@@ -1,36 +1,229 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📘 Meme Battles — Project Documentation & Development Plan
 
-## Getting Started
+**Meme Battles** is a real-time multiplayer web game where players compete to create the funniest meme matches. Inspired by **What Do You Meme?**, players draw seven random meme image cards from a pool of 800 images stored in `/public/memes/`, select one to match an AI-generated situation (using Vercel AI SDK), and rate submissions to determine the winner.
 
-First, run the development server:
+## 🎯 Project Overview
+
+- **Platform**: Web-based, built with **Next.js**, **Tailwind CSS**, **shadcn/ui**, **Firebase**, and **Vercel AI SDK** (`npm i ai`).
+- **Core Gameplay**: Players join rooms, receive seven random meme image cards from a folder of 800 images, submit one card to match an AI-generated situation, and rate all submissions (1-5 stars) to score points.
+- **Goal**: Launch by **August 25, 2025 @ 10:00 PM**.
+
+## 🎲 Game Mechanics (Inverted from What Do You Meme?)
+
+1. Each player receives **seven random meme image cards** from a pool of 800 images in `/public/memes/`.
+2. An **AI-generated situation** (e.g., "When you realize the meeting is all-you-can-eat...") is presented each round using Vercel AI SDK.
+3. Players select and submit one meme image card to match the situation.
+4. All players rate each submission anonymously using emojis (😂 = 1pt, 😄 = 2pts, 🤣 = 3pts, 🔥 = 4pts, 💯 = 5pts).
+5. The card with the highest total emoji points wins the round, and the player earns points based on their submission's total score.
+6. Players draw back up to seven cards from the meme pool, and a new round begins.
+
+### Key Features
+
+- **Random Meme Selection**: Randomly assign seven unique meme images per player from 800 images, ensuring no duplicates within a player's hand.
+- **AI Situations**: Dynamic, humorous prompts generated via Vercel AI SDK.
+- **Rating System**: Democratic scoring with emoji reactions (😂 😄 🤣 🔥 💯) worth 1-5 points each.
+- **Social Features**: Real-time chat and shareable winning memes.
+- **Visual Polish**: Meme-centric UI with animations and confetti effects.
+
+### 🎯 Emoji Rating System
+
+Players rate submissions using five emoji reactions, each worth different points:
+
+| Emoji | Points | Meaning        |
+| ----- | ------ | -------------- |
+| 😂    | 1pt    | Slightly funny |
+| 😄    | 2pts   | Pretty good    |
+| 🤣    | 3pts   | Very funny     |
+| 🔥    | 4pts   | Hilarious      |
+| 💯    | 5pts   | Perfect match  |
+
+**Scoring Logic:**
+
+- Each player can rate each submission with one emoji
+- Total points = sum of all emoji reactions received
+- Winner is determined by highest total points
+- Players earn points equal to their submission's total score
+
+## 🚀 Getting Started
+
+First, install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+```
+
+Then, run the development server:
+
+```bash
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🗓️ Timeline to Launch (Approx. 4 Weeks)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🔹 Week 1: July 29 – August 4
 
-## Learn More
+**Goal: Setup & Core Structure**
 
-To learn more about Next.js, take a look at the following resources:
+- [ ] Initialize project: Next.js, Tailwind, shadcn/ui, Firebase, Vercel AI SDK.
+- [ ] Configure Firebase: Auth (Google + Guest), Firestore, Storage.
+- [ ] Build Create/Join Room flows with username/avatar input and guest with random name.
+- [ ] Create real-time Lobby UI with player list and game status.
+- [ ] Implement **MemeCardDeck** component to display seven random meme cards per player.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 🔹 Week 2: August 5 – August 11
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Goal: Game Logic MVP**
 
-## Deploy on Vercel
+- [ ] Develop logic to randomly select seven unique meme images from `/public/memes/` (800 images).
+- [ ] Set up AI situation generator using Vercel AI SDK.
+- [ ] Build **MemeCardSelector** for players to choose one card.
+- [ ] Develop emoji rating system (😂 😄 🤣 🔥 💯 = 1-5pts) for submitted cards.
+- [ ] Code round flow: situation → submission → rating → results → next round.
+- [ ] Implement scoreboard logic in Firestore.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🔹 Week 3: August 12 – August 18
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Goal: Polish & Features**
+
+- [ ] Style UI with shadcn/ui (Cards, Buttons, Emoji Rating Buttons).
+- [ ] Add **GameChatBox** for real-time banter.
+- [ ] Build Leaderboard page with top scores.
+- [ ] Generate room invite links.
+- [ ] Add confetti effects for round winners.
+
+### 🔹 Week 4: August 19 – August 25
+
+**Goal: Testing & Launch**
+
+- [ ] Optimize for mobile devices.
+- [ ] Test for bugs (multi-device, disconnections, empty submissions).
+- [ ] Implement **shareable meme cards** (image + situation export).
+- [ ] Finalize UI with animations.
+- [ ] Deploy to Vercel by **August 25, 2025 @ 10:00 PM**.
+
+## 🧱 Project Structure
+
+```
+/pages
+  index.tsx              → Landing Page
+  /create.tsx            → Create Room
+  /join.tsx              → Join Room
+  /game/[roomId].tsx     → Game Room
+  /leaderboard.tsx       → Top Players
+
+/components
+  MemeCardDeck.tsx       → Displays player's 7 random meme cards
+  MemeCardSelector.tsx   → Submits selected meme card
+  RatingPanel.tsx        → Emoji-based rating UI
+  PlayerList.tsx         → Real-time player list
+  Scoreboard.tsx         → Displays scores
+  GameChatBox.tsx        → Real-time chat
+
+/lib
+  firebase.ts            → Firebase config
+  aiSituation.ts         → AI prompt generation (Vercel AI SDK)
+  gameEngine.ts          → Manages rounds, card selection, ratings
+  db.ts                  → Firestore helpers
+  avatarGen.ts           → Random avatars
+  memeSelector.ts        → Logic for random meme card distribution
+
+/public
+  memes/                 → Folder with 800 meme images (e.g., meme001.jpg to meme800.jpg)
+```
+
+## 🔐 Firestore Structure
+
+```
+/rooms/{roomId}
+  - players: [{ id, name, avatar, score, cards: [memeUrl, ...] }] # 7 URLs per player
+  - situation: "AI-generated text"    # E.g., "When you realize the meeting is all-you-can-eat..."
+  - submissions: { playerId: memeUrl } # Selected meme card
+  - ratings: { playerId: { submissionId: emoji } } # 😂 😄 🤣 🔥 💯 (1-5pts)
+  - status: "submitting" | "rating" | "results"
+  - round: number
+
+/users/{uid}
+  - name
+  - score
+  - gamesPlayed
+```
+
+## 🧪 MVP Feature Checklist
+
+| Feature                         | Status |
+| ------------------------------- | ------ |
+| Firebase Auth (Google + Guest)  | ⬜️    |
+| Room creation + join            | ⬜️    |
+| Real-time room updates          | ⬜️    |
+| Random 7 meme cards (from 800)  | ⬜️    |
+| AI-generated situation          | ⬜️    |
+| Meme card submission            | ⬜️    |
+| Rating system (emoji reactions) | ⬜️    |
+| Winner display + scoring        | ⬜️    |
+| Leaderboard                     | ⬜️    |
+| Real-time chat                  | ⬜️    |
+| Mobile responsive UI            | ⬜️    |
+| Shareable meme cards            | ⬜️    |
+| Deployment (Vercel)             | ⬜️    |
+
+## 🌟 Stretch Goals
+
+- **AI Caption Suggestions**: Offer AI-generated caption hints for situations.
+- **Themed Meme Packs**: Categorize the 800 memes into themes (e.g., pop culture, animals).
+- **Custom Memes**: Allow moderated image uploads.
+- **Enhanced Emoji Reactions**: Add more reaction options beyond the core 5 emojis.
+- **Freestyle Mode**: Players create custom situations.
+
+## 📋 Meme Card Selection Logic
+
+- **Folder**: `/public/memes/` contains 800 images (e.g., `meme001.jpg` to `meme800.jpg`).
+- **Distribution**: For each player, randomly select seven unique images without replacement within their hand, but allow overlap across players.
+- **Implementation**: Use `memeSelector.ts` to generate a list of image URLs (e.g., `/memes/meme123.jpg`) and store them in Firestore under `players.cards`.
+- **Refill**: After each round, replenish each player's hand to seven cards, ensuring no duplicates in their new hand.
+
+### Sample Code for `memeSelector.ts`
+
+```javascript
+// /lib/memeSelector.ts
+export function getRandomMemeCards(numCards = 7, totalMemes = 800) {
+  const memeUrls = [];
+  const usedIndices = new Set();
+
+  while (memeUrls.length < numCards) {
+    const index = Math.floor(Math.random() * totalMemes) + 1;
+    const paddedIndex = String(index).padStart(3, "0");
+    const memeUrl = `/memes/meme${paddedIndex}.jpg`;
+
+    if (!usedIndices.has(index)) {
+      usedIndices.add(index);
+      memeUrls.push(memeUrl);
+    }
+  }
+
+  return memeUrls;
+}
+
+// Usage: Assign to player in Firestore
+// const playerCards = getRandomMemeCards(7, 800);
+// db.collection('rooms').doc(roomId).update({ [`players.${playerId}.cards`]: playerCards });
+```
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 14 with App Router
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Auth (Google + Guest)
+- **AI**: Vercel AI SDK
+- **Deployment**: Vercel
+- **Package Manager**: pnpm
+
+## 📋 Next Steps
+
+- **Format**: Generate as a **Notion project**, **GitHub Issues**, or **downloadable doc**?
+- **Development**: Start coding Week 1 (e.g., project setup, Firebase config, `memeSelector.ts`)?
+- **Sample Code**: Provide a starter for `aiSituation.ts` or Firebase setup?
+
+Let me know how to proceed! 🎉
