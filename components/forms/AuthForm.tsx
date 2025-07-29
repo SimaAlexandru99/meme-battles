@@ -122,7 +122,7 @@ const AuthForm = ({
 
       if (response.success) {
         toast.success(response.message);
-        router.push("/app/home");
+        router.push("/");
       } else {
         toast.error(response.message);
       }
@@ -158,7 +158,7 @@ const AuthForm = ({
 
       if (response.success) {
         toast.success(response.message);
-        router.push("/app/home");
+        router.push("/");
       } else {
         toast.error(response.message);
       }
@@ -347,7 +347,7 @@ const AuthForm = ({
 
         if (result?.success) {
           toast.success(result.message);
-          router.push("/app/home");
+          router.push("/");
         } else {
           toast.error(result?.message || "Failed to sign in");
         }

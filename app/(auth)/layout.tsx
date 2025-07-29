@@ -3,12 +3,19 @@ import { redirect } from "next/navigation";
 import { Gamepad2, Users, Trophy, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-import { isAuthenticated } from "@/lib/actions/auth.action";
+import { isAuthenticated, isAnonymousUser } from "@/lib/actions/auth.action";
 import { Logo } from "@/components/shared";
 
 const AuthLayout = async ({ children }: { children: ReactNode }) => {
   const isUserAuthenticated = await isAuthenticated();
-  if (isUserAuthenticated) redirect("/app/home");
+  const isAnonymous = await isAnonymousUser();
+
+  // Only redirect if user is authenticated AND not anonymous
+  // Anonymous users should be able to access auth pages to convert their account
+  // This allows them to sign up/sign in with email or social providers
+  if (isUserAuthenticated && !isAnonymous) {
+    redirect("/");
+  }
 
   return (
     <div className="h-full w-full flex flex-col justify-center">

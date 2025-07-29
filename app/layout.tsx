@@ -3,9 +3,6 @@ import { Bangers } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
-import { Button } from "@/components/ui/button";
-import { RiLoginBoxLine } from "react-icons/ri";
-import Image from "next/image";
 
 const bangers = Bangers({
   variable: "--font-bangers",

@@ -20,11 +20,14 @@ interface SignUpParams {
 
 interface User {
   name: string;
-  email: string;
+  email: string | null;
   id: string;
   provider: string;
   role: string;
   profileURL?: string;
+  avatarId?: string;
+  isAnonymous?: boolean;
+  setupCompleted?: boolean;
   createdAt: string;
   lastLoginAt: string;
   xp: number;

@@ -3,6 +3,7 @@
 import { auth, db } from "@/firebase/admin";
 import { cookies } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
+import { getRandomAvatar } from "@/lib/utils";
 
 // ============================================================================
 // CONSTANTS & CONFIGURATION
@@ -105,12 +106,18 @@ export async function signUp(params: SignUpParams) {
           };
         }
 
+        // Get a random avatar for the new user
+        const randomAvatar = getRandomAvatar();
+
         // Save new user to the database
         await db.collection("users").doc(uid).set({
           name,
           email,
           provider: "email",
           role: "user",
+          profileURL: randomAvatar.src,
+          avatarId: randomAvatar.id,
+          setupCompleted: false,
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
           xp: 0,
@@ -228,6 +235,9 @@ export async function signInWithGoogle(idToken: string) {
           .get();
 
         if (!userRecord.exists) {
+          // Get a random avatar for the new user
+          const randomAvatar = getRandomAvatar();
+
           // Create new user in database for first-time Google sign-in
           await db
             .collection("users")
@@ -238,7 +248,9 @@ export async function signInWithGoogle(idToken: string) {
               email: decodedToken.email,
               provider: "google",
               role: "user",
-              profileURL: decodedToken.picture,
+              profileURL: decodedToken.picture || randomAvatar.src,
+              avatarId: randomAvatar.id,
+              setupCompleted: false,
               createdAt: new Date().toISOString(),
               lastLoginAt: new Date().toISOString(),
               xp: 0,
@@ -302,6 +314,9 @@ export async function signInWithGitHub(idToken: string) {
           .get();
 
         if (!userRecord.exists) {
+          // Get a random avatar for the new user
+          const randomAvatar = getRandomAvatar();
+
           // Create new user in database for first-time GitHub sign-in
           await db
             .collection("users")
@@ -312,7 +327,9 @@ export async function signInWithGitHub(idToken: string) {
               email: decodedToken.email,
               provider: "github",
               role: "user",
-              profileURL: decodedToken.picture,
+              profileURL: decodedToken.picture || randomAvatar.src,
+              avatarId: randomAvatar.id,
+              setupCompleted: false,
               createdAt: new Date().toISOString(),
               lastLoginAt: new Date().toISOString(),
               xp: 0,
@@ -343,6 +360,97 @@ export async function signInWithGitHub(idToken: string) {
         return {
           success: false,
           message: "Failed to sign in with GitHub. Please try again.",
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Handles anonymous authentication for guest users
+ * Creates temporary user session with generated display name
+ * @param params - Anonymous sign in parameters (idToken, displayName)
+ * @returns Success/error response with message
+ */
+export async function signInAsGuest(params: {
+  idToken: string;
+  displayName: string;
+}) {
+  return Sentry.startSpan(
+    {
+      op: "auth.anonymous.signin",
+      name: "Sign In as Guest",
+    },
+    async (span) => {
+      const { idToken, displayName } = params;
+
+      try {
+        // Verify the ID token with Firebase Admin
+        const decodedToken = await auth.verifyIdToken(idToken);
+
+        span.setAttribute("user.provider", "anonymous");
+        span.setAttribute("user.display_name", displayName);
+        span.setAttribute("user.is_anonymous", true);
+
+        // Check if anonymous user already exists in our database
+        const userRecord = await db
+          .collection("users")
+          .doc(decodedToken.uid)
+          .get();
+
+        if (!userRecord.exists) {
+          // Get a random avatar for the new anonymous user
+          const randomAvatar = getRandomAvatar();
+
+          // Create new anonymous user in database
+          await db.collection("users").doc(decodedToken.uid).set({
+            name: displayName,
+            email: null, // Anonymous users don't have email
+            provider: "anonymous",
+            role: "guest",
+            isAnonymous: true,
+            profileURL: randomAvatar.src,
+            avatarId: randomAvatar.id,
+            setupCompleted: false,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            xp: 0,
+          });
+
+          span.setAttribute("user.created", true);
+        } else {
+          // Update last login timestamp for existing anonymous users
+          await db.collection("users").doc(decodedToken.uid).update({
+            lastLoginAt: new Date().toISOString(),
+          });
+        }
+
+        // Set session cookie for anonymous user (shorter duration)
+        const sessionCookie = await auth.createSessionCookie(idToken, {
+          expiresIn: 60 * 60 * 24 * 1000, // 1 day for anonymous users
+        });
+
+        const cookieStore = await cookies();
+        cookieStore.set("session", sessionCookie, {
+          maxAge: 60 * 60 * 24, // 1 day
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+          sameSite: "lax",
+        });
+
+        span.setAttribute("user.signed_in", true);
+        return {
+          success: true,
+          message: `Successfully signed in as ${displayName}.`,
+        };
+      } catch (error: unknown) {
+        Sentry.captureException(error);
+        console.error("Error signing in as guest:", error);
+
+        return {
+          success: false,
+          message: "Failed to sign in as guest. Please try again.",
         };
       }
     }
@@ -422,6 +530,254 @@ export async function isAuthenticated() {
       const isAuth = !!user;
       span.setAttribute("user.authenticated", isAuth);
       return isAuth;
+    }
+  );
+}
+
+/**
+ * Checks if the current user is anonymous
+ * @returns Boolean indicating if user is anonymous, null if not authenticated
+ */
+export async function isAnonymousUser() {
+  return Sentry.startSpan(
+    {
+      op: "auth.user.check_anonymous",
+      name: "Check Anonymous Status",
+    },
+    async (span) => {
+      const user = await getCurrentUser();
+      const isAnonymous = user?.isAnonymous ?? null;
+      span.setAttribute("user.is_anonymous", isAnonymous ?? false);
+
+      // Log anonymous user behavior for analytics
+      if (isAnonymous) {
+        const { logger } = Sentry;
+        logger.info("Anonymous user accessing auth pages", {
+          userId: user?.id,
+          userRole: user?.role,
+          userProvider: user?.provider,
+        });
+      }
+
+      return isAnonymous;
+    }
+  );
+}
+
+/**
+ * Checks if the current user is a first-time user (needs setup)
+ * @returns Boolean indicating if user needs first-time setup
+ */
+export async function isFirstTimeUser() {
+  return Sentry.startSpan(
+    {
+      op: "auth.user.check_first_time",
+      name: "Check First Time User Status",
+    },
+    async (span) => {
+      const user = await getCurrentUser();
+
+      if (!user) {
+        span.setAttribute("user.first_time", false);
+        return false;
+      }
+
+      // For anonymous users, check if they have a custom name (not the default generated one)
+      // For authenticated users, check if they haven't customized their profile yet
+      const isAnonymous = user.isAnonymous;
+
+      let hasCustomName = false;
+      let hasCustomAvatar = false;
+
+      if (isAnonymous) {
+        // For anonymous users, check if they have a meaningful name (not just the generated one)
+        hasCustomName = !!(
+          user.name &&
+          user.name.length > 3 &&
+          !user.name.includes("Guest")
+        );
+        hasCustomAvatar = !!(user.avatarId && user.avatarId !== "evil-doge");
+      } else {
+        // For authenticated users, check if they have set up their profile
+        hasCustomName = !!(user.name && user.name.length > 2);
+        hasCustomAvatar = !!(user.avatarId && user.avatarId !== "evil-doge");
+      }
+
+      // User is first-time if they don't have custom name or avatar, or haven't completed setup
+      const isFirstTime =
+        !hasCustomName || !hasCustomAvatar || !user.setupCompleted;
+
+      span.setAttribute("user.first_time", isFirstTime);
+      span.setAttribute("user.has_custom_name", hasCustomName);
+      span.setAttribute("user.has_custom_avatar", hasCustomAvatar);
+      span.setAttribute("user.is_anonymous", isAnonymous);
+
+      return isFirstTime;
+    }
+  );
+}
+
+/**
+ * Updates the current user's display name
+ * @param displayName - New display name for the user
+ * @returns Success/error response with message
+ */
+export async function updateUserDisplayName(displayName: string) {
+  return Sentry.startSpan(
+    {
+      op: "auth.user.update_name",
+      name: "Update User Display Name",
+    },
+    async (span) => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          return {
+            success: false,
+            message: "User not authenticated",
+          };
+        }
+
+        span.setAttribute("user.uid", user.id);
+        span.setAttribute("user.new_name", displayName);
+
+        // Update user's display name in database
+        await db.collection("users").doc(user.id).update({
+          name: displayName,
+          lastLoginAt: new Date().toISOString(),
+        });
+
+        span.setAttribute("user.name_updated", true);
+        return {
+          success: true,
+          message: "Display name updated successfully",
+        };
+      } catch (error: unknown) {
+        Sentry.captureException(error);
+        console.error("Error updating display name:", error);
+
+        return {
+          success: false,
+          message: "Failed to update display name. Please try again.",
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Marks a user as having completed their first-time setup
+ * @returns Success/error response with message
+ */
+export async function markUserSetupComplete() {
+  return Sentry.startSpan(
+    {
+      op: "auth.user.setup_complete",
+      name: "Mark User Setup Complete",
+    },
+    async (span) => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          return {
+            success: false,
+            message: "User not authenticated",
+          };
+        }
+
+        span.setAttribute("user.uid", user.id);
+
+        // Update user's setup completion status
+        await db.collection("users").doc(user.id).update({
+          setupCompleted: true,
+          lastLoginAt: new Date().toISOString(),
+        });
+
+        span.setAttribute("user.setup_completed", true);
+        return {
+          success: true,
+          message: "Setup completed successfully",
+        };
+      } catch (error: unknown) {
+        Sentry.captureException(error);
+        console.error("Error marking setup complete:", error);
+
+        return {
+          success: false,
+          message: "Failed to mark setup complete. Please try again.",
+        };
+      }
+    }
+  );
+}
+
+/**
+ * Updates the current user's profile information
+ * @param updates - Object containing profile updates
+ * @returns Success/error response with message
+ */
+export async function updateUserProfile(updates: {
+  name?: string;
+  profileURL?: string;
+  avatarId?: string;
+}) {
+  return Sentry.startSpan(
+    {
+      op: "auth.user.update_profile",
+      name: "Update User Profile",
+    },
+    async (span) => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          return {
+            success: false,
+            message: "User not authenticated",
+          };
+        }
+
+        span.setAttribute("user.uid", user.id);
+        span.setAttribute("profile.updates", JSON.stringify(updates));
+
+        // Prepare update object
+        const updateData: {
+          name?: string;
+          profileURL?: string;
+          avatarId?: string;
+          lastLoginAt?: string;
+        } = {
+          lastLoginAt: new Date().toISOString(),
+        };
+
+        if (updates.name) {
+          updateData.name = updates.name;
+        }
+
+        if (updates.profileURL) {
+          updateData.profileURL = updates.profileURL;
+        }
+
+        if (updates.avatarId) {
+          updateData.avatarId = updates.avatarId;
+        }
+
+        // Update user's profile in database
+        await db.collection("users").doc(user.id).update(updateData);
+
+        span.setAttribute("user.profile_updated", true);
+        return {
+          success: true,
+          message: "Profile updated successfully",
+        };
+      } catch (error: unknown) {
+        Sentry.captureException(error);
+        console.error("Error updating profile:", error);
+
+        return {
+          success: false,
+          message: "Failed to update profile. Please try again.",
+        };
+      }
     }
   );
 }

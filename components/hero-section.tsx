@@ -5,9 +5,10 @@ import {
   RiGlobalLine,
   RiFireLine,
   RiGroupLine,
-  RiEditLine,
   RiDiceLine,
   RiLoginBoxLine,
+  RiUserLine,
+  RiLogoutBoxLine,
   RiDiscordLine,
   RiNotificationLine,
   RiArrowDownLine,
@@ -17,31 +18,165 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useCallback } from "react";
-import { generateFunnyName } from "@/lib/utils";
+import { useState, useCallback, useEffect } from "react";
+import { generateGuestDisplayName } from "@/firebase/client";
+import { useUpdateDisplayName } from "@/hooks/useUpdateDisplayName";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import {
+  getCurrentUser,
+  isAnonymousUser,
+  signOut,
+} from "@/lib/actions/auth.action";
+import ProfilePicker from "./profile-picker";
 import GameCard from "./game-card";
 
 interface AvatarSetupCardProps {
   onNicknameChange?: (nickname: string) => void;
+  onAvatarChange?: (avatarId: string, avatarSrc: string) => void;
 }
 
-function AvatarSetupCard({ onNicknameChange }: AvatarSetupCardProps) {
+function AvatarSetupCard({
+  onNicknameChange,
+  onAvatarChange,
+}: AvatarSetupCardProps) {
   const [nickname, setNickname] = useState("MemeLord");
+  const [currentAvatar, setCurrentAvatar] = useState("evil-doge");
+  const [profileURL, setProfileURL] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
+  const { updateDisplayName, isUpdating } = useUpdateDisplayName(1500); // 1.5 second debounce
+  const { updateAvatar, isUpdatingAvatar } = useUpdateProfile();
+
+  // Add a function to refresh profile data
+  const refreshProfileData = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        if (user.name) {
+          setNickname(user.name);
+          onNicknameChange?.(user.name);
+        }
+        if (user.avatarId) {
+          setCurrentAvatar(user.avatarId);
+        }
+        if (user.profileURL) {
+          setProfileURL(user.profileURL);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh profile data:", error);
+    }
+  }, [onNicknameChange]);
+
+  // Load current user's profile on mount and refresh periodically
+  useEffect(() => {
+    const loadCurrentUserProfile = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          if (user.name) {
+            setNickname(user.name);
+            onNicknameChange?.(user.name);
+          }
+          if (user.avatarId) {
+            setCurrentAvatar(user.avatarId);
+          }
+          if (user.profileURL) {
+            setProfileURL(user.profileURL);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load current user profile:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCurrentUserProfile();
+
+    // Listen for user setup completion event
+    const handleUserSetupComplete = () => {
+      console.log("User setup completed, refreshing avatar setup data...");
+      refreshProfileData();
+    };
+
+    window.addEventListener("userSetupComplete", handleUserSetupComplete);
+
+    // Set up periodic refresh every 30 seconds to keep UI in sync
+    const refreshInterval = setInterval(refreshProfileData, 30000);
+
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener("userSetupComplete", handleUserSetupComplete);
+    };
+  }, [onNicknameChange, refreshProfileData]);
 
   const generateRandomName = useCallback(() => {
-    const newName = generateFunnyName();
+    const newName = generateGuestDisplayName();
     setNickname(newName);
     onNicknameChange?.(newName);
-  }, [onNicknameChange]);
+    // Update in Firebase
+    updateDisplayName(newName);
+  }, [onNicknameChange, updateDisplayName]);
 
   const handleNicknameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setNickname(value);
       onNicknameChange?.(value);
+      // Update in Firebase with debouncing
+      if (value.trim()) {
+        updateDisplayName(value.trim());
+      }
     },
-    [onNicknameChange]
+    [onNicknameChange, updateDisplayName]
+  );
+
+  const handleAvatarChange = useCallback(
+    async (avatarId: string, avatarSrc: string) => {
+      try {
+        // Update in Firebase first
+        const result = await updateAvatar(avatarId, avatarSrc);
+
+        if (result.success) {
+          // Immediately update local state for responsive UI
+          setCurrentAvatar(avatarId);
+          setProfileURL(avatarSrc);
+
+          // Also call the parent callback
+          onAvatarChange?.(avatarId, avatarSrc);
+
+          // Optionally reload from Firebase after a short delay to ensure consistency
+          setTimeout(async () => {
+            try {
+              const updatedUser = await getCurrentUser();
+              if (updatedUser) {
+                // Only update if the data is different to avoid unnecessary re-renders
+                if (updatedUser.avatarId && updatedUser.avatarId !== avatarId) {
+                  setCurrentAvatar(updatedUser.avatarId);
+                }
+                if (
+                  updatedUser.profileURL &&
+                  updatedUser.profileURL !== avatarSrc
+                ) {
+                  setProfileURL(updatedUser.profileURL);
+                }
+              }
+            } catch (error) {
+              console.error("Failed to refresh profile after update:", error);
+            }
+          }, 1000); // 1 second delay
+        } else {
+          // If Firebase update fails, revert the local state
+          console.error("Failed to update avatar:", result.error);
+          // The ProfilePicker will handle reverting its own state
+          throw new Error(result.error || "Failed to update avatar");
+        }
+      } catch (error) {
+        console.error("Error updating avatar:", error);
+        throw error; // Re-throw so ProfilePicker can handle it
+      }
+    },
+    [onAvatarChange, updateAvatar]
   );
 
   return (
@@ -53,21 +188,14 @@ function AvatarSetupCard({ onNicknameChange }: AvatarSetupCardProps) {
       <CardContent className="relative h-full flex flex-col items-center justify-center p-4 sm:p-4 gap-3 sm:gap-4">
         {/* Avatar Section */}
         <div className="flex flex-col items-center gap-2 sm:gap-3">
-          <div className="relative">
-            <Avatar className="w-14 h-14 sm:w-18 sm:h-18 md:w-16 md:h-16 border-4 border-purple-400/50 shadow-lg">
-              <AvatarImage src="/memes/Angry doge.jpg" alt="User avatar" />
-              <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white font-bold text-sm sm:text-lg md:text-base">
-                ML
-              </AvatarFallback>
-            </Avatar>
-            <Button
-              size="sm"
-              className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 rounded-full bg-purple-600 hover:bg-purple-700"
-              aria-label="Edit avatar"
-            >
-              <RiEditLine className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-2.5 md:h-2.5" />
-            </Button>
-          </div>
+          <ProfilePicker
+            currentAvatar={currentAvatar}
+            profileURL={profileURL}
+            onAvatarChange={handleAvatarChange}
+            size="md"
+            className={isUpdatingAvatar ? "opacity-75" : ""}
+            isUpdating={isUpdatingAvatar}
+          />
 
           {/* Nickname Input */}
           <div className="flex flex-col items-center gap-1 sm:gap-2">
@@ -75,19 +203,29 @@ function AvatarSetupCard({ onNicknameChange }: AvatarSetupCardProps) {
               Choose your meme identity
             </p>
             <div className="flex items-center gap-1 sm:gap-2">
-              <Input
-                placeholder="Meme name"
-                value={nickname}
-                onChange={handleNicknameChange}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-20 sm:w-28 md:w-24 text-xs sm:text-sm md:text-xs h-6 sm:h-8 md:h-7"
-                maxLength={20}
-                aria-label="Enter your meme nickname"
-              />
+              <div className="relative">
+                <Input
+                  placeholder={isLoading ? "Loading..." : "Meme name"}
+                  value={nickname}
+                  onChange={handleNicknameChange}
+                  disabled={isLoading}
+                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-20 sm:w-28 md:w-24 text-xs sm:text-sm md:text-xs h-6 sm:h-8 md:h-7 disabled:opacity-50"
+                  maxLength={20}
+                  aria-label="Enter your meme nickname"
+                />
+                {isUpdating && (
+                  <div
+                    className="absolute -right-1 -top-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"
+                    title="Updating name..."
+                  />
+                )}
+              </div>
               <Button
                 size="sm"
                 variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-600 w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 p-0"
+                className="border-slate-600 text-slate-300 hover:bg-slate-600 w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 p-0 disabled:opacity-50"
                 onClick={generateRandomName}
+                disabled={isLoading}
                 title="Generate random funny name"
                 aria-label="Generate random funny name"
               >
@@ -102,6 +240,53 @@ function AvatarSetupCard({ onNicknameChange }: AvatarSetupCardProps) {
 }
 
 function Header() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const user = await getCurrentUser();
+        const anonymous = await isAnonymousUser();
+
+        setCurrentUser(user);
+        setIsAnonymous(anonymous);
+      } catch (error) {
+        console.error("Error loading user data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Load user data on mount
+    loadUserData();
+
+    // Listen for user setup completion event
+    const handleUserSetupComplete = () => {
+      console.log("User setup completed, refreshing header data...");
+      loadUserData();
+    };
+
+    window.addEventListener("userSetupComplete", handleUserSetupComplete);
+
+    // Cleanup event listener
+    return () => {
+      window.removeEventListener("userSetupComplete", handleUserSetupComplete);
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  const isAuthenticatedUser = currentUser && !isAnonymous;
+
   return (
     <header className="absolute top-0 left-0 right-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
@@ -117,16 +302,50 @@ function Header() {
           />
         </div>
 
-        {/* Sign In Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2 md:text-base md:px-6 md:py-2.5"
-          aria-label="Sign in to your account"
-        >
-          <RiLoginBoxLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-          Sign In
-        </Button>
+        {/* Dynamic Auth Buttons */}
+        {!isLoading && (
+          <>
+            {isAuthenticatedUser ? (
+              // Authenticated user - show profile and sign out
+              <div className="flex items-center gap-2">
+                <Link href="/profile">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
+                    aria-label="View your profile"
+                  >
+                    <RiUserLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    Profile
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500/30 text-red-300 hover:bg-red-500/10 hover:border-red-400/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
+                  onClick={handleSignOut}
+                  aria-label="Sign out of your account"
+                >
+                  <RiLogoutBoxLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              // Anonymous or not authenticated - show sign in
+              <Link href="/sign-in">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2 md:text-base md:px-6 md:py-2.5"
+                  aria-label="Sign in to your account"
+                >
+                  <RiLoginBoxLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </>
+        )}
       </div>
     </header>
   );
@@ -179,20 +398,46 @@ function BottomNavigation() {
 }
 
 function GameCardsSection() {
+  const [currentNickname, setCurrentNickname] = useState("MemeLord");
+  const [currentAvatar, setCurrentAvatar] = useState("evil-doge");
+
   const handleMemeBattleClick = useCallback(() => {
-    // Handle meme battle royale click
-    console.log("Entering meme battle royale");
-  }, []);
+    // User is already authenticated as guest via layout
+    console.log("Entering meme battle royale with:", {
+      nickname: currentNickname,
+      avatar: currentAvatar,
+    });
+    // TODO: Navigate to battle royale game
+  }, [currentNickname, currentAvatar]);
 
   const handlePrivateWarClick = useCallback(() => {
-    // Handle private meme war click
-    console.log("Starting private meme war");
+    // User is already authenticated as guest via layout
+    console.log("Starting private meme war with:", {
+      nickname: currentNickname,
+      avatar: currentAvatar,
+    });
+    // TODO: Navigate to private game creation
+  }, [currentNickname, currentAvatar]);
+
+  const handleNicknameChange = useCallback((newNickname: string) => {
+    setCurrentNickname(newNickname);
   }, []);
+
+  const handleAvatarChange = useCallback(
+    (avatarId: string, avatarSrc: string) => {
+      console.log("Avatar changed:", { avatarId, avatarSrc });
+      setCurrentAvatar(avatarId);
+    },
+    []
+  );
 
   return (
     <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8 w-full max-w-sm sm:max-w-2xl md:max-w-none">
       {/* Meme Lord Setup Card */}
-      <AvatarSetupCard />
+      <AvatarSetupCard
+        onNicknameChange={handleNicknameChange}
+        onAvatarChange={handleAvatarChange}
+      />
 
       {/* Meme Battle Royale Card */}
       <GameCard
