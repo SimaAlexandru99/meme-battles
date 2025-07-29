@@ -101,8 +101,8 @@ function AvatarSetupCard({
 
     window.addEventListener("userSetupComplete", handleUserSetupComplete);
 
-    // Set up periodic refresh every 30 seconds to keep UI in sync
-    const refreshInterval = setInterval(refreshProfileData, 30000);
+    // Set up periodic refresh every 5 minutes to keep UI in sync (reduced from 30s)
+    const refreshInterval = setInterval(refreshProfileData, 300000);
 
     return () => {
       clearInterval(refreshInterval);
@@ -268,18 +268,34 @@ function Header() {
       loadUserData();
     };
 
-    window.addEventListener("userSetupComplete", handleUserSetupComplete);
+    // Listen for authentication changes
+    const handleUserAuthenticated = () => {
+      console.log("User authenticated, refreshing header data...");
+      loadUserData();
+    };
 
-    // Cleanup event listener
+    const handleUserSignedOut = () => {
+      console.log("User signed out, refreshing header data...");
+      loadUserData();
+    };
+
+    window.addEventListener("userSetupComplete", handleUserSetupComplete);
+    window.addEventListener("userAuthenticated", handleUserAuthenticated);
+    window.addEventListener("userSignedOut", handleUserSignedOut);
+
+    // Cleanup event listeners
     return () => {
       window.removeEventListener("userSetupComplete", handleUserSetupComplete);
+      window.removeEventListener("userAuthenticated", handleUserAuthenticated);
+      window.removeEventListener("userSignedOut", handleUserSignedOut);
     };
   }, []);
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      window.location.reload();
+      // Dispatch event to notify components of sign out
+      window.dispatchEvent(new CustomEvent("userSignedOut"));
     } catch (error) {
       console.error("Error signing out:", error);
     }

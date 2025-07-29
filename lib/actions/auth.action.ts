@@ -12,6 +12,44 @@ import { getRandomAvatar } from "@/lib/utils";
 // Session duration (1 week in seconds)
 const SESSION_DURATION = 60 * 60 * 24 * 7;
 
+// Simple in-memory cache for user data (5 minute TTL)
+const userCache = new Map<string, { user: User; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+// ============================================================================
+// CACHE MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Gets cached user data if valid, null otherwise
+ */
+function getCachedUser(sessionCookie: string): User | null {
+  const cached = userCache.get(sessionCookie);
+  if (!cached) return null;
+
+  // Check if cache is still valid
+  if (Date.now() - cached.timestamp > CACHE_TTL) {
+    userCache.delete(sessionCookie);
+    return null;
+  }
+
+  return cached.user;
+}
+
+/**
+ * Caches user data with timestamp
+ */
+function cacheUser(sessionCookie: string, user: User): void {
+  userCache.set(sessionCookie, { user, timestamp: Date.now() });
+}
+
+/**
+ * Clears user cache (called on updates)
+ */
+export async function clearUserCache(): Promise<void> {
+  userCache.clear();
+}
+
 // ============================================================================
 // SESSION MANAGEMENT FUNCTIONS
 // ============================================================================
@@ -478,6 +516,13 @@ export async function getCurrentUser(): Promise<User | null> {
       const sessionCookie = cookieStore.get("session")?.value;
       if (!sessionCookie) return null;
 
+      // Check cache first
+      const cachedUser = getCachedUser(sessionCookie);
+      if (cachedUser) {
+        span.setAttribute("user.cached", true);
+        return cachedUser;
+      }
+
       try {
         // Verify session cookie with Firebase Admin
         const decodedClaims = await auth.verifySessionCookie(
@@ -500,6 +545,9 @@ export async function getCurrentUser(): Promise<User | null> {
           ...userRecord.data(),
           id: userRecord.id,
         } as User;
+
+        // Cache the user
+        cacheUser(sessionCookie, user);
 
         span.setAttribute("user.role", user.role);
         span.setAttribute("user.provider", user.provider);
@@ -647,6 +695,15 @@ export async function updateUserDisplayName(displayName: string) {
           lastLoginAt: new Date().toISOString(),
         });
 
+        // Clear cache for the current session
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+        if (sessionCookie) {
+          userCache.delete(sessionCookie);
+        }
+        // Also clear the global cache to ensure consistency
+        await clearUserCache();
+
         span.setAttribute("user.name_updated", true);
         return {
           success: true,
@@ -692,6 +749,15 @@ export async function markUserSetupComplete() {
           setupCompleted: true,
           lastLoginAt: new Date().toISOString(),
         });
+
+        // Clear cache for the current session
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+        if (sessionCookie) {
+          userCache.delete(sessionCookie);
+        }
+        // Also clear the global cache to ensure consistency
+        await clearUserCache();
 
         span.setAttribute("user.setup_completed", true);
         return {
@@ -763,6 +829,15 @@ export async function updateUserProfile(updates: {
 
         // Update user's profile in database
         await db.collection("users").doc(user.id).update(updateData);
+
+        // Clear cache for the current session
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+        if (sessionCookie) {
+          userCache.delete(sessionCookie);
+        }
+        // Also clear the global cache to ensure consistency
+        await clearUserCache();
 
         span.setAttribute("user.profile_updated", true);
         return {

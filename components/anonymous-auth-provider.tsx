@@ -43,8 +43,8 @@ export default function AnonymousAuthProvider({
 
         if (result.success) {
           console.log("Anonymous authentication successful:", result.message);
-          // Refresh the page to update the authentication state
-          window.location.reload();
+          // Dispatch event to notify components of authentication change
+          window.dispatchEvent(new CustomEvent("userAuthenticated"));
         } else {
           throw new Error(result.message);
         }

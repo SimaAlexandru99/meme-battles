@@ -52,8 +52,8 @@ export default function FirstTimeSetupProvider({
       }
     };
 
-    // Small delay to ensure authentication is complete
-    const timer = setTimeout(checkFirstTimeUser, 1000);
+    // Small delay to ensure authentication is complete (reduced from 1000ms)
+    const timer = setTimeout(checkFirstTimeUser, 500);
     return () => clearTimeout(timer);
   }, []);
 
