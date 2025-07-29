@@ -1,8 +1,5 @@
-"use client";
-
+import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ReactNode } from "react";
 
 interface GameCardProps {
   title: string;
@@ -12,12 +9,12 @@ interface GameCardProps {
   gradientTo: string;
   hoverShadowColor: string;
   buttonText: string;
-  buttonIcon: ReactNode;
+  buttonIcon: React.ReactNode;
   badgeText?: string;
   badgeColor?: string;
   onClick?: () => void;
   className?: string;
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 export default function GameCard({
@@ -35,15 +32,33 @@ export default function GameCard({
   className = "",
   children,
 }: GameCardProps) {
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <Card
       className={`relative border-0 shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden ${hoverShadowColor} ${className} group`}
-      onClick={onClick}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={onClick ? 0 : -1}
+      aria-label={`${title} - ${description || ""}`}
     >
       {/* Hover Badge */}
       {badgeText && (
         <div
-          className={`absolute top-4 right-4 ${badgeColor} text-white text-xs font-bold px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 shadow-lg`}
+          className={`absolute top-3 right-3 sm:top-4 sm:right-4 ${badgeColor} text-white text-xs font-bold px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 shadow-lg`}
+          aria-label={`Badge: ${badgeText}`}
         >
           {badgeText}
         </div>
@@ -56,7 +71,8 @@ export default function GameCard({
           style={{
             backgroundImage: `url('${backgroundImage}')`,
           }}
-        ></div>
+          aria-hidden="true"
+        />
       )}
 
       {/* Gradient Overlay */}
@@ -65,24 +81,25 @@ export default function GameCard({
         style={{
           opacity: backgroundImage ? 0.8 : 0.2,
         }}
-      ></div>
+        aria-hidden="true"
+      />
 
-      <CardContent className="relative h-full flex flex-col items-center justify-center p-6 gap-4 z-10">
-        <h2 className="text-3xl font-bangers text-white text-center drop-shadow-lg tracking-wider">
+      <CardContent className="relative h-full flex flex-col items-center justify-center p-4 sm:p-6 gap-3 sm:gap-4 z-10">
+        <h2 className="text-2xl sm:text-3xl font-bangers text-white text-center drop-shadow-lg tracking-wider">
           {title}
         </h2>
 
         {description && (
-          <p className="text-white/80 text-center text-sm drop-shadow-md font-bangers tracking-wide">
+          <p className="text-white/80 text-center text-xs sm:text-sm drop-shadow-md font-bangers tracking-wide">
             {description}
           </p>
         )}
 
         {children}
 
-        <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
+        <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 sm:px-4 sm:py-2 border border-white/30">
           {buttonIcon}
-          <span className="text-white font-bangers font-medium tracking-wide">
+          <span className="text-white font-bangers font-medium tracking-wide text-xs sm:text-sm">
             {buttonText}
           </span>
         </div>
