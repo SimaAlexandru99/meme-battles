@@ -13,36 +13,36 @@
 1. Each player receives **seven random meme image cards** from a pool of 800 images in `/public/memes/`.
 2. An **AI-generated situation** (e.g., "When you realize the meeting is all-you-can-eat...") is presented each round using Vercel AI SDK.
 3. Players select and submit one meme image card to match the situation.
-4. All players rate each submission anonymously using emojis (😂 = 1pt, 😄 = 2pts, 🤣 = 3pts, 🔥 = 4pts, 💯 = 5pts).
-5. The card with the highest total emoji points wins the round, and the player earns points based on their submission's total score.
+4. All players vote for their favorite meme submission (one vote per player, cannot vote for own submission).
+5. The meme with the most votes wins the round, and the player earns points based on their submission's vote count.
 6. Players draw back up to seven cards from the meme pool, and a new round begins.
 
 ### Key Features
 
 - **Random Meme Selection**: Randomly assign seven unique meme images per player from 800 images, ensuring no duplicates within a player's hand.
 - **AI Situations**: Dynamic, humorous prompts generated via Vercel AI SDK.
-- **Rating System**: Democratic scoring with emoji reactions (😂 😄 🤣 🔥 💯) worth 1-5 points each.
+- **Voting System**: Simple one-vote-per-player system where the meme with the most votes wins.
 - **Social Features**: Real-time chat and shareable winning memes.
 - **Visual Polish**: Meme-centric UI with animations and confetti effects.
 
-### 🎯 Emoji Rating System
+### 🎯 Simple Voting System
 
-Players rate submissions using five emoji reactions, each worth different points:
+Players vote for their favorite meme submission:
 
-| Emoji | Points | Meaning        |
-| ----- | ------ | -------------- |
-| 😂    | 1pt    | Slightly funny |
-| 😄    | 2pts   | Pretty good    |
-| 🤣    | 3pts   | Very funny     |
-| 🔥    | 4pts   | Hilarious      |
-| 💯    | 5pts   | Perfect match  |
+**Voting Rules:**
 
-**Scoring Logic:**
+- Each player can vote for **only one meme** per round
+- Players cannot vote for their own submission
+- The meme with the most votes wins the round
+- In case of a tie, the submission with the most unique voters wins
+- Players earn points based on their submission's vote count
 
-- Each player can rate each submission with one emoji
-- Total points = sum of all emoji reactions received
-- Winner is determined by highest total points
-- Players earn points equal to their submission's total score
+**Voting UI:**
+
+- Simple "Vote" button under each meme card
+- Visual feedback showing vote count
+- Disabled state for own submission
+- Clear indication of which meme each player voted for
 
 ## 🚀 Getting Started
 
@@ -79,8 +79,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - [ ] Develop logic to randomly select seven unique meme images from `/public/memes/` (800 images).
 - [ ] Set up AI situation generator using Vercel AI SDK.
 - [ ] Build **MemeCardSelector** for players to choose one card.
-- [ ] Develop emoji rating system (😂 😄 🤣 🔥 💯 = 1-5pts) for submitted cards.
-- [ ] Code round flow: situation → submission → rating → results → next round.
+- [ ] Develop simple voting system (one vote per player) for submitted cards.
+- [ ] Code round flow: situation → submission → voting → results → next round.
 - [ ] Implement scoreboard logic in Firestore.
 
 ### 🔹 Week 3: August 12 – August 18
@@ -116,7 +116,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 /components
   MemeCardDeck.tsx       → Displays player's 7 random meme cards
   MemeCardSelector.tsx   → Submits selected meme card
-  RatingPanel.tsx        → Emoji-based rating UI
+  VotingPanel.tsx        → Simple voting UI
   PlayerList.tsx         → Real-time player list
   Scoreboard.tsx         → Displays scores
   GameChatBox.tsx        → Real-time chat
@@ -140,7 +140,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
   - players: [{ id, name, avatar, score, cards: [memeUrl, ...] }] # 7 URLs per player
   - situation: "AI-generated text"    # E.g., "When you realize the meeting is all-you-can-eat..."
   - submissions: { playerId: memeUrl } # Selected meme card
-  - ratings: { playerId: { submissionId: emoji } } # 😂 😄 🤣 🔥 💯 (1-5pts)
+  - votes: { playerId: votedForPlayerId } # Simple vote tracking
   - status: "submitting" | "rating" | "results"
   - round: number
 
@@ -152,28 +152,28 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## 🧪 MVP Feature Checklist
 
-| Feature                         | Status |
-| ------------------------------- | ------ |
-| Firebase Auth (Google + Guest)  | ⬜️    |
-| Room creation + join            | ⬜️    |
-| Real-time room updates          | ⬜️    |
-| Random 7 meme cards (from 800)  | ⬜️    |
-| AI-generated situation          | ⬜️    |
-| Meme card submission            | ⬜️    |
-| Rating system (emoji reactions) | ⬜️    |
-| Winner display + scoring        | ⬜️    |
-| Leaderboard                     | ⬜️    |
-| Real-time chat                  | ⬜️    |
-| Mobile responsive UI            | ⬜️    |
-| Shareable meme cards            | ⬜️    |
-| Deployment (Vercel)             | ⬜️    |
+| Feature                             | Status |
+| ----------------------------------- | ------ |
+| Firebase Auth (Google + Guest)      | ⬜️    |
+| Room creation + join                | ⬜️    |
+| Real-time room updates              | ⬜️    |
+| Random 7 meme cards (from 800)      | ⬜️    |
+| AI-generated situation              | ⬜️    |
+| Meme card submission                | ⬜️    |
+| Voting system (one vote per player) | ⬜️    |
+| Winner display + scoring            | ⬜️    |
+| Leaderboard                         | ⬜️    |
+| Real-time chat                      | ⬜️    |
+| Mobile responsive UI                | ⬜️    |
+| Shareable meme cards                | ⬜️    |
+| Deployment (Vercel)                 | ⬜️    |
 
 ## 🌟 Stretch Goals
 
 - **AI Caption Suggestions**: Offer AI-generated caption hints for situations.
 - **Themed Meme Packs**: Categorize the 800 memes into themes (e.g., pop culture, animals).
 - **Custom Memes**: Allow moderated image uploads.
-- **Enhanced Emoji Reactions**: Add more reaction options beyond the core 5 emojis.
+- **Enhanced Voting**: Add voting animations and sound effects.
 - **Freestyle Mode**: Players create custom situations.
 
 ## 📋 Meme Card Selection Logic

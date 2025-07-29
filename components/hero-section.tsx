@@ -113,29 +113,29 @@ function AvatarSetupCard() {
   };
 
   return (
-    <Card className="relative w-56 h-[280px] bg-gradient-to-br from-slate-800 to-slate-700 border-0 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-lg"></div>
+    <Card className="relative w-full max-w-sm h-[280px] md:w-56 md:h-[280px] bg-transparent md:bg-gradient-to-br md:from-slate-800 md:to-slate-700 border-0 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-lg opacity-0 md:opacity-100"></div>
       <CardContent className="relative h-full flex flex-col items-center justify-center p-4 gap-4">
         {/* Avatar Section */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative">
-            <Avatar className="w-16 h-16 border-4 border-purple-400/50 shadow-lg">
+            <Avatar className="w-20 h-20 md:w-16 md:h-16 border-4 border-purple-400/50 shadow-lg">
               <AvatarImage src="/memes/Angry doge.jpg" alt="Avatar" />
-              <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white font-bold">
+              <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white font-bold text-lg md:text-base">
                 ML
               </AvatarFallback>
             </Avatar>
             <Button
               size="sm"
-              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-purple-600 hover:bg-purple-700"
+              className="absolute -bottom-1 -right-1 w-6 h-6 md:w-5 md:h-5 rounded-full bg-purple-600 hover:bg-purple-700"
             >
-              <RiEditLine className="w-2.5 h-2.5" />
+              <RiEditLine className="w-3 h-3 md:w-2.5 md:h-2.5" />
             </Button>
           </div>
 
           {/* Nickname Input */}
           <div className="flex flex-col items-center gap-2">
-            <p className="text-purple-200 text-center text-xs font-bangers font-medium tracking-wide">
+            <p className="text-purple-200 text-center text-sm md:text-xs font-bangers font-medium tracking-wide">
               Choose your meme identity
             </p>
             <div className="flex items-center gap-2">
@@ -143,17 +143,17 @@ function AvatarSetupCard() {
                 placeholder="Meme name"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-24 text-xs h-7"
+                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-28 md:w-24 text-sm md:text-xs h-8 md:h-7"
                 maxLength={20}
               />
               <Button
                 size="sm"
                 variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-600 w-5 h-5 p-0"
+                className="border-slate-600 text-slate-300 hover:bg-slate-600 w-6 h-6 md:w-5 md:h-5 p-0"
                 onClick={generateRandomName}
                 title="Generate random funny name"
               >
-                <RiDiceLine className="w-2.5 h-2.5" />
+                <RiDiceLine className="w-3 h-3 md:w-2.5 md:h-2.5" />
               </Button>
             </div>
           </div>
@@ -182,7 +182,8 @@ function Header() {
         {/* Sign In Button */}
         <Button
           variant="outline"
-          className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-sm px-3 py-1.5"
+          size="lg"
+          className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-sm px-3 py-1.5 md:text-base md:px-4 md:py-2"
         >
           <RiLoginBoxLine className="w-3 h-3 mr-1" />
           Sign In
@@ -287,13 +288,13 @@ export default function HeroSection() {
             alt="MEME BATTLES"
             width={200}
             height={80}
-            className="drop-shadow-2xl"
+            className="drop-shadow-2xl w-32 h-auto md:w-auto md:h-auto"
             priority
           />
         </div>
 
         {/* Game Cards Container */}
-        <div className="flex flex-wrap justify-center items-center gap-6">
+        <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 md:gap-6 w-full max-w-md md:max-w-none">
           {/* Meme Lord Setup Card */}
           <AvatarSetupCard />
 
@@ -309,7 +310,7 @@ export default function HeroSection() {
             buttonIcon={<RiFireLine className="w-4 h-4" />}
             badgeText="HOT"
             badgeColor="bg-red-500"
-            className="w-72 h-[400px]"
+            className="w-full max-w-sm h-[300px] md:w-72 md:h-[400px]"
           />
 
           {/* Private Meme War Card */}
@@ -324,7 +325,7 @@ export default function HeroSection() {
             buttonIcon={<RiGroupLine className="w-4 h-4" />}
             badgeText="FRIENDS"
             badgeColor="bg-green-500"
-            className="w-56 h-[280px]"
+            className="w-full max-w-sm h-[250px] md:w-56 md:h-[280px]"
           />
         </div>
 
