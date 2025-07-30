@@ -111,7 +111,7 @@ export default function AdBanner({
               const slot = googletag.defineSlot(
                 slotData.googleAdId!,
                 [160, 600],
-                slotData.containerId
+                slotData.containerId,
               );
 
               if (slot) {

@@ -17,14 +17,7 @@ import { AVATAR_OPTIONS } from "@/lib/utils";
 // Use the shared avatar options
 const ICON_AVATARS = AVATAR_OPTIONS;
 
-interface ProfilePickerProps {
-  currentAvatar?: string;
-  profileURL?: string;
-  onAvatarChange?: (avatarId: string, avatarSrc: string) => void;
-  size?: "sm" | "md" | "lg";
-  className?: string;
-  isUpdating?: boolean;
-}
+// Import types from global definitions
 
 export default function ProfilePicker({
   currentAvatar = "evil-doge",

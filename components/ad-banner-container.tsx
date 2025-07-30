@@ -1,24 +1,7 @@
 import * as React from "react";
 import AdBanner from "./ad-banner";
 
-// Import types
-declare global {
-  interface AdNetworkConfig {
-    network: "google" | "poki";
-    slotId?: string;
-    publisherId?: string;
-    enabled: boolean;
-  }
-
-  interface AdLocalizationConfig {
-    [locale: string]: AdLocalization;
-  }
-
-  interface AdLocalization {
-    removeAdsText: string;
-    locale: string;
-  }
-}
+// Import types from global definitions
 
 interface AdBannerContainerProps {
   upgradeUrl?: string;

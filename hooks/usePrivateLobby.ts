@@ -1,56 +1,5 @@
 import { useReducer, useCallback } from "react";
 
-export interface PrivateLobbyState {
-  showPrivateLobby: boolean;
-  isJoining: boolean;
-  isCreating: boolean;
-  invitationCode: string;
-  error: string | null;
-  createdLobbyCode: string | null;
-}
-
-export interface LobbyInvitation {
-  code: string; // 5-character alphanumeric
-  lobbyId: string;
-  createdBy: string;
-  createdAt: Date;
-  expiresAt: Date;
-  maxPlayers: number;
-  currentPlayers: number;
-}
-
-export interface PrivateLobby {
-  id: string;
-  invitationCode: string;
-  hostId: string;
-  players: Player[];
-  status: "waiting" | "starting" | "in-progress" | "completed";
-  createdAt: Date;
-  settings: {
-    maxPlayers: number;
-    gameMode: string;
-    timeLimit: number;
-  };
-}
-
-export interface Player {
-  id: string;
-  nickname: string;
-  avatarId: string;
-  profileURL?: string;
-  isHost: boolean;
-  joinedAt: Date;
-}
-
-export type LobbyError =
-  | "INVALID_CODE"
-  | "LOBBY_NOT_FOUND"
-  | "LOBBY_FULL"
-  | "LOBBY_EXPIRED"
-  | "NETWORK_ERROR"
-  | "CREATION_FAILED"
-  | "PERMISSION_DENIED";
-
 const initialState: PrivateLobbyState = {
   showPrivateLobby: false,
   isJoining: false,
@@ -72,7 +21,7 @@ type Action =
 
 function privateLobbyReducer(
   state: PrivateLobbyState,
-  action: Action
+  action: Action,
 ): PrivateLobbyState {
   switch (action.type) {
     case "SHOW_LOBBY":
@@ -101,19 +50,19 @@ export function usePrivateLobby() {
 
   const showPrivateLobby = useCallback(
     () => dispatch({ type: "SHOW_LOBBY" }),
-    []
+    [],
   );
   const hidePrivateLobby = useCallback(
     () => dispatch({ type: "HIDE_LOBBY" }),
-    []
+    [],
   );
   const setInvitationCode = useCallback(
     (code: string) => dispatch({ type: "SET_INVITATION_CODE", payload: code }),
-    []
+    [],
   );
   const setError = useCallback(
     (error: string | null) => dispatch({ type: "SET_ERROR", payload: error }),
-    []
+    [],
   );
 
   const joinLobby = useCallback(async (code: string): Promise<void> => {

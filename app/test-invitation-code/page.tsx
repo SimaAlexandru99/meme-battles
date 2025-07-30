@@ -95,7 +95,7 @@ export default function TestInvitationCodePage() {
     let result = "";
     for (let i = 0; i < 5; i++) {
       result += characters.charAt(
-        Math.floor(Math.random() * characters.length)
+        Math.floor(Math.random() * characters.length),
       );
     }
 

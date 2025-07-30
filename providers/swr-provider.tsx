@@ -1,11 +1,8 @@
 "use client";
 
 import { SWRConfig } from "swr";
-import { ReactNode } from "react";
 
-interface SWRProviderProps {
-  children: ReactNode;
-}
+// Import types from global definitions
 
 export function SWRProvider({ children }: SWRProviderProps) {
   return (

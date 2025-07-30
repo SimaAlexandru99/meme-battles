@@ -181,6 +181,7 @@ export function PrivateLobbySection({
       className={cn(
         "w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
         "flex flex-col items-center gap-8 sm:gap-12",
+        "min-h-full py-8 sm:py-12", // Add padding to ensure button is clickable
         className
       )}
       role="main"
@@ -189,7 +190,7 @@ export function PrivateLobbySection({
       {/* Back Navigation Button */}
       <motion.div
         variants={lobbySectionVariants}
-        className="w-full flex justify-start"
+        className="w-full flex justify-start  sticky top-0 z-20" // Make it sticky and ensure it's always accessible
       >
         <Button
           ref={backButtonRef}
@@ -205,7 +206,10 @@ export function PrivateLobbySection({
             "transition-all duration-300",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "focus-visible:ring-2 focus-visible:ring-purple-500/50",
-            "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+            "z-10 relative", // Ensure button is above other elements
+            "min-h-[48px] min-w-[160px]", // Ensure minimum touch target size
+            "cursor-pointer" // Explicitly set cursor
           )}
           aria-label="Navigate back to main menu"
           aria-describedby="back-button-description"

@@ -141,11 +141,11 @@ export default function HowToPlay() {
   }, [api]);
 
   return (
-    <section className="py-16 bg-gradient-to-b from-background via-background to-muted/20 relative overflow-hidden">
+    <section className="py-16 pb-32 bg-gradient-to-b from-background via-background to-muted/20 relative overflow-hidden mt-20 sm:mt-24 xl:mt-28">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
 
-      <div className="container mx-auto px-4 relative">
+      <div className="container mx-auto px-4 xl:px-8 relative z-10">
         {/* Tutorial Section */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 mb-4">
@@ -165,7 +165,7 @@ export default function HowToPlay() {
         </div>
 
         {/* Tutorial Carousel */}
-        <div className="max-w-6xl mx-auto mb-16">
+        <div className="max-w-6xl mx-auto mb-16 xl:mb-20">
           <Carousel
             setApi={setApi}
             className="w-full"
@@ -178,7 +178,7 @@ export default function HowToPlay() {
               {tutorialSteps.map((step) => (
                 <CarouselItem
                   key={step.id}
-                  className="md:basis-1/2 lg:basis-1/3"
+                  className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3"
                 >
                   <Card className="h-full border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group">
                     <CardHeader className="text-center">
@@ -222,7 +222,7 @@ export default function HowToPlay() {
         </div>
 
         {/* FAQ Section */}
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto xl:mb-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
               <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />

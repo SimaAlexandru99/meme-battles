@@ -95,7 +95,7 @@ describe("Firebase Tests", () => {
     const snapshot = createMockDocumentSnapshot(
       { name: "Test", value: 123 },
       "test-doc-id",
-      true
+      true,
     );
     expect(snapshot.exists()).toBe(true);
     expect(snapshot.data()).toEqual({ name: "Test", value: 123 });

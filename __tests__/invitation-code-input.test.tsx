@@ -67,7 +67,7 @@ describe("InvitationCodeInput", () => {
         value=""
         onChange={mockOnChange}
         onComplete={mockOnComplete}
-      />
+      />,
     );
 
     expect(screen.getByTestId("input-otp")).toBeInTheDocument();
@@ -80,11 +80,11 @@ describe("InvitationCodeInput", () => {
         value=""
         onChange={mockOnChange}
         onComplete={mockOnComplete}
-      />
+      />,
     );
 
     expect(
-      screen.getByText("Enter 5-character invitation code")
+      screen.getByText("Enter 5-character invitation code"),
     ).toBeInTheDocument();
   });
 
@@ -95,7 +95,7 @@ describe("InvitationCodeInput", () => {
         onChange={mockOnChange}
         onComplete={mockOnComplete}
         error={true}
-      />
+      />,
     );
 
     expect(screen.getByText("Invalid invitation code")).toBeInTheDocument();
@@ -108,7 +108,7 @@ describe("InvitationCodeInput", () => {
         onChange={mockOnChange}
         onComplete={mockOnComplete}
         className="custom-class"
-      />
+      />,
     );
 
     expect(container.firstChild).toHaveClass("custom-class");
@@ -120,7 +120,7 @@ describe("InvitationCodeInput", () => {
         value=""
         onChange={mockOnChange}
         onComplete={mockOnComplete}
-      />
+      />,
     );
 
     // Check that 5 slots are rendered

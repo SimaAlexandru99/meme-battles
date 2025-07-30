@@ -9,7 +9,7 @@ import { updateUserDisplayName } from "@/lib/actions/auth.action";
  */
 export function useUpdateDisplayName(
   delay: number = 1000,
-  refreshUser?: () => void
+  refreshUser?: () => void,
 ) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -41,7 +41,7 @@ export function useUpdateDisplayName(
         }
       }, delay);
     },
-    [delay, refreshUser]
+    [delay, refreshUser],
   );
 
   return { updateDisplayName, isUpdating };

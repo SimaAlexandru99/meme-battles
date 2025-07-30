@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth as adminAuth, db as adminDb } from "@/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as Sentry from "@sentry/nextjs";
-import { getUserDisplayName } from "@/lib/actions/auth.action";
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   return Sentry.startSpan(
     {
       op: "http.server",
-      name: "POST /api/lobby/join",
+      name: "POST /api/lobby/[code]/start",
     },
     async () => {
       try {
-        const { invitationCode } = await request.json();
+        const { code } = await params;
 
         // Validate invitation code
-        if (!invitationCode || typeof invitationCode !== "string") {
+        if (!code || typeof code !== "string") {
           return NextResponse.json(
             { error: "Invalid invitation code" },
             { status: 400 }
@@ -23,9 +25,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Normalize invitation code (uppercase, alphanumeric only)
-        const normalizedCode = invitationCode
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .toUpperCase();
+        const normalizedCode = code.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
         if (normalizedCode.length !== 5) {
           return NextResponse.json(
@@ -76,25 +76,23 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Check if lobby is full (max 8 players)
-        if (lobbyData.players && lobbyData.players.length >= 8) {
-          return NextResponse.json({ error: "Lobby is full" }, { status: 409 });
-        }
-
-        // Check if user is already in the lobby
-        if (
-          lobbyData.players &&
-          lobbyData.players.some(
-            (player: { uid: string }) => player.uid === decodedToken.uid
-          )
-        ) {
+        // Check if user is the host
+        if (lobbyData.hostUid !== decodedToken.uid) {
           return NextResponse.json(
-            { error: "You are already in this lobby" },
-            { status: 409 }
+            { error: "Only the host can start the game" },
+            { status: 403 }
           );
         }
 
-        // Check if lobby has started
+        // Check if lobby has enough players (minimum 2)
+        if (!lobbyData.players || lobbyData.players.length < 2) {
+          return NextResponse.json(
+            { error: "Need at least 2 players to start the game" },
+            { status: 400 }
+          );
+        }
+
+        // Check if game has already started
         if (lobbyData.status === "started") {
           return NextResponse.json(
             { error: "Game has already started" },
@@ -102,44 +100,22 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Get user display name from database
-        const userDisplayName = await getUserDisplayName(decodedToken.uid);
-
-        // Get user profile data
-        const userDoc = await adminDb
-          .collection("users")
-          .doc(decodedToken.uid)
-          .get();
-        const userData = userDoc.exists ? userDoc.data() : null;
-        const profileURL = userData?.profileURL || null;
-
-        // Add user to lobby
-        const playerData = {
-          uid: decodedToken.uid,
-          displayName: userDisplayName,
-          profileURL: profileURL,
-          joinedAt: new Date(),
-          isHost: false,
-        };
-
+        // Update lobby status to started
         await lobbyRef.update({
-          players: FieldValue.arrayUnion(playerData),
+          status: "started",
           updatedAt: FieldValue.serverTimestamp(),
+          gameStartedAt: FieldValue.serverTimestamp(),
         });
 
         return NextResponse.json({
           success: true,
-          lobby: {
-            code: normalizedCode,
-            ...lobbyData,
-            players: [...(lobbyData.players || []), playerData],
-          },
+          message: "Game started successfully",
         });
       } catch (error) {
         Sentry.captureException(error);
-        console.error("Error joining lobby:", error);
+        console.error("Error starting game:", error);
         return NextResponse.json(
-          { error: "Failed to join lobby" },
+          { error: "Failed to start game" },
           { status: 500 }
         );
       }

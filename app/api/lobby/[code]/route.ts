@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth as adminAuth, db as adminDb } from "@/firebase/admin";
-import { FieldValue } from "firebase-admin/firestore";
 import * as Sentry from "@sentry/nextjs";
-import { getUserDisplayName } from "@/lib/actions/auth.action";
 
-export async function POST(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
   return Sentry.startSpan(
     {
       op: "http.server",
-      name: "POST /api/lobby/join",
+      name: "GET /api/lobby/[code]",
     },
     async () => {
       try {
-        const { invitationCode } = await request.json();
+        const { code } = await params;
 
         // Validate invitation code
-        if (!invitationCode || typeof invitationCode !== "string") {
+        if (!code || typeof code !== "string") {
           return NextResponse.json(
             { error: "Invalid invitation code" },
             { status: 400 }
@@ -23,9 +24,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Normalize invitation code (uppercase, alphanumeric only)
-        const normalizedCode = invitationCode
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .toUpperCase();
+        const normalizedCode = code.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
         if (normalizedCode.length !== 5) {
           return NextResponse.json(
@@ -76,70 +75,47 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Check if lobby is full (max 8 players)
-        if (lobbyData.players && lobbyData.players.length >= 8) {
-          return NextResponse.json({ error: "Lobby is full" }, { status: 409 });
-        }
-
-        // Check if user is already in the lobby
-        if (
+        // Check if user is in the lobby
+        const isUserInLobby =
           lobbyData.players &&
           lobbyData.players.some(
             (player: { uid: string }) => player.uid === decodedToken.uid
-          )
-        ) {
+          );
+
+        if (!isUserInLobby) {
           return NextResponse.json(
-            { error: "You are already in this lobby" },
-            { status: 409 }
+            { error: "You are not a member of this lobby" },
+            { status: 403 }
           );
         }
 
-        // Check if lobby has started
-        if (lobbyData.status === "started") {
-          return NextResponse.json(
-            { error: "Game has already started" },
-            { status: 409 }
-          );
-        }
+        // Convert Firestore Timestamps to serializable objects
+        const serializedPlayers = lobbyData.players.map((player: any) => ({
+          ...player,
+          joinedAt:
+            player.joinedAt &&
+            typeof player.joinedAt === "object" &&
+            "toDate" in player.joinedAt
+              ? player.joinedAt.toDate().toISOString()
+              : player.joinedAt instanceof Date
+                ? player.joinedAt.toISOString()
+                : player.joinedAt,
+        }));
 
-        // Get user display name from database
-        const userDisplayName = await getUserDisplayName(decodedToken.uid);
-
-        // Get user profile data
-        const userDoc = await adminDb
-          .collection("users")
-          .doc(decodedToken.uid)
-          .get();
-        const userData = userDoc.exists ? userDoc.data() : null;
-        const profileURL = userData?.profileURL || null;
-
-        // Add user to lobby
-        const playerData = {
-          uid: decodedToken.uid,
-          displayName: userDisplayName,
-          profileURL: profileURL,
-          joinedAt: new Date(),
-          isHost: false,
+        const serializedLobby = {
+          ...lobbyData,
+          players: serializedPlayers,
         };
-
-        await lobbyRef.update({
-          players: FieldValue.arrayUnion(playerData),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
 
         return NextResponse.json({
           success: true,
-          lobby: {
-            code: normalizedCode,
-            ...lobbyData,
-            players: [...(lobbyData.players || []), playerData],
-          },
+          lobby: serializedLobby,
         });
       } catch (error) {
         Sentry.captureException(error);
-        console.error("Error joining lobby:", error);
+        console.error("Error fetching lobby:", error);
         return NextResponse.json(
-          { error: "Failed to join lobby" },
+          { error: "Failed to fetch lobby" },
           { status: 500 }
         );
       }

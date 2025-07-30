@@ -1,84 +1,37 @@
 import * as Sentry from "@sentry/nextjs";
-import { auth } from "@/firebase/client";
-
-export interface LobbyPlayer {
-  uid: string;
-  displayName: string;
-  joinedAt: Date; // Date object
-  isHost: boolean;
-}
-
-export interface LobbySettings {
-  rounds: number;
-  timeLimit: number;
-  categories: string[];
-}
-
-export interface Lobby {
-  code: string;
-  hostUid: string;
-  hostDisplayName: string;
-  status: "waiting" | "started" | "finished";
-  maxPlayers: number;
-  players: LobbyPlayer[];
-  createdAt: Date | FirebaseFirestore.Timestamp; // Can be either Date or Firestore timestamp
-  updatedAt: Date | FirebaseFirestore.Timestamp; // Can be either Date or Firestore timestamp
-  settings: LobbySettings;
-}
-
-export interface JoinLobbyResponse {
-  success: boolean;
-  lobby: Lobby;
-}
-
-export interface CreateLobbyResponse {
-  success: boolean;
-  lobby: Lobby;
-}
-
-export interface ApiError {
-  error: string;
-}
+import {
+  createLobby,
+  joinLobby,
+  getLobbyData,
+  startGame,
+  leaveLobby,
+} from "@/lib/actions";
 
 /**
  * Joins a lobby with the given invitation code
  * @param invitationCode - The 5-character invitation code
  * @returns Promise with lobby data or error
  */
-export async function joinLobby(
+export async function joinLobbyService(
   invitationCode: string
 ): Promise<JoinLobbyResponse> {
   return Sentry.startSpan(
     {
-      op: "http.client",
-      name: `POST /api/lobby/join`,
+      op: "ui.action",
+      name: `Join Lobby Service`,
     },
     async () => {
       try {
-        // Get the current user's ID token
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          throw new Error("Authentication required");
+        const response = await joinLobby(invitationCode);
+
+        if (response.success && response.lobby) {
+          return {
+            success: true,
+            lobby: response.lobby,
+          } as unknown as JoinLobbyResponse;
+        } else {
+          throw new Error("Failed to join lobby");
         }
-
-        const idToken = await currentUser.getIdToken();
-
-        const response = await fetch("/api/lobby/join", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({ invitationCode }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to join lobby");
-        }
-
-        return data as JoinLobbyResponse;
       } catch (error) {
         Sentry.captureException(error);
         throw error;
@@ -91,37 +44,123 @@ export async function joinLobby(
  * Creates a new lobby and returns the invitation code
  * @returns Promise with lobby data or error
  */
-export async function createLobby(): Promise<CreateLobbyResponse> {
+export async function createLobbyService(): Promise<CreateLobbyResponse> {
   return Sentry.startSpan(
     {
-      op: "http.client",
-      name: `POST /api/lobby/create`,
+      op: "ui.action",
+      name: `Create Lobby Service`,
     },
     async () => {
       try {
-        // Get the current user's ID token
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          throw new Error("Authentication required");
+        const response = await createLobby();
+
+        if (response.success && response.lobby) {
+          return {
+            success: true,
+            lobby: response.lobby,
+          } as unknown as CreateLobbyResponse;
+        } else {
+          throw new Error("Failed to create lobby");
         }
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
 
-        const idToken = await currentUser.getIdToken();
+/**
+ * Gets lobby data by invitation code
+ * @param invitationCode - The 5-character invitation code
+ * @returns Promise with lobby data or error
+ */
+export async function getLobbyDataService(
+  invitationCode: string
+): Promise<{ success: boolean; lobby: Lobby }> {
+  return Sentry.startSpan(
+    {
+      op: "ui.action",
+      name: `Get Lobby Data Service`,
+    },
+    async () => {
+      try {
+        const response = await getLobbyData(invitationCode);
 
-        const response = await fetch("/api/lobby/create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to create lobby");
+        if (response.success && response.lobby) {
+          return {
+            success: true,
+            lobby: response.lobby,
+          } as unknown as { success: boolean; lobby: Lobby };
+        } else {
+          throw new Error("Failed to get lobby data");
         }
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
 
-        return data as CreateLobbyResponse;
+/**
+ * Starts a game in the lobby (host only)
+ * @param invitationCode - The 5-character invitation code
+ * @returns Promise with updated lobby data or error
+ */
+export async function startGameService(
+  invitationCode: string
+): Promise<{ success: boolean; lobby: Lobby }> {
+  return Sentry.startSpan(
+    {
+      op: "ui.action",
+      name: `Start Game Service`,
+    },
+    async () => {
+      try {
+        const response = await startGame(invitationCode);
+
+        if (response.success && response.lobby) {
+          return {
+            success: true,
+            lobby: response.lobby,
+          } as unknown as { success: boolean; lobby: Lobby };
+        } else {
+          throw new Error("Failed to start game");
+        }
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Leaves a lobby
+ * @param invitationCode - The 5-character invitation code
+ * @returns Promise with success response or error
+ */
+export async function leaveLobbyService(
+  invitationCode: string
+): Promise<{ success: boolean; message: string }> {
+  return Sentry.startSpan(
+    {
+      op: "ui.action",
+      name: `Leave Lobby Service`,
+    },
+    async () => {
+      try {
+        const response = await leaveLobby(invitationCode);
+
+        if (response.success) {
+          return {
+            success: true,
+            message: response.message || "Successfully left the lobby",
+          };
+        } else {
+          throw new Error("Failed to leave lobby");
+        }
       } catch (error) {
         Sentry.captureException(error);
         throw error;

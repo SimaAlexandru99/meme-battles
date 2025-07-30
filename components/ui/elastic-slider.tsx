@@ -147,7 +147,7 @@ const Slider: React.FC<SliderProps> = ({
           }}
           style={{
             x: useTransform(() =>
-              region === "left" ? -overflow.get() / scale.get() : 0
+              region === "left" ? -overflow.get() / scale.get() : 0,
             ),
           }}
         >
@@ -201,7 +201,7 @@ const Slider: React.FC<SliderProps> = ({
           }}
           style={{
             x: useTransform(() =>
-              region === "right" ? overflow.get() / scale.get() : 0
+              region === "right" ? overflow.get() / scale.get() : 0,
             ),
           }}
         >

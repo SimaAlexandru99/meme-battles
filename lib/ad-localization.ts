@@ -3,17 +3,7 @@
  * Provides default text fallbacks and multi-language support for advertisement components
  */
 
-// Import types
-declare global {
-  interface AdLocalization {
-    removeAdsText: string;
-    locale: string;
-  }
-
-  interface AdLocalizationConfig {
-    [locale: string]: AdLocalization;
-  }
-}
+// Import types from global definitions
 
 // Default localization configurations for supported languages
 export const defaultAdLocalizations: AdLocalizationConfig = {
@@ -55,7 +45,7 @@ export const defaultAdLocalizations: AdLocalizationConfig = {
  */
 export function getAdLocalization(
   locale: string = "en",
-  customLocalizations?: AdLocalizationConfig,
+  customLocalizations?: AdLocalizationConfig
 ): AdLocalization {
   // Check custom localizations first
   if (customLocalizations && customLocalizations[locale]) {
@@ -81,7 +71,7 @@ export function getAdLocalization(
 export function getRemoveAdsText(
   locale?: string,
   customText?: string,
-  customLocalizations?: AdLocalizationConfig,
+  customLocalizations?: AdLocalizationConfig
 ): string {
   // If custom text is provided, use it directly
   if (customText) {

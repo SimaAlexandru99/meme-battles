@@ -13,7 +13,7 @@ describe("Utils", () => {
 
     it("handles conditional classes", () => {
       expect(cn("base", true && "conditional", false && "not-included")).toBe(
-        "base conditional"
+        "base conditional",
       );
     });
 
@@ -27,7 +27,7 @@ describe("Utils", () => {
 
     it("handles objects with conditional classes", () => {
       expect(cn("base", { conditional: true, "not-included": false })).toBe(
-        "base conditional"
+        "base conditional",
       );
     });
 
@@ -37,7 +37,7 @@ describe("Utils", () => {
 
     it("handles mixed types", () => {
       expect(
-        cn("base", "class1", { conditional: true }, ["array1", "array2"])
+        cn("base", "class1", { conditional: true }, ["array1", "array2"]),
       ).toBe("base class1 conditional array1 array2");
     });
   });

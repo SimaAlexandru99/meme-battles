@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth as adminAuth, db as adminDb } from "@/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as Sentry from "@sentry/nextjs";
+import { getUserDisplayName } from "@/lib/actions/auth.action";
 
 /**
  * Generates a random 5-character alphanumeric invitation code
@@ -73,17 +74,29 @@ export async function POST(request: NextRequest) {
         // Generate unique invitation code
         const invitationCode = await generateUniqueInvitationCode();
 
+        // Get user display name from database
+        const userDisplayName = await getUserDisplayName(decodedToken.uid);
+
+        // Get user profile data
+        const userDoc = await adminDb
+          .collection("users")
+          .doc(decodedToken.uid)
+          .get();
+        const userData = userDoc.exists ? userDoc.data() : null;
+        const profileURL = userData?.profileURL || null;
+
         // Create lobby data
         const lobbyData = {
           code: invitationCode,
           hostUid: decodedToken.uid,
-          hostDisplayName: decodedToken.name || "Anonymous Host",
+          hostDisplayName: userDisplayName,
           status: "waiting", // waiting, started, finished
           maxPlayers: 8,
           players: [
             {
               uid: decodedToken.uid,
-              displayName: decodedToken.name || "Anonymous Host",
+              displayName: userDisplayName,
+              profileURL: profileURL,
               joinedAt: new Date(),
               isHost: true,
             },

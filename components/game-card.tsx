@@ -44,18 +44,21 @@ export default function GameCard({
   const cardRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLDivElement>(null);
 
-  const handleClick = () => {
+  const handleClick = React.useCallback(() => {
     if (onClick) {
       onClick();
     }
-  };
+  }, [onClick]);
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleClick();
-    }
-  };
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick]
+  );
 
   // Announce card interaction to screen readers
   const handleCardInteraction = React.useCallback(() => {

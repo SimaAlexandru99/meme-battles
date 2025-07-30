@@ -2,20 +2,7 @@
 
 import { auth, db } from "@/firebase/admin";
 
-// Import types
-declare global {
-  interface SignInParams {
-    email: string;
-    idToken: string;
-  }
-
-  interface SignUpParams {
-    uid: string;
-    name: string;
-    email: string;
-    password: string;
-  }
-}
+// Import types from global definitions
 import { cookies } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
 import { getRandomAvatar } from "@/lib/utils";
@@ -862,6 +849,111 @@ export async function updateUserProfile(updates: {
           success: false,
           message: "Failed to update profile. Please try again.",
         };
+      }
+    }
+  );
+}
+
+export async function getUserDisplayName(uid: string): Promise<string> {
+  try {
+    const userDoc = await db.collection("users").doc(uid).get();
+
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      return userData?.name || "Anonymous Player";
+    }
+
+    return "Anonymous Player";
+  } catch (error) {
+    console.error("Error fetching user display name:", error);
+    return "Anonymous Player";
+  }
+}
+
+/**
+ * Checks if a user is currently in an active game lobby
+ * @param uid - User ID to check
+ * @returns Active lobby data or null if not in any lobby
+ */
+export async function getUserActiveLobby(uid: string) {
+  return Sentry.startSpan(
+    {
+      op: "db.query",
+      name: "Get User Active Lobby",
+    },
+    async (span) => {
+      try {
+        span.setAttribute("user.uid", uid);
+
+        // Query lobbies where status is not finished
+        const lobbiesRef = db.collection("lobbies");
+        const query = lobbiesRef.where("status", "in", ["waiting", "started"]);
+
+        const snapshot = await query.get();
+
+        if (snapshot.empty) {
+          span.setAttribute("lobby.found", false);
+          return null;
+        }
+
+        // Find the lobby where the user is a player
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let userLobby: any = null;
+        for (const doc of snapshot.docs) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const lobbyData = doc.data() as any;
+          const players = lobbyData.players || [];
+
+          // Check if user is in the players array
+          const isPlayer = players.some(
+            (player: { uid: string }) => player.uid === uid
+          );
+
+          if (isPlayer) {
+            userLobby = {
+              ...lobbyData,
+              id: doc.id,
+            };
+            break;
+          }
+        }
+
+        if (!userLobby) {
+          span.setAttribute("lobby.found", false);
+          return null;
+        }
+
+        // Convert Firestore Timestamps to serializable objects
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const serializedPlayers = userLobby.players.map((player: any) => ({
+          ...player,
+          joinedAt:
+            player.joinedAt &&
+            typeof player.joinedAt === "object" &&
+            "toDate" in player.joinedAt
+              ? player.joinedAt.toDate().toISOString()
+              : player.joinedAt instanceof Date
+                ? player.joinedAt.toISOString()
+                : player.joinedAt,
+        }));
+
+        const serializedLobby = {
+          code: userLobby.code,
+          status: userLobby.status,
+          hostUid: userLobby.hostUid,
+          players: serializedPlayers,
+          settings: userLobby.settings,
+        };
+
+        span.setAttribute("lobby.found", true);
+        span.setAttribute("lobby.code", userLobby.code);
+        span.setAttribute("lobby.status", userLobby.status);
+
+        return serializedLobby;
+      } catch (error) {
+        Sentry.captureException(error);
+        console.error("Error checking user active lobby:", error);
+        return null;
       }
     }
   );

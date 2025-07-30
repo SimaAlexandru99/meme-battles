@@ -1,4 +1,3 @@
-
 import useSWR from "swr";
 import { getCurrentUser } from "@/lib/actions/auth.action";
 

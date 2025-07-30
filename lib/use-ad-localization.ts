@@ -4,12 +4,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { getRemoveAdsText, detectBrowserLocale } from "./ad-localization";
 
-interface UseAdLocalizationOptions {
-  locale?: string;
-  removeAdsText?: string;
-  customLocalizations?: AdLocalizationConfig;
-}
-
 /**
  * Hook for SSR-safe advertisement localization
  * Prevents hydration mismatches by using consistent server/client rendering

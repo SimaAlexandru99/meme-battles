@@ -2,25 +2,8 @@
 
 import { useState, useEffect } from "react";
 
-// Import User type
-declare global {
-  interface User {
-    name: string;
-    email: string | null;
-    id: string;
-    provider: string;
-    role: string;
-    profileURL?: string;
-    avatarId?: string;
-    isAnonymous?: boolean;
-    setupCompleted?: boolean;
-    createdAt: string;
-    lastLoginAt: string;
-    xp: number;
-    plan: "free" | "pro";
-  }
-}
-import { isFirstTimeUser, isAnonymousUser } from "@/lib/actions/auth.action";
+// Import types from global definitions
+import { isFirstTimeUser } from "@/lib/actions/auth.action";
 import { useCurrentUser, useIsAnonymous } from "@/hooks/useCurrentUser";
 import FirstTimeSetupDialog from "./first-time-setup-dialog";
 import * as Sentry from "@sentry/nextjs";

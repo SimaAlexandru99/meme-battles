@@ -67,7 +67,7 @@ describe("Animation System", () => {
       render(
         <motion.div variants={cardExitVariants} custom={0}>
           Test Content
-        </motion.div>
+        </motion.div>,
       );
 
       const motionDiv = screen.getByTestId("motion-div");
@@ -77,7 +77,7 @@ describe("Animation System", () => {
 
     test("motion.button should render with button variants", () => {
       render(
-        <motion.button variants={buttonVariants}>Test Button</motion.button>
+        <motion.button variants={buttonVariants}>Test Button</motion.button>,
       );
 
       const motionButton = screen.getByTestId("motion-button");

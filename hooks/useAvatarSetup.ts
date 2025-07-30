@@ -4,19 +4,6 @@ import { useUpdateDisplayName } from "@/hooks/useUpdateDisplayName";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-interface AvatarState {
-  nickname: string;
-  currentAvatar: string;
-  profileURL?: string;
-  isLoading: boolean;
-}
-
-type AvatarAction =
-  | { type: "SET_NICKNAME"; payload: string }
-  | { type: "SET_CURRENT_AVATAR"; payload: string }
-  | { type: "SET_PROFILE_URL"; payload: string | undefined }
-  | { type: "SET_IS_LOADING"; payload: boolean };
-
 const initialState: AvatarState = {
   nickname: "MemeLord",
   currentAvatar: "evil-doge",
@@ -56,7 +43,7 @@ export function useAvatarSetup(initialUserData?: User | null) {
   } = useCurrentUser(initialUserData);
   const { updateDisplayName, isUpdating } = useUpdateDisplayName(
     1500,
-    refreshUser
+    refreshUser,
   );
   const { updateAvatar, isUpdatingAvatar } = useUpdateProfile();
 
@@ -131,7 +118,7 @@ export function useAvatarSetup(initialUserData?: User | null) {
         updateDisplayName(value.trim());
       }
     },
-    [updateDisplayName]
+    [updateDisplayName],
   );
 
   const handleAvatarChange = useCallback(
@@ -150,7 +137,7 @@ export function useAvatarSetup(initialUserData?: User | null) {
         throw error;
       }
     },
-    [refreshUser, updateAvatar]
+    [refreshUser, updateAvatar],
   );
 
   return {

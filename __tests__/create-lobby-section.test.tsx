@@ -11,21 +11,24 @@ describe("CreateLobbySection", () => {
 
   it("renders correctly with all required elements", () => {
     render(
-      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={false} />
+      <CreateLobbySection
+        onCreateLobby={mockOnCreateLobby}
+        isLoading={false}
+      />,
     );
 
     // Check for English text
     expect(screen.getByText("Create a private lobby")).toBeInTheDocument();
     expect(
-      screen.getByText("Create a lobby and invite your friends")
+      screen.getByText("Create a lobby and invite your friends"),
     ).toBeInTheDocument();
     expect(screen.getByText("CREATE MY LOBBY")).toBeInTheDocument();
 
     // Check for helper text
     expect(
       screen.getByText(
-        "You will receive an invitation code that you can send to friends"
-      )
+        "You will receive an invitation code that you can send to friends",
+      ),
     ).toBeInTheDocument();
 
     // Check for visual elements (by checking for specific classes or structure)
@@ -40,7 +43,10 @@ describe("CreateLobbySection", () => {
     mockOnCreateLobby.mockResolvedValue("ABC12");
 
     render(
-      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={false} />
+      <CreateLobbySection
+        onCreateLobby={mockOnCreateLobby}
+        isLoading={false}
+      />,
     );
 
     const button = screen.getByRole("button", {
@@ -55,7 +61,7 @@ describe("CreateLobbySection", () => {
 
   it("shows loading state when isLoading is true", () => {
     render(
-      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={true} />
+      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={true} />,
     );
 
     const button = screen.getByRole("button");
@@ -71,7 +77,10 @@ describe("CreateLobbySection", () => {
     mockOnCreateLobby.mockReturnValue(promise);
 
     render(
-      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={false} />
+      <CreateLobbySection
+        onCreateLobby={mockOnCreateLobby}
+        isLoading={false}
+      />,
     );
 
     const button = screen.getByRole("button", {
@@ -102,13 +111,13 @@ describe("CreateLobbySection", () => {
         onCreateLobby={mockOnCreateLobby}
         isLoading={false}
         createdCode="ABC12"
-      />
+      />,
     );
 
     expect(screen.getByText("Your invitation code:")).toBeInTheDocument();
     expect(screen.getByText("ABC12")).toBeInTheDocument();
     expect(
-      screen.getByText("Send this code to your friends!")
+      screen.getByText("Send this code to your friends!"),
     ).toBeInTheDocument();
   });
 
@@ -119,7 +128,10 @@ describe("CreateLobbySection", () => {
     mockOnCreateLobby.mockRejectedValue(new Error("Network error"));
 
     render(
-      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={false} />
+      <CreateLobbySection
+        onCreateLobby={mockOnCreateLobby}
+        isLoading={false}
+      />,
     );
 
     const button = screen.getByRole("button", {
@@ -130,7 +142,7 @@ describe("CreateLobbySection", () => {
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
         "Failed to create lobby:",
-        expect.any(Error)
+        expect.any(Error),
       );
     });
 
@@ -145,7 +157,10 @@ describe("CreateLobbySection", () => {
     mockOnCreateLobby.mockReturnValue(promise);
 
     render(
-      <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={false} />
+      <CreateLobbySection
+        onCreateLobby={mockOnCreateLobby}
+        isLoading={false}
+      />,
     );
 
     const button = screen.getByRole("button", {
@@ -174,7 +189,7 @@ describe("CreateLobbySection", () => {
         onCreateLobby={mockOnCreateLobby}
         isLoading={false}
         className="custom-class"
-      />
+      />,
     );
 
     expect(container.firstChild).toHaveClass("custom-class");

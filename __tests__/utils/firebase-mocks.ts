@@ -54,7 +54,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
  * Creates a mock anonymous Firebase user
  */
 function createMockAnonymousUserForFirebase(
-  overrides: Partial<User> = {}
+  overrides: Partial<User> = {},
 ): User {
   return createMockUser({
     uid: "anonymous-user-123",
@@ -84,7 +84,7 @@ export const mockFirebaseAuth = {
     mockFirebaseAuth.currentUser = user;
     // Simulate auth state change callback
     const callbacks = mockFirebaseAuth.onAuthStateChanged.mock.calls.map(
-      (call) => call[0]
+      (call) => call[0],
     );
     callbacks.forEach((callback) => callback(user));
   },
@@ -100,7 +100,7 @@ export const mockFirebaseAuth = {
 export function createMockDocumentSnapshot(
   data: DocumentData | null = null,
   id: string = "mock-doc-id",
-  exists: boolean = true
+  exists: boolean = true,
 ): DocumentSnapshot {
   return {
     id,
@@ -121,7 +121,7 @@ export function createMockDocumentSnapshot(
  */
 export function createMockQuerySnapshot(
   docs: DocumentSnapshot[] = [],
-  empty: boolean = docs.length === 0
+  empty: boolean = docs.length === 0,
 ): QuerySnapshot {
   return {
     docs,
@@ -157,13 +157,13 @@ export const mockFirestore = {
   // Helper methods for testing
   mockGetDoc: (data: DocumentData | null, exists: boolean = true) => {
     mockFirestore.getDoc.mockResolvedValue(
-      createMockDocumentSnapshot(data, "mock-doc-id", exists)
+      createMockDocumentSnapshot(data, "mock-doc-id", exists),
     );
   },
 
   mockGetDocs: (docsData: DocumentData[]) => {
     const docs = docsData.map((data, index) =>
-      createMockDocumentSnapshot(data, `doc-${index}`, true)
+      createMockDocumentSnapshot(data, `doc-${index}`, true),
     );
     mockFirestore.getDocs.mockResolvedValue(createMockQuerySnapshot(docs));
   },

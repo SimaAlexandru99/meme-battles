@@ -1,22 +1,10 @@
 import * as React from "react";
-import { joinLobby, createLobby } from "@/lib/services/lobby.service";
+import { createLobby, joinLobby } from "@/lib/actions";
 import * as Sentry from "@sentry/nextjs";
-
-interface LobbyState {
-  isLoading: boolean;
-  error: string | null;
-  createdLobbyCode: string | null;
-  joinSuccess: boolean;
-}
-
-interface UseLobbyOperationsReturn {
-  lobbyState: LobbyState;
-  handleJoinLobby: (code: string) => Promise<void>;
-  handleCreateLobby: () => Promise<string>;
-  resetLobbyState: () => void;
-}
+import { useRouter } from "next/navigation";
 
 export function useLobbyOperations(): UseLobbyOperationsReturn {
+  const router = useRouter();
   const [lobbyState, setLobbyState] = React.useState<LobbyState>({
     isLoading: false,
     error: null,
@@ -24,44 +12,47 @@ export function useLobbyOperations(): UseLobbyOperationsReturn {
     joinSuccess: false,
   });
 
-  const handleJoinLobby = React.useCallback(async (code: string) => {
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Join Lobby",
-      },
-      async () => {
-        setLobbyState((prev) => ({ ...prev, isLoading: true, error: null }));
+  const handleJoinLobby = React.useCallback(
+    async (code: string) => {
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Join Lobby",
+        },
+        async () => {
+          setLobbyState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-        try {
-          const response = await joinLobby(code);
-          console.log("Successfully joined lobby:", response.lobby);
+          try {
+            const response = await joinLobby(code);
+            console.log("Successfully joined lobby:", response.lobby);
 
-          setLobbyState((prev) => ({
-            ...prev,
-            isLoading: false,
-            error: null,
-            joinSuccess: true,
-          }));
+            setLobbyState((prev) => ({
+              ...prev,
+              isLoading: false,
+              error: null,
+              joinSuccess: true,
+            }));
 
-          // TODO: Navigate to game lobby or show success message
-          // For now, just show success feedback
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Failed to join lobby";
+            // Redirect to game lobby
+            router.push(`/game/${code}`);
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : "Failed to join lobby";
 
-          setLobbyState((prev) => ({
-            ...prev,
-            error: errorMessage,
-            isLoading: false,
-            joinSuccess: false,
-          }));
+            setLobbyState((prev) => ({
+              ...prev,
+              error: errorMessage,
+              isLoading: false,
+              joinSuccess: false,
+            }));
 
-          throw error;
+            throw error;
+          }
         }
-      }
-    );
-  }, []);
+      );
+    },
+    [router]
+  );
 
   const handleCreateLobby = React.useCallback(async () => {
     return Sentry.startSpan(
@@ -83,6 +74,8 @@ export function useLobbyOperations(): UseLobbyOperationsReturn {
             error: null,
           }));
 
+          // Redirect to game lobby
+          router.push(`/game/${response.lobby.code}`);
           return response.lobby.code;
         } catch (error) {
           const errorMessage =
@@ -98,7 +91,7 @@ export function useLobbyOperations(): UseLobbyOperationsReturn {
         }
       }
     );
-  }, []);
+  }, [router]);
 
   const resetLobbyState = React.useCallback(() => {
     setLobbyState({

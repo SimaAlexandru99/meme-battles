@@ -34,7 +34,6 @@ export function InvitationCodeInput({
 }: InvitationCodeInputProps) {
   // Focus management refs
   const inputRef = React.useRef<HTMLDivElement>(null);
-  const [currentFocusIndex, setCurrentFocusIndex] = React.useState<number>(-1);
 
   const handleChange = React.useCallback(
     (newValue: string) => {
@@ -64,39 +63,6 @@ export function InvitationCodeInput({
       }
     },
     [onChange, onComplete]
-  );
-
-  // Handle keyboard navigation
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
-      if (disabled) return;
-
-      switch (event.key) {
-        case "ArrowLeft":
-          event.preventDefault();
-          setCurrentFocusIndex((prev) => Math.max(0, prev - 1));
-          break;
-        case "ArrowRight":
-          event.preventDefault();
-          setCurrentFocusIndex((prev) => Math.min(4, prev + 1));
-          break;
-        case "Home":
-          event.preventDefault();
-          setCurrentFocusIndex(0);
-          break;
-        case "End":
-          event.preventDefault();
-          setCurrentFocusIndex(4);
-          break;
-        case "Tab":
-          // Let default tab behavior work
-          break;
-        default:
-          // For other keys, let the input handle them
-          break;
-      }
-    },
-    [disabled]
   );
 
   // Announce input changes to screen readers
@@ -138,7 +104,6 @@ export function InvitationCodeInput({
       role="group"
       aria-labelledby="otp-input-label"
       aria-describedby="otp-input-description"
-      onKeyDown={handleKeyDown}
     >
       <div id="otp-input-label" className="sr-only">
         Invitation code input field
@@ -157,7 +122,6 @@ export function InvitationCodeInput({
         className="w-full"
         role="group"
         aria-label="Invitation code input"
-        aria-invalid={error}
         aria-describedby={error ? "otp-error-message" : undefined}
       >
         <InputOTP

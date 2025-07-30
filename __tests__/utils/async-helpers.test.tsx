@@ -39,7 +39,7 @@ const ApiComponent: React.FC<{ shouldSucceed?: boolean }> = ({
   shouldSucceed = true,
 }) => {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
+    "loading",
   );
 
   useEffect(() => {
@@ -146,7 +146,7 @@ describe("Async Helpers", () => {
       const condition = () => false;
 
       await expect(waitForCondition(condition, 100, 10)).rejects.toThrow(
-        "Condition not met within 100ms"
+        "Condition not met within 100ms",
       );
     });
   });

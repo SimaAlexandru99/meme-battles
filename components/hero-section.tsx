@@ -441,7 +441,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
           {currentView === "private-lobby" && (
             <motion.div
               key="private-lobby-view"
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex flex-col items-center justify-start pt-8 sm:pt-12"
               variants={lobbyEnterVariants}
               initial="initial"
               animate="animate"
@@ -455,7 +455,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
                 error={lobbyState.error}
                 createdLobbyCode={lobbyState.createdLobbyCode}
                 joinSuccess={lobbyState.joinSuccess}
-                className="w-full h-full flex items-center justify-center"
+                className="w-full h-full flex flex-col items-center justify-start"
               />
             </motion.div>
           )}

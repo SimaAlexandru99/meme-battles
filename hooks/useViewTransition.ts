@@ -1,17 +1,5 @@
 import { useState, useCallback, useRef } from "react";
 
-export type ViewState =
-  | "main"
-  | "transitioning-out"
-  | "private-lobby"
-  | "transitioning-in";
-
-export interface ViewTransitionState {
-  currentView: ViewState;
-  isAnimating: boolean;
-  animationPhase: "idle" | "exit" | "enter" | "complete";
-}
-
 const initialState: ViewTransitionState = {
   currentView: "main",
   isAnimating: false,
