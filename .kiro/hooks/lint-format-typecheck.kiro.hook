@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "name": "Lint, Format & TypeCheck",
+  "description": "Runs pnpm run lint, pnpm run format, and checks for TypeScript errors when TypeScript, JavaScript, or configuration files are modified",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "tsconfig.json",
+      "eslint.config.mjs",
+      "package.json"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the following commands in sequence: 1) pnpm run lint 2) pnpm run format 3) Check for TypeScript errors by running tsc --noEmit. Report the results of each step and any issues found and try to fix it using best practices for next.js   files with d.ts are global dont need to import those or update to export "
+  }
+}

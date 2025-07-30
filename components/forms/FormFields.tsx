@@ -1,6 +1,7 @@
 "use client";
-import { Controller, FieldValues } from "react-hook-form";
+import { Controller, FieldValues, Control, Path } from "react-hook-form";
 import { useState } from "react";
+
 import { Eye, EyeOff } from "lucide-react";
 
 import {
@@ -88,8 +89,8 @@ const CustomFormField = <T extends FieldValues>({
                         ? "text"
                         : "password"
                       : isNumberField
-                      ? "number"
-                      : type
+                        ? "number"
+                        : type
                   }
                   placeholder={placeholder}
                   {...(inputMode && allowedInputModes.includes(inputMode)

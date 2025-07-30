@@ -57,7 +57,7 @@ interface AccountUpgradeService {
   // Link anonymous account with email/password
   linkWithEmailPassword(
     email: string,
-    password: string
+    password: string,
   ): Promise<UpgradeResult>;
 
   // Link anonymous account with OAuth provider
@@ -107,7 +107,7 @@ interface DataMigrationService {
   migrateAnonymousToPermament(
     userId: string,
     newProvider: string,
-    email?: string
+    email?: string,
   ): Promise<void>;
 
   // Restore from backup if upgrade fails
@@ -168,14 +168,12 @@ interface UpgradeAttempt {
 ### Error Categories
 
 1. **Firebase Linking Errors**
-
    - `auth/credential-already-in-use`: Email already associated with another account
    - `auth/email-already-in-use`: Email exists in different account
    - `auth/invalid-credential`: Invalid OAuth token
    - `auth/provider-already-linked`: Provider already linked to account
 
 2. **Database Update Errors**
-
    - Network connectivity issues
    - Firestore write failures
    - Concurrent modification conflicts
@@ -195,7 +193,7 @@ interface ErrorRecoveryStrategy {
   // Retry failed operations
   retryWithBackoff(
     operation: () => Promise<any>,
-    maxRetries: number
+    maxRetries: number,
   ): Promise<any>;
 
   // Graceful degradation
@@ -214,14 +212,12 @@ type RecoveryAction =
 ### Unit Tests
 
 1. **Account Linking Service Tests**
-
    - Test successful email/password linking
    - Test successful OAuth linking
    - Test error handling for each provider
    - Test rollback functionality
 
 2. **Data Migration Tests**
-
    - Test data preservation during upgrade
    - Test backup creation and restoration
    - Test atomic database updates
@@ -234,13 +230,11 @@ type RecoveryAction =
 ### Integration Tests
 
 1. **End-to-End Upgrade Flow**
-
    - Complete upgrade process for each method
    - Test data integrity after upgrade
    - Test user experience continuity
 
 2. **Error Scenarios**
-
    - Network interruption during upgrade
    - Concurrent upgrade attempts
    - Database failures during migration
@@ -253,7 +247,6 @@ type RecoveryAction =
 ### Performance Tests
 
 1. **Upgrade Process Performance**
-
    - Measure upgrade completion time
    - Test with large user datasets
    - Monitor Firebase quota usage
@@ -268,13 +261,11 @@ type RecoveryAction =
 ### Data Protection
 
 1. **Backup Security**
-
    - Encrypt sensitive data in backups
    - Automatic backup cleanup after successful upgrade
    - Access control for backup operations
 
 2. **Credential Handling**
-
    - Secure OAuth token management
    - Password validation and hashing
    - Protection against credential stuffing
@@ -287,7 +278,6 @@ type RecoveryAction =
 ### Privacy Compliance
 
 1. **Data Retention**
-
    - Clear policies for anonymous user data
    - Proper data deletion for failed upgrades
    - User consent for data migration

@@ -35,7 +35,7 @@ export function useUpdateDisplayName(delay: number = 1000) {
         }
       }, delay);
     },
-    [delay]
+    [delay],
   );
 
   return { updateDisplayName, isUpdating };

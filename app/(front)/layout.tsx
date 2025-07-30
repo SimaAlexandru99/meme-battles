@@ -2,6 +2,7 @@ import { isAuthenticated, getCurrentUser } from "@/lib/actions/auth.action";
 import { ReactNode } from "react";
 import AnonymousAuthProvider from "@/components/anonymous-auth-provider";
 import FirstTimeSetupProvider from "@/components/first-time-setup-provider";
+import AdBannerContainer from "@/components/ad-banner-container";
 
 const Frontlayout = async ({ children }: { children: ReactNode }) => {
   const isUserAuthenticated = await isAuthenticated();
@@ -14,12 +15,15 @@ const Frontlayout = async ({ children }: { children: ReactNode }) => {
   // console.log("currentUser", currentUser);
 
   return (
-    <AnonymousAuthProvider
-      needsAuth={needsAnonymousAuth}
-      currentUser={currentUser}
-    >
-      <FirstTimeSetupProvider>{children}</FirstTimeSetupProvider>
-    </AnonymousAuthProvider>
+    <>
+      <AdBannerContainer />
+      <AnonymousAuthProvider
+        needsAuth={needsAnonymousAuth}
+        currentUser={currentUser}
+      >
+        <FirstTimeSetupProvider>{children}</FirstTimeSetupProvider>
+      </AnonymousAuthProvider>
+    </>
   );
 };
 

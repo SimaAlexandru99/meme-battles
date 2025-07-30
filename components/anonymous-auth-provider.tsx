@@ -51,7 +51,7 @@ export default function AnonymousAuthProvider({
       } catch (error) {
         console.error("Failed to authenticate as guest:", error);
         setAuthError(
-          error instanceof Error ? error.message : "Authentication failed"
+          error instanceof Error ? error.message : "Authentication failed",
         );
       } finally {
         setIsAuthenticating(false);

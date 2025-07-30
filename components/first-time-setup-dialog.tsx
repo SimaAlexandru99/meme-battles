@@ -1,6 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+// Import User type
+declare global {
+  interface User {
+    name: string;
+    email: string | null;
+    id: string;
+    provider: string;
+    role: string;
+    profileURL?: string;
+    avatarId?: string;
+    isAnonymous?: boolean;
+    setupCompleted?: boolean;
+    createdAt: string;
+    lastLoginAt: string;
+    xp: number;
+    plan: "free" | "pro";
+  }
+}
 import {
   Dialog,
   DialogContent,
@@ -16,10 +35,7 @@ import { RiDiceLine, RiCheckLine } from "react-icons/ri";
 import { generateGuestDisplayName } from "@/firebase/client";
 import { useUpdateDisplayName } from "@/hooks/useUpdateDisplayName";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
-import {
-  getCurrentUser,
-  markUserSetupComplete,
-} from "@/lib/actions/auth.action";
+import { markUserSetupComplete } from "@/lib/actions/auth.action";
 import ProfilePicker from "./profile-picker";
 import * as Sentry from "@sentry/nextjs";
 
@@ -37,7 +53,7 @@ export default function FirstTimeSetupDialog({
   const [username, setUsername] = useState("");
   const [currentAvatar, setCurrentAvatar] = useState("evil-doge");
   const [profileURL, setProfileURL] = useState<string | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { updateDisplayName, isUpdating } = useUpdateDisplayName(0); // No debounce for immediate save
   const { updateAvatar, isUpdatingAvatar } = useUpdateProfile();
@@ -100,7 +116,7 @@ export default function FirstTimeSetupDialog({
           span.setAttribute("user.username", username.trim());
           span.setAttribute("user.avatar", currentAvatar);
           span.setAttribute("setup.completed", true);
-        }
+        },
       );
 
       // Close dialog after successful update
@@ -134,7 +150,7 @@ export default function FirstTimeSetupDialog({
           {/* Welcome Message */}
           <div className="text-center space-y-2">
             <p className="text-muted-foreground">
-              Let's set up your meme warrior identity!
+              Let&apos;s set up your meme warrior identity!
             </p>
             <p className="text-sm text-muted-foreground">
               You can change these anytime from your profile.

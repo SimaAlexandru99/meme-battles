@@ -32,7 +32,7 @@ export function useUpdateProfile() {
         setIsUpdatingAvatar(false);
       }
     },
-    []
+    [],
   );
 
   const updateDisplayName = useCallback(async (displayName: string) => {
@@ -85,7 +85,7 @@ export function useUpdateProfile() {
         setIsUpdatingName(false);
       }
     },
-    []
+    [],
   );
 
   return {

@@ -154,19 +154,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 | Feature                             | Status |
 | ----------------------------------- | ------ |
-| Firebase Auth (Google + Guest)      | ⬜️    |
-| Room creation + join                | ⬜️    |
-| Real-time room updates              | ⬜️    |
-| Random 7 meme cards (from 800)      | ⬜️    |
-| AI-generated situation              | ⬜️    |
-| Meme card submission                | ⬜️    |
-| Voting system (one vote per player) | ⬜️    |
-| Winner display + scoring            | ⬜️    |
-| Leaderboard                         | ⬜️    |
-| Real-time chat                      | ⬜️    |
-| Mobile responsive UI                | ⬜️    |
-| Shareable meme cards                | ⬜️    |
-| Deployment (Vercel)                 | ⬜️    |
+| Firebase Auth (Google + Guest)      | ⬜️     |
+| Room creation + join                | ⬜️     |
+| Real-time room updates              | ⬜️     |
+| Random 7 meme cards (from 800)      | ⬜️     |
+| AI-generated situation              | ⬜️     |
+| Meme card submission                | ⬜️     |
+| Voting system (one vote per player) | ⬜️     |
+| Winner display + scoring            | ⬜️     |
+| Leaderboard                         | ⬜️     |
+| Real-time chat                      | ⬜️     |
+| Mobile responsive UI                | ⬜️     |
+| Shareable meme cards                | ⬜️     |
+| Deployment (Vercel)                 | ⬜️     |
 
 ## 🌟 Stretch Goals
 

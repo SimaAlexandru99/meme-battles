@@ -31,7 +31,11 @@ interface User {
   createdAt: string;
   lastLoginAt: string;
   xp: number;
+  plan: UserPlan;
 }
+
+// User Plan 2 types Free and Pro
+type UserPlan = "free" | "pro";
 
 interface FormSelectProps<T extends FieldValues> {
   control: Control<T>;
@@ -82,4 +86,80 @@ interface FormRadioGroupProps<T extends FieldValues> {
   description?: string;
   options: RadioOption[];
   className?: string;
+}
+
+// Advertisement types
+interface AdSlotData {
+  slotId: string;
+  containerId: string;
+  googleAdId?: string;
+  pokiAdId?: string;
+}
+
+interface AdConfig {
+  id: string;
+  size: {
+    width: number;
+    height: number;
+  };
+  position: "left" | "right";
+  upgradeUrl: string;
+  removeAdsText: string;
+}
+
+type AdNetwork = "google" | "poki";
+
+type AdLoadingState = "idle" | "loading" | "loaded" | "error";
+
+interface AdNetworkConfig {
+  network: AdNetwork;
+  slotId?: string;
+  publisherId?: string;
+  enabled: boolean;
+}
+
+// Advertisement localization types
+interface AdLocalization {
+  removeAdsText: string;
+  locale: string;
+}
+
+interface AdLocalizationConfig {
+  [locale: string]: AdLocalization;
+}
+
+// Window interface extensions for ad networks
+interface GoogleAdsWindow extends Window {
+  googletag: {
+    cmd: Array<() => void>;
+    defineSlot: (
+      adUnitPath: string,
+      size: [number, number],
+      div: string
+    ) => any;
+    pubads: () => {
+      enableSingleRequest: () => void;
+      enableServices: () => void;
+    };
+    enableServices: () => void;
+    display: (div: string) => void;
+  };
+}
+
+interface PokiWindow extends Window {
+  PokiSDK: {
+    displayAd: (containerId: string) => Promise<void>;
+  };
+}
+
+interface FormFieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  placeholder?: string;
+  type?: "text" | "email" | "password" | "textarea" | "number" | "url";
+  description?: string;
+  className?: string;
+  textareaClassName?: string;
+  rows?: number;
 }

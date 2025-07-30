@@ -1,6 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+// Import User type
+declare global {
+  interface User {
+    name: string;
+    email: string | null;
+    id: string;
+    provider: string;
+    role: string;
+    profileURL?: string;
+    avatarId?: string;
+    isAnonymous?: boolean;
+    setupCompleted?: boolean;
+    createdAt: string;
+    lastLoginAt: string;
+    xp: number;
+    plan: "free" | "pro";
+  }
+}
 import {
   isFirstTimeUser,
   getCurrentUser,
@@ -42,7 +61,7 @@ export default function FirstTimeSetupProvider({
             } else {
               span.setAttribute("dialog.shown", false);
             }
-          }
+          },
         );
       } catch (error) {
         console.error("Error checking first-time user status:", error);

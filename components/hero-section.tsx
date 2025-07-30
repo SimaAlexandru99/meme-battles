@@ -128,7 +128,7 @@ function AvatarSetupCard({
         updateDisplayName(value.trim());
       }
     },
-    [onNicknameChange, updateDisplayName]
+    [onNicknameChange, updateDisplayName],
   );
 
   const handleAvatarChange = useCallback(
@@ -176,7 +176,7 @@ function AvatarSetupCard({
         throw error; // Re-throw so ProfilePicker can handle it
       }
     },
-    [onAvatarChange, updateAvatar]
+    [onAvatarChange, updateAvatar],
   );
 
   return (
@@ -370,7 +370,7 @@ function Header() {
 function BottomNavigation() {
   return (
     <nav
-      className="absolute bottom-0 left-0 right-0 z-50"
+      className="absolute bottom-0 left-0 right-0 z-20"
       aria-label="Bottom navigation"
     >
       <div className="flex justify-between items-end w-full px-4 sm:px-6 pb-4 sm:pb-6 gap-3 sm:gap-4">
@@ -444,7 +444,7 @@ function GameCardsSection() {
       console.log("Avatar changed:", { avatarId, avatarSrc });
       setCurrentAvatar(avatarId);
     },
-    []
+    [],
   );
 
   return (
@@ -529,7 +529,7 @@ export default function HeroSection() {
       </div>
 
       {/* Content Container */}
-      <div className="h-full flex flex-col items-center justify-center gap-3 sm:gap-4 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-20 sm:pb-24 relative z-10">
+      <div className="h-full flex flex-col items-center justify-center gap-3 sm:gap-4 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-20 sm:pb-24 relative ">
         {/* Logo */}
         <div className="transition-transform duration-300 hover:scale-110 cursor-pointer hidden sm:flex">
           <Image
