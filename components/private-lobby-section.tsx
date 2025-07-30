@@ -11,7 +11,6 @@ import {
   lobbyEnterVariants,
   lobbySectionVariants,
   staggerContainerVariants,
-  buttonVariants,
 } from "@/lib/animations/private-lobby-variants";
 
 interface PrivateLobbySectionProps {
@@ -21,6 +20,7 @@ interface PrivateLobbySectionProps {
   isLoading?: boolean;
   error?: string | null;
   createdLobbyCode?: string | null;
+  joinSuccess?: boolean;
   className?: string;
 }
 
@@ -31,6 +31,7 @@ export function PrivateLobbySection({
   isLoading = false,
   error = null,
   createdLobbyCode = null,
+  joinSuccess = false,
   className,
 }: PrivateLobbySectionProps) {
   // Local state for managing individual section loading states
@@ -38,6 +39,11 @@ export function PrivateLobbySection({
   const [createError, setCreateError] = React.useState<string | null>(null);
   const [isJoining, setIsJoining] = React.useState(false);
   const [isCreating, setIsCreating] = React.useState(false);
+
+  // Focus management refs
+  const backButtonRef = React.useRef<HTMLButtonElement>(null);
+  const joinSectionRef = React.useRef<HTMLDivElement>(null);
+  const createSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Handle join lobby with error management
   const handleJoinLobby = React.useCallback(
@@ -77,7 +83,7 @@ export function PrivateLobbySection({
     }
   }, [onCreateLobby]);
 
-  // Handle back navigation with keyboard support
+  // Handle back navigation with keyboard support and focus management
   const handleBackToMain = React.useCallback(
     (event?: React.KeyboardEvent) => {
       if (!event || event.key === "Enter" || event.key === " ") {
@@ -99,6 +105,73 @@ export function PrivateLobbySection({
     }
   }, [error]);
 
+  // Focus management for screen readers
+  React.useEffect(() => {
+    // Announce view change to screen readers
+    const announcement = document.createElement("div");
+    announcement.setAttribute("aria-live", "polite");
+    announcement.setAttribute("aria-atomic", "true");
+    announcement.className = "sr-only";
+    announcement.textContent =
+      "Private lobby interface loaded. Choose to join an existing lobby or create your own.";
+    document.body.appendChild(announcement);
+
+    // Focus the back button for logical tab order
+    if (backButtonRef.current) {
+      backButtonRef.current.focus();
+    }
+
+    return () => {
+      document.body.removeChild(announcement);
+    };
+  }, []);
+
+  // Announce dynamic content changes
+  React.useEffect(() => {
+    if (error) {
+      const announcement = document.createElement("div");
+      announcement.setAttribute("aria-live", "assertive");
+      announcement.setAttribute("aria-atomic", "true");
+      announcement.className = "sr-only";
+      announcement.textContent = `Error: ${error}`;
+      document.body.appendChild(announcement);
+
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 100);
+    }
+  }, [error]);
+
+  React.useEffect(() => {
+    if (joinSuccess) {
+      const announcement = document.createElement("div");
+      announcement.setAttribute("aria-live", "polite");
+      announcement.setAttribute("aria-atomic", "true");
+      announcement.className = "sr-only";
+      announcement.textContent = "Successfully joined lobby!";
+      document.body.appendChild(announcement);
+
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 100);
+    }
+  }, [joinSuccess]);
+
+  React.useEffect(() => {
+    if (createdLobbyCode) {
+      const announcement = document.createElement("div");
+      announcement.setAttribute("aria-live", "polite");
+      announcement.setAttribute("aria-atomic", "true");
+      announcement.className = "sr-only";
+      announcement.textContent = `Lobby created successfully. Your invitation code is: ${createdLobbyCode}`;
+      document.body.appendChild(announcement);
+
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 100);
+    }
+  }, [createdLobbyCode]);
+
   return (
     <motion.div
       variants={lobbyEnterVariants}
@@ -110,6 +183,8 @@ export function PrivateLobbySection({
         "flex flex-col items-center gap-8 sm:gap-12",
         className
       )}
+      role="main"
+      aria-label="Private lobby interface"
     >
       {/* Back Navigation Button */}
       <motion.div
@@ -117,6 +192,7 @@ export function PrivateLobbySection({
         className="w-full flex justify-start"
       >
         <Button
+          ref={backButtonRef}
           onClick={() => handleBackToMain()}
           onKeyDown={handleBackToMain}
           disabled={isAnyOperationInProgress}
@@ -131,23 +207,21 @@ export function PrivateLobbySection({
             "focus-visible:ring-2 focus-visible:ring-purple-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           )}
-          asChild
+          aria-label="Navigate back to main menu"
+          aria-describedby="back-button-description"
         >
-          <motion.button
-            variants={buttonVariants}
-            whileHover="hover"
-            whileTap="tap"
-            aria-label="Back to main menu"
-          >
-            <RiArrowLeftLine
-              className={cn(
-                "w-5 h-5 transition-transform duration-300",
-                "group-hover:-translate-x-1"
-              )}
-            />
-            <span>BACK TO START</span>
-          </motion.button>
+          <RiArrowLeftLine
+            className={cn(
+              "w-5 h-5 transition-transform duration-300",
+              "group-hover:-translate-x-1"
+            )}
+            aria-hidden="true"
+          />
+          <span>BACK TO START</span>
         </Button>
+        <div id="back-button-description" className="sr-only">
+          Return to the main game selection screen
+        </div>
       </motion.div>
 
       {/* Global Error Display */}
@@ -164,9 +238,14 @@ export function PrivateLobbySection({
           )}
           role="alert"
           aria-live="assertive"
+          aria-atomic="true"
         >
-          <h4 className="text-lg font-bold mb-2">Error</h4>
-          <p className="text-sm">{error}</p>
+          <h4 className="text-lg font-bold mb-2" id="error-heading">
+            Error
+          </h4>
+          <p className="text-sm" aria-describedby="error-heading">
+            {error}
+          </p>
         </motion.div>
       )}
 
@@ -182,24 +261,33 @@ export function PrivateLobbySection({
           // Ensure equal height on desktop
           "lg:items-stretch"
         )}
+        role="region"
+        aria-label="Lobby options"
       >
         {/* Join With Code Section */}
         <motion.div
+          ref={joinSectionRef}
           variants={lobbySectionVariants}
           className="w-full flex justify-center"
+          role="region"
+          aria-label="Join existing lobby"
         >
           <JoinWithCodeSection
             onJoinLobby={handleJoinLobby}
             isLoading={isJoining || isLoading}
             error={joinError || (error && !createError ? error : null)}
+            success={joinSuccess}
             className="w-full max-w-md h-full"
           />
         </motion.div>
 
         {/* Create Lobby Section */}
         <motion.div
+          ref={createSectionRef}
           variants={lobbySectionVariants}
           className="w-full flex justify-center"
+          role="region"
+          aria-label="Create new lobby"
         >
           <CreateLobbySection
             onCreateLobby={handleCreateLobby}
@@ -214,6 +302,8 @@ export function PrivateLobbySection({
       <motion.div
         variants={lobbySectionVariants}
         className="text-center max-w-2xl"
+        role="complementary"
+        aria-label="Instructions"
       >
         <p className="text-purple-200/60 text-sm sm:text-base font-bangers tracking-wide">
           Choose to join an existing lobby with an invitation code or create
@@ -231,12 +321,21 @@ export function PrivateLobbySection({
             "fixed inset-0 z-50 flex items-center justify-center",
             "bg-slate-900/80 backdrop-blur-sm"
           )}
+          role="dialog"
+          aria-modal="true"
           aria-live="polite"
           aria-label="Loading"
+          aria-describedby="loading-description"
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-            <p className="text-white font-bangers text-lg tracking-wide">
+            <div
+              className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"
+              aria-hidden="true"
+            />
+            <p
+              id="loading-description"
+              className="text-white font-bangers text-lg tracking-wide"
+            >
               Processing...
             </p>
           </div>

@@ -53,7 +53,7 @@
   - Add proper cleanup and state reset on navigation
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 8. Add lobby operation handlers and API integration
+- [x] 8. Add lobby operation handlers and API integration
   - Implement handleJoinLobby function with invitation code validation
   - Create handleCreateLobby function that generates invitation codes
   - Add proper error handling for network operations and invalid codes
@@ -61,7 +61,7 @@
   - Add success feedback for completed operations
   - _Requirements: 2.4, 2.5, 3.5, 3.6, 6.1, 6.2, 6.3_
 
-- [ ] 9. Implement accessibility features
+- [x] 9. Implement accessibility features
   - Add proper ARIA labels and roles to all interactive elements
   - Implement keyboard navigation with proper tab order
   - Add screen reader announcements for dynamic content changes

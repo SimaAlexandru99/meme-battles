@@ -169,7 +169,7 @@ export interface MockGameSettings {
  * Creates mock game settings
  */
 export function createMockGameSettings(
-  overrides: Partial<MockGameSettings> = {},
+  overrides: Partial<MockGameSettings> = {}
 ): MockGameSettings {
   return {
     roundTimeLimit: 120, // 2 minutes
@@ -186,7 +186,7 @@ export function createMockGameSettings(
  * Creates a mock player
  */
 export function createMockPlayer(
-  overrides: Partial<MockPlayer> = {},
+  overrides: Partial<MockPlayer> = {}
 ): MockPlayer {
   return {
     uid: `player-${Math.random().toString(36).substr(2, 9)}`,
@@ -203,7 +203,7 @@ export function createMockPlayer(
  * Creates a mock submission
  */
 export function createMockSubmission(
-  overrides: Partial<MockSubmission> = {},
+  overrides: Partial<MockSubmission> = {}
 ): MockSubmission {
   return {
     id: `submission-${Math.random().toString(36).substr(2, 9)}`,
@@ -250,7 +250,7 @@ export function createMockRound(overrides: Partial<MockRound> = {}): MockRound {
  * Creates mock game data
  */
 export function createMockGameData(
-  overrides: Partial<MockGameData> = {},
+  overrides: Partial<MockGameData> = {}
 ): MockGameData {
   const gameId = `game-${Math.random().toString(36).substr(2, 9)}`;
   const hostPlayer = createMockPlayer({ isHost: true, isReady: true });
@@ -385,7 +385,7 @@ export function createMockMemes(count: number = 10): MockMeme[] {
 /**
  * Interface for mock API responses
  */
-export interface MockApiResponse<T = any> {
+export interface MockApiResponse<T = unknown> {
   data: T;
   status: number;
   message?: string;
@@ -398,7 +398,7 @@ export interface MockApiResponse<T = any> {
 export function createMockApiSuccess<T>(
   data: T,
   status: number = 200,
-  message?: string,
+  message?: string
 ): MockApiResponse<T> {
   return {
     data,
@@ -412,7 +412,7 @@ export function createMockApiSuccess<T>(
  */
 export function createMockApiError(
   error: string,
-  status: number = 400,
+  status: number = 400
 ): MockApiResponse<null> {
   return {
     data: null,
@@ -441,7 +441,7 @@ export function createMockPaginatedResponse<T>(
   items: T[],
   page: number = 1,
   pageSize: number = 10,
-  totalCount?: number,
+  totalCount?: number
 ): MockPaginationData<T> {
   const total = totalCount || items.length;
   const totalPages = Math.ceil(total / pageSize);

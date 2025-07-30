@@ -1,25 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-// Import User type
-declare global {
-  interface User {
-    name: string;
-    email: string | null;
-    id: string;
-    provider: string;
-    role: string;
-    profileURL?: string;
-    avatarId?: string;
-    isAnonymous?: boolean;
-    setupCompleted?: boolean;
-    createdAt: string;
-    lastLoginAt: string;
-    xp: number;
-    plan: "free" | "pro";
-  }
-}
 import {
   Dialog,
   DialogContent,
@@ -116,7 +97,7 @@ export default function FirstTimeSetupDialog({
           span.setAttribute("user.username", username.trim());
           span.setAttribute("user.avatar", currentAvatar);
           span.setAttribute("setup.completed", true);
-        },
+        }
       );
 
       // Close dialog after successful update

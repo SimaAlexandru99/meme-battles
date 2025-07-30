@@ -40,6 +40,10 @@ export default function GameCard({
   className = "",
   children,
 }: GameCardProps) {
+  // Focus management refs
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const buttonRef = React.useRef<HTMLDivElement>(null);
+
   const handleClick = () => {
     if (onClick) {
       onClick();
@@ -53,20 +57,46 @@ export default function GameCard({
     }
   };
 
+  // Announce card interaction to screen readers
+  const handleCardInteraction = React.useCallback(() => {
+    if (onClick) {
+      const announcement = document.createElement("div");
+      announcement.setAttribute("aria-live", "polite");
+      announcement.setAttribute("aria-atomic", "true");
+      announcement.className = "sr-only";
+      announcement.textContent = `Selected ${title} game mode`;
+      document.body.appendChild(announcement);
+
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 100);
+    }
+  }, [onClick, title]);
+
+  const handleClickWithAnnouncement = React.useCallback(() => {
+    handleClick();
+    handleCardInteraction();
+  }, [handleClick, handleCardInteraction]);
+
   return (
     <motion.div
       variants={microInteractionVariants}
       whileHover="hover"
       whileTap="tap"
       className="w-full h-full"
+      role="article"
+      aria-label={`${title} game card`}
     >
       <Card
+        ref={cardRef}
         className={`relative border-0 shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden ${hoverShadowColor} ${className} group w-full h-full`}
-        onClick={handleClick}
+        onClick={handleClickWithAnnouncement}
         onKeyDown={handleKeyDown}
         role="button"
         tabIndex={onClick ? 0 : -1}
         aria-label={`${title} - ${description || ""}`}
+        aria-describedby={`${title.toLowerCase().replace(/\s+/g, "-")}-description`}
+        aria-pressed="false"
       >
         {/* Hover Badge */}
         {badgeText && (
@@ -75,6 +105,7 @@ export default function GameCard({
             initial="initial"
             whileHover="pulse"
             className={`absolute top-3 right-3 sm:top-4 sm:right-4 ${badgeColor} text-white text-xs font-bold px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 shadow-lg`}
+            role="img"
             aria-label={`Badge: ${badgeText}`}
           >
             {badgeText}
@@ -89,6 +120,8 @@ export default function GameCard({
               backgroundImage: `url('${backgroundImage}')`,
             }}
             aria-hidden="true"
+            role="img"
+            aria-label="Game background image"
           />
         )}
 
@@ -106,6 +139,7 @@ export default function GameCard({
             className="text-2xl sm:text-3xl font-bangers text-white text-center drop-shadow-lg tracking-wider"
             variants={microInteractionVariants}
             whileHover="hover"
+            id={`${title.toLowerCase().replace(/\s+/g, "-")}-title`}
           >
             {title}
           </motion.h2>
@@ -114,6 +148,7 @@ export default function GameCard({
             <motion.p
               className="text-white/80 text-center text-xs sm:text-sm drop-shadow-md font-bangers tracking-wide"
               variants={microInteractionVariants}
+              id={`${title.toLowerCase().replace(/\s+/g, "-")}-description`}
             >
               {description}
             </motion.p>
@@ -122,16 +157,27 @@ export default function GameCard({
           {children}
 
           <motion.div
+            ref={buttonRef}
             className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 sm:px-4 sm:py-2 border border-white/30"
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
+            role="button"
+            tabIndex={-1}
+            aria-label={`${buttonText} for ${title}`}
+            aria-describedby={`${title.toLowerCase().replace(/\s+/g, "-")}-button-description`}
           >
-            {buttonIcon}
+            <span aria-hidden="true">{buttonIcon}</span>
             <span className="text-white font-bangers font-medium tracking-wide text-xs sm:text-sm">
               {buttonText}
             </span>
           </motion.div>
+          <div
+            id={`${title.toLowerCase().replace(/\s+/g, "-")}-button-description`}
+            className="sr-only"
+          >
+            Click to start {title} game mode
+          </div>
         </CardContent>
       </Card>
     </motion.div>

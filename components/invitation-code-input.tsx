@@ -13,6 +13,7 @@ import {
   errorVariants,
   microInteractionVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { normalizeInvitationCode } from "@/lib/services/lobby.service";
 
 interface InvitationCodeInputProps {
   value: string;
@@ -31,17 +32,19 @@ export function InvitationCodeInput({
   error = false,
   className,
 }: InvitationCodeInputProps) {
+  // Focus management refs
+  const inputRef = React.useRef<HTMLDivElement>(null);
+  const [currentFocusIndex, setCurrentFocusIndex] = React.useState<number>(-1);
+
   const handleChange = React.useCallback(
     (newValue: string) => {
-      // Only allow alphanumeric characters
-      const sanitizedValue = newValue
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .toUpperCase();
-      onChange(sanitizedValue);
+      // Use the service function for normalization
+      const normalizedValue = normalizeInvitationCode(newValue);
+      onChange(normalizedValue);
 
       // Auto-complete when 5 characters are entered
-      if (sanitizedValue.length === 5) {
-        onComplete(sanitizedValue);
+      if (normalizedValue.length === 5) {
+        onComplete(normalizedValue);
       }
     },
     [onChange, onComplete]
@@ -51,32 +54,111 @@ export function InvitationCodeInput({
     (e: React.ClipboardEvent) => {
       e.preventDefault();
       const pastedText = e.clipboardData.getData("text");
-      const sanitizedText = pastedText
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .toUpperCase()
-        .slice(0, 5);
+      const normalizedText = normalizeInvitationCode(pastedText).slice(0, 5);
 
-      if (sanitizedText.length > 0) {
-        onChange(sanitizedText);
-        if (sanitizedText.length === 5) {
-          onComplete(sanitizedText);
+      if (normalizedText.length > 0) {
+        onChange(normalizedText);
+        if (normalizedText.length === 5) {
+          onComplete(normalizedText);
         }
       }
     },
     [onChange, onComplete]
   );
 
+  // Handle keyboard navigation
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (disabled) return;
+
+      switch (event.key) {
+        case "ArrowLeft":
+          event.preventDefault();
+          setCurrentFocusIndex((prev) => Math.max(0, prev - 1));
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          setCurrentFocusIndex((prev) => Math.min(4, prev + 1));
+          break;
+        case "Home":
+          event.preventDefault();
+          setCurrentFocusIndex(0);
+          break;
+        case "End":
+          event.preventDefault();
+          setCurrentFocusIndex(4);
+          break;
+        case "Tab":
+          // Let default tab behavior work
+          break;
+        default:
+          // For other keys, let the input handle them
+          break;
+      }
+    },
+    [disabled]
+  );
+
+  // Announce input changes to screen readers
+  React.useEffect(() => {
+    if (value.length > 0) {
+      const announcement = document.createElement("div");
+      announcement.setAttribute("aria-live", "polite");
+      announcement.setAttribute("aria-atomic", "true");
+      announcement.className = "sr-only";
+      announcement.textContent = `Entered ${value.length} of 5 characters`;
+      document.body.appendChild(announcement);
+
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 100);
+    }
+  }, [value]);
+
+  React.useEffect(() => {
+    if (error) {
+      const announcement = document.createElement("div");
+      announcement.setAttribute("aria-live", "assertive");
+      announcement.setAttribute("aria-atomic", "true");
+      announcement.className = "sr-only";
+      announcement.textContent =
+        "Invalid invitation code. Please check the code and try again.";
+      document.body.appendChild(announcement);
+
+      setTimeout(() => {
+        document.body.removeChild(announcement);
+      }, 100);
+    }
+  }, [error]);
+
   return (
     <motion.div
       className={cn("flex flex-col items-center gap-2", className)}
       variants={microInteractionVariants}
+      role="group"
+      aria-labelledby="otp-input-label"
+      aria-describedby="otp-input-description"
+      onKeyDown={handleKeyDown}
     >
+      <div id="otp-input-label" className="sr-only">
+        Invitation code input field
+      </div>
+      <div id="otp-input-description" className="sr-only">
+        Enter a 5-character alphanumeric invitation code. Use arrow keys to
+        navigate between fields.
+      </div>
+
       <motion.div
+        ref={inputRef}
         variants={inputVariants}
         initial="initial"
         animate={error ? "error" : "initial"}
         whileFocus="focus"
         className="w-full"
+        role="group"
+        aria-label="Invitation code input"
+        aria-invalid={error}
+        aria-describedby={error ? "otp-error-message" : undefined}
       >
         <InputOTP
           maxLength={5}
@@ -86,6 +168,7 @@ export function InvitationCodeInput({
           onPaste={handlePaste}
           className={cn("gap-2 sm:gap-3", error && "aria-invalid:true")}
           containerClassName="flex items-center justify-center"
+          aria-label="Enter 5-character invitation code"
         >
           <InputOTPGroup className="gap-2 sm:gap-3">
             {Array.from({ length: 5 }, (_, index) => (
@@ -128,7 +211,15 @@ export function InvitationCodeInput({
                     value[index] &&
                       "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10"
                   )}
+                  aria-label={`Character ${index + 1} of invitation code`}
+                  aria-describedby={`slot-${index}-description`}
                 />
+                <div id={`slot-${index}-description`} className="sr-only">
+                  {value[index]
+                    ? `Slot ${index + 1} contains: ${value[index]}`
+                    : `Slot ${index + 1} is empty`}
+                </div>
+
                 {/* Success indicator for filled slots */}
                 <AnimatePresence>
                   {value[index] && (
@@ -137,6 +228,9 @@ export function InvitationCodeInput({
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
                       className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"
+                      role="img"
+                      aria-label="Character entered"
+                      aria-hidden="true"
                     />
                   )}
                 </AnimatePresence>
@@ -159,12 +253,24 @@ export function InvitationCodeInput({
             error ? "text-red-400" : "text-purple-200/70",
             disabled && "opacity-50"
           )}
+          id={error ? "otp-error-message" : undefined}
+          role="status"
+          aria-live="polite"
         >
           {error
             ? "Invalid invitation code"
             : "Enter 5-character invitation code"}
         </motion.p>
       </AnimatePresence>
+
+      {/* Progress indicator for screen readers */}
+      <div className="sr-only" aria-live="polite">
+        {value.length === 0 && "No characters entered"}
+        {value.length > 0 &&
+          value.length < 5 &&
+          `${value.length} of 5 characters entered`}
+        {value.length === 5 && "All 5 characters entered"}
+      </div>
     </motion.div>
   );
 }

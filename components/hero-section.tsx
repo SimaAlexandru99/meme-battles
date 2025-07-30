@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ import {
   microInteractionVariants,
   lobbyEnterVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { useLobbyOperations } from "@/hooks/useLobbyOperations";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;
@@ -129,7 +130,7 @@ const Header = memo(function Header() {
   } = useCurrentUser();
   const { isAnonymous } = useIsAnonymous();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleUserSetupComplete = () => {
       console.log("User setup completed, refreshing header data...");
       refreshUser();
@@ -271,7 +272,7 @@ const GameCardsSection = memo(function GameCardsSection({
   initialUserData?: User | null;
   onPrivateWarClick: () => void;
 }) {
-  const handleMemeBattleClick = React.useCallback(() => {
+  const handleMemeBattleClick = useCallback(() => {
     console.log("Starting meme battle");
   }, []);
 
@@ -331,18 +332,17 @@ interface HeroSectionProps {
 
 export default function HeroSection({ initialUserData }: HeroSectionProps) {
   // State management for view transitions
-  const [currentView, setCurrentView] = React.useState<
-    "main" | "private-lobby"
-  >("main");
-  const [isTransitioning, setIsTransitioning] = React.useState(false);
-  const [lobbyState, setLobbyState] = React.useState({
-    isLoading: false,
-    error: null as string | null,
-    createdLobbyCode: null as string | null,
-  });
+  const [currentView, setCurrentView] = useState<"main" | "private-lobby">(
+    "main"
+  );
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Use the lobby operations hook
+  const { lobbyState, handleJoinLobby, handleCreateLobby, resetLobbyState } =
+    useLobbyOperations();
 
   // Handle private war click with animation transition
-  const handlePrivateWarClick = React.useCallback(() => {
+  const handlePrivateWarClick = useCallback(() => {
     setIsTransitioning(true);
     // Small delay to allow exit animations to complete
     setTimeout(() => {
@@ -352,75 +352,13 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
   }, []);
 
   // Handle back to main view
-  const handleBackToMain = React.useCallback(() => {
+  const handleBackToMain = useCallback(() => {
     setCurrentView("main");
     // Reset lobby state when going back
-    setLobbyState({
-      isLoading: false,
-      error: null,
-      createdLobbyCode: null,
-    });
-  }, []);
+    resetLobbyState();
+  }, [resetLobbyState]);
 
-  // Mock lobby functions (to be replaced with actual implementation)
-  const handleJoinLobby = React.useCallback(async (code: string) => {
-    setLobbyState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Simulate success/failure
-      if (code === "TEST1") {
-        console.log("Successfully joined lobby:", code);
-        // Navigate to game or show success message
-      } else {
-        throw new Error("Invalid invitation code");
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to join lobby";
-      setLobbyState((prev) => ({
-        ...prev,
-        error: errorMessage,
-        isLoading: false,
-      }));
-      throw error;
-    } finally {
-      setLobbyState((prev) => ({ ...prev, isLoading: false }));
-    }
-  }, []);
-
-  const handleCreateLobby = React.useCallback(async () => {
-    setLobbyState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Generate a random lobby code
-      const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-
-      setLobbyState((prev) => ({
-        ...prev,
-        createdLobbyCode: code,
-        isLoading: false,
-      }));
-
-      return code;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to create lobby";
-      setLobbyState((prev) => ({
-        ...prev,
-        error: errorMessage,
-        isLoading: false,
-      }));
-      throw error;
-    }
-  }, []);
-
-  const handleBrowseLobbies = React.useCallback(() => {
+  const handleBrowseLobbies = useCallback(() => {
     console.log("Browsing lobbies");
   }, []);
 
@@ -516,6 +454,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
                 isLoading={lobbyState.isLoading}
                 error={lobbyState.error}
                 createdLobbyCode={lobbyState.createdLobbyCode}
+                joinSuccess={lobbyState.joinSuccess}
                 className="w-full h-full flex items-center justify-center"
               />
             </motion.div>
