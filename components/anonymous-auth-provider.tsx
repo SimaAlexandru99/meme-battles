@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useRef } from "react";
 import { signInAsGuest } from "@/firebase/client";
 import { signInAsGuest as signInAsGuestAction } from "@/lib/actions/auth.action";
 
@@ -8,6 +8,7 @@ interface AnonymousAuthProviderProps {
   children: ReactNode;
   needsAuth: boolean;
   currentUser: User | null;
+  initialUserData?: User | null;
 }
 
 export default function AnonymousAuthProvider({
@@ -17,14 +18,26 @@ export default function AnonymousAuthProvider({
 }: AnonymousAuthProviderProps) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const hasAttemptedAuth = useRef(false);
 
   useEffect(() => {
     const handleAnonymousAuth = async () => {
-      // Only authenticate if user needs auth and we're not already authenticating
-      if (!needsAuth || isAuthenticating || currentUser) {
+      // Only authenticate if:
+      // 1. User needs auth
+      // 2. We're not already authenticating
+      // 3. No current user exists
+      // 4. We haven't already attempted authentication
+      if (
+        !needsAuth ||
+        isAuthenticating ||
+        currentUser ||
+        hasAttemptedAuth.current
+      ) {
         return;
       }
 
+      // Mark that we've attempted authentication to prevent loops
+      hasAttemptedAuth.current = true;
       setIsAuthenticating(true);
       setAuthError(null);
 
@@ -45,14 +58,18 @@ export default function AnonymousAuthProvider({
           console.log("Anonymous authentication successful:", result.message);
           // Dispatch event to notify components of authentication change
           window.dispatchEvent(new CustomEvent("userAuthenticated"));
+          // Reload the page to get fresh server-side data
+          window.location.reload();
         } else {
           throw new Error(result.message);
         }
       } catch (error) {
         console.error("Failed to authenticate as guest:", error);
         setAuthError(
-          error instanceof Error ? error.message : "Authentication failed",
+          error instanceof Error ? error.message : "Authentication failed"
         );
+        // Reset the attempt flag on error so user can retry
+        hasAttemptedAuth.current = false;
       } finally {
         setIsAuthenticating(false);
       }
@@ -60,6 +77,13 @@ export default function AnonymousAuthProvider({
 
     handleAnonymousAuth();
   }, [needsAuth, isAuthenticating, currentUser]);
+
+  // Reset attempt flag when user changes (for logout scenarios)
+  useEffect(() => {
+    if (currentUser) {
+      hasAttemptedAuth.current = false;
+    }
+  }, [currentUser]);
 
   // Show loading state while authenticating
   if (needsAuth && isAuthenticating) {
@@ -86,7 +110,11 @@ export default function AnonymousAuthProvider({
           </h2>
           <p className="text-gray-300 mb-6">{authError}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              hasAttemptedAuth.current = false;
+              setAuthError(null);
+              window.location.reload();
+            }}
             className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-bangers transition-colors"
           >
             Try Again

@@ -1,8 +1,8 @@
-import { isAuthenticated, getCurrentUser } from "@/lib/actions/auth.action";
 import { ReactNode } from "react";
 import AnonymousAuthProvider from "@/components/anonymous-auth-provider";
 import FirstTimeSetupProvider from "@/components/first-time-setup-provider";
 import AdBannerContainer from "@/components/ad-banner-container";
+import { isAuthenticated, getCurrentUser } from "@/lib/actions/auth.action";
 
 const Frontlayout = async ({ children }: { children: ReactNode }) => {
   const isUserAuthenticated = await isAuthenticated();
@@ -11,17 +11,17 @@ const Frontlayout = async ({ children }: { children: ReactNode }) => {
   // Check if user needs anonymous authentication
   const needsAnonymousAuth = !isUserAuthenticated;
 
-  // Debug: currentUser state for development
-  // console.log("currentUser", currentUser);
-
   return (
     <>
       <AdBannerContainer />
       <AnonymousAuthProvider
         needsAuth={needsAnonymousAuth}
         currentUser={currentUser}
+        initialUserData={currentUser}
       >
-        <FirstTimeSetupProvider>{children}</FirstTimeSetupProvider>
+        <FirstTimeSetupProvider initialUserData={currentUser}>
+          {children}
+        </FirstTimeSetupProvider>
       </AnonymousAuthProvider>
     </>
   );

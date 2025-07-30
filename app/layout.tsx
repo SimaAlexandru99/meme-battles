@@ -3,11 +3,12 @@ import { Bangers } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { SWRProvider } from "@/providers/swr-provider";
 
 const bangers = Bangers({
-  variable: "--font-bangers",
-  subsets: ["latin"],
   weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bangers",
 });
 
 export const metadata: Metadata = {
@@ -24,15 +25,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${bangers.variable} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <SWRProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </SWRProvider>
       </body>
     </html>
   );

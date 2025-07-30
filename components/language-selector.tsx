@@ -48,7 +48,7 @@ export function LanguageSelector({ className }: LanguageSelectorProps) {
     <div
       className={cn(
         "fixed bottom-5 right-8 z-50 flex items-end justify-center gap-4",
-        className,
+        className
       )}
     >
       {/* Language Selector */}

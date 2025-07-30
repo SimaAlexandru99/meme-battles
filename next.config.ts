@@ -1,6 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    browserDebugInfoInTerminal: true,
+  },
   assetPrefix: "/exp4-static",
   transpilePackages: ["@workspace/ui"],
   images: {

@@ -102,7 +102,7 @@ export async function setSessionCookie(idToken: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -124,7 +124,7 @@ export async function signOut() {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -202,7 +202,7 @@ export async function signUp(params: SignUpParams) {
           message: "Failed to create account. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -254,7 +254,7 @@ export async function signIn(params: SignInParams) {
           message: "Failed to log into account. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -338,7 +338,7 @@ export async function signInWithGoogle(idToken: string) {
           message: "Failed to sign in with Google. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -418,7 +418,7 @@ export async function signInWithGitHub(idToken: string) {
           message: "Failed to sign in with GitHub. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -510,7 +510,7 @@ export async function signInAsGuest(params: {
           message: "Failed to sign in as guest. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -546,7 +546,7 @@ export async function getCurrentUser(): Promise<User | null> {
         // Verify session cookie with Firebase Admin
         const decodedClaims = await auth.verifySessionCookie(
           sessionCookie,
-          true,
+          true
         );
 
         span.setAttribute("user.uid", decodedClaims.uid);
@@ -578,7 +578,7 @@ export async function getCurrentUser(): Promise<User | null> {
         // Invalid or expired session - return null
         return null;
       }
-    },
+    }
   );
 }
 
@@ -597,7 +597,7 @@ export async function isAuthenticated() {
       const isAuth = !!user;
       span.setAttribute("user.authenticated", isAuth);
       return isAuth;
-    },
+    }
   );
 }
 
@@ -627,7 +627,7 @@ export async function isAnonymousUser() {
       }
 
       return isAnonymous;
-    },
+    }
   );
 }
 
@@ -649,26 +649,18 @@ export async function isFirstTimeUser() {
         return false;
       }
 
-      // For anonymous users, check if they have a custom name (not the default generated one)
-      // For authenticated users, check if they haven't customized their profile yet
-      const isAnonymous = user.isAnonymous;
-
-      let hasCustomName = false;
-      let hasCustomAvatar = false;
-
-      if (isAnonymous) {
-        // For anonymous users, check if they have a meaningful name (not just the generated one)
-        hasCustomName = !!(
-          user.name &&
-          user.name.length > 3 &&
-          !user.name.includes("Guest")
-        );
-        hasCustomAvatar = !!(user.avatarId && user.avatarId !== "evil-doge");
-      } else {
-        // For authenticated users, check if they have set up their profile
-        hasCustomName = !!(user.name && user.name.length > 2);
-        hasCustomAvatar = !!(user.avatarId && user.avatarId !== "evil-doge");
+      // Anonymous users should never see the setup dialog
+      if (user.isAnonymous) {
+        span.setAttribute("user.first_time", false);
+        span.setAttribute("user.is_anonymous", true);
+        return false;
       }
+
+      // For authenticated users, check if they haven't customized their profile yet
+      const hasCustomName = !!(user.name && user.name.length > 2);
+      const hasCustomAvatar = !!(
+        user.avatarId && user.avatarId !== "evil-doge"
+      );
 
       // User is first-time if they don't have custom name or avatar, or haven't completed setup
       const isFirstTime =
@@ -677,10 +669,9 @@ export async function isFirstTimeUser() {
       span.setAttribute("user.first_time", isFirstTime);
       span.setAttribute("user.has_custom_name", hasCustomName);
       span.setAttribute("user.has_custom_avatar", hasCustomAvatar);
-      span.setAttribute("user.is_anonymous", isAnonymous);
-
+      span.setAttribute("user.setup_completed", user.setupCompleted ?? false);
       return isFirstTime;
-    },
+    }
   );
 }
 
@@ -737,7 +728,7 @@ export async function updateUserDisplayName(displayName: string) {
           message: "Failed to update display name. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -792,7 +783,7 @@ export async function markUserSetupComplete() {
           message: "Failed to mark setup complete. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -872,6 +863,6 @@ export async function updateUserProfile(updates: {
           message: "Failed to update profile. Please try again.",
         };
       }
-    },
+    }
   );
 }

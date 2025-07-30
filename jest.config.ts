@@ -19,8 +19,20 @@ const config: Config = {
     "^@/(.*)$": "<rootDir>/$1",
   },
 
-  // Test file patterns
-  testMatch: ["**/__tests__/**/*.(ts|tsx|js)", "**/*.(test|spec).(ts|tsx|js)"],
+  // Test file patterns - only include files with .test. or .spec. in the name
+  testMatch: [
+    "**/__tests__/**/*.(test|spec).(ts|tsx|js)",
+    "**/*.(test|spec).(ts|tsx|js)",
+  ],
+
+  // Files to ignore during testing
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/.next/",
+    "/coverage/",
+    "/dist/",
+    "/build/",
+  ],
 
   // Transform configuration
   transform: {
@@ -51,6 +63,7 @@ const config: Config = {
     "!tailwind.config.ts",
     "!postcss.config.mjs",
     "!**/*.stories.{ts,tsx}",
+    "!**/__tests__/**",
   ],
 
   // Coverage thresholds

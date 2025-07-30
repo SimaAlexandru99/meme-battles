@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -49,7 +50,7 @@ export default function ProfilePicker({
     // we should update our local state to reflect this
     if (profileURL) {
       const currentAvatarData = ICON_AVATARS.find(
-        (avatar) => avatar.id === selectedAvatar,
+        (avatar) => avatar.id === selectedAvatar
       );
       if (currentAvatarData && profileURL !== currentAvatarData.src) {
         // Profile URL is different from our current avatar, so we should use the profile URL
@@ -99,7 +100,7 @@ export default function ProfilePicker({
         }
       }
     },
-    [onAvatarChange, isUpdating, currentAvatar],
+    [onAvatarChange, isUpdating, currentAvatar]
   );
 
   // If we have a Firebase profile URL, use it as the primary avatar
@@ -139,6 +140,9 @@ export default function ProfilePicker({
           <DialogTitle className="text-white font-bangers text-xl tracking-wide">
             Choose Your Icon Avatar
           </DialogTitle>
+          <DialogDescription className="text-slate-400 text-sm text-center">
+            Select your icon identity to represent you in battles
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-4 p-4">

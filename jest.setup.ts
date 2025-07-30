@@ -1,5 +1,4 @@
 import "@testing-library/jest-dom";
-import { type } from "os";
 
 // Mock Next.js router
 jest.mock("next/navigation", () => ({
@@ -24,7 +23,7 @@ jest.mock("next/navigation", () => ({
 // Mock Next.js image component
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: (props: any) => {
+  default: (props: Record<string, unknown>) => {
     const { src, alt, ...rest } = props;
     return {
       type: "img",
@@ -81,10 +80,19 @@ beforeEach(() => {
 // Suppress console errors during tests unless explicitly needed
 const originalError = console.error;
 beforeAll(() => {
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
+    // Suppress common React testing warnings
     if (
       typeof args[0] === "string" &&
-      args[0].includes("Warning: ReactDOM.render is deprecated")
+      (args[0].includes("Warning: ReactDOM.render is deprecated") ||
+        args[0].includes("Warning: An update to") ||
+        args[0].includes(
+          "Not implemented: HTMLFormElement.prototype.requestSubmit"
+        ) ||
+        args[0].includes("Warning: React does not recognize the") ||
+        args[0].includes("Warning: Invalid DOM property") ||
+        args[0].includes("An update to") ||
+        args[0].includes("Error: Not implemented:"))
     ) {
       return;
     }
@@ -100,7 +108,7 @@ afterAll(() => {
 global.IntersectionObserver = class IntersectionObserver {
   root = null;
   rootMargin = "";
-  thresholds = [];
+  thresholds: number[] = [];
 
   constructor() {}
   disconnect() {}
@@ -109,7 +117,7 @@ global.IntersectionObserver = class IntersectionObserver {
   takeRecords() {
     return [];
   }
-} as any;
+} as typeof IntersectionObserver;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -122,7 +130,7 @@ global.ResizeObserver = class ResizeObserver {
 // Mock matchMedia
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: jest.fn().mockImplementation((query) => ({
+  value: jest.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,

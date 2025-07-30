@@ -60,6 +60,18 @@ interface FormSliderProps<T extends FieldValues> {
   formatValue?: (value: number) => string;
 }
 
+interface FormFieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  placeholder?: string;
+  type?: "text" | "email" | "password" | "textarea" | "number" | "url";
+  description?: string;
+  className?: string;
+  textareaClassName?: string;
+  rows?: number;
+}
+
 interface FormSwitchProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
@@ -156,16 +168,4 @@ interface PokiWindow extends Window {
   PokiSDK?: {
     displayAd: (containerId: string) => Promise<void>;
   };
-}
-
-interface FormFieldProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
-  label: string;
-  placeholder?: string;
-  type?: "text" | "email" | "password" | "textarea" | "number" | "url";
-  description?: string;
-  className?: string;
-  textareaClassName?: string;
-  rows?: number;
 }

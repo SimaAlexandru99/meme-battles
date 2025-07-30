@@ -17,7 +17,7 @@ const DEFAULT_TIMEOUT = 5000;
  * Waits for loading indicators to disappear
  */
 export async function waitForLoadingToFinish(
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<void> {
   await waitFor(
     () => {
@@ -29,10 +29,10 @@ export async function waitForLoadingToFinish(
       });
 
       expect(
-        spinners.length + loadingTexts.length + loadingButtons.length,
+        spinners.length + loadingTexts.length + loadingButtons.length
       ).toBe(0);
     },
-    { timeout },
+    { timeout }
   );
 }
 
@@ -41,7 +41,7 @@ export async function waitForLoadingToFinish(
  */
 export async function waitForSpecificLoadingToFinish(
   loadingText: string | RegExp,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<void> {
   const loadingElement = screen.queryByText(loadingText);
 
@@ -56,7 +56,7 @@ export async function waitForSpecificLoadingToFinish(
 export async function waitForApiCall(
   successIndicator?: string | RegExp,
   errorIndicator?: string | RegExp,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<"success" | "error"> {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -114,7 +114,7 @@ export async function waitForApiCall(
  */
 export async function waitForDataToLoad(
   dataTestId?: string,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<void> {
   await waitFor(
     () => {
@@ -127,7 +127,7 @@ export async function waitForDataToLoad(
         expect(loadingElements.length).toBe(0);
       }
     },
-    { timeout },
+    { timeout }
   );
 }
 
@@ -137,7 +137,7 @@ export async function waitForDataToLoad(
 export async function waitForElementWithRetry(
   getElement: () => HTMLElement | null,
   maxRetries: number = 5,
-  retryDelay: number = 1000,
+  retryDelay: number = 1000
 ): Promise<HTMLElement> {
   let retries = 0;
 
@@ -163,7 +163,7 @@ export async function waitForElementWithRetry(
  */
 export async function waitForMultipleOperations(
   operations: Array<() => Promise<any>>,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<any[]> {
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {
@@ -182,7 +182,7 @@ export async function waitForMultipleOperations(
 export async function waitForCondition(
   condition: () => boolean | Promise<boolean>,
   timeout: number = DEFAULT_TIMEOUT,
-  pollInterval: number = 100,
+  pollInterval: number = 100
 ): Promise<void> {
   const startTime = Date.now();
 
@@ -203,7 +203,7 @@ export async function waitForCondition(
  * Simulates network delay for testing loading states
  */
 export async function simulateNetworkDelay(
-  delay: number = 1000,
+  delay: number = 1000
 ): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delay));
 }
@@ -213,7 +213,7 @@ export async function simulateNetworkDelay(
  */
 export async function waitForErrorMessage(
   errorText?: string | RegExp,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<HTMLElement> {
   return waitFor(
     () => {
@@ -233,7 +233,7 @@ export async function waitForErrorMessage(
         return errorElements[0];
       }
     },
-    { timeout },
+    { timeout }
   );
 }
 
@@ -242,7 +242,7 @@ export async function waitForErrorMessage(
  */
 export async function waitForSuccessMessage(
   successText?: string | RegExp,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<HTMLElement> {
   return waitFor(
     () => {
@@ -261,7 +261,7 @@ export async function waitForSuccessMessage(
         return successElements[0];
       }
     },
-    { timeout },
+    { timeout }
   );
 }
 
@@ -270,7 +270,7 @@ export async function waitForSuccessMessage(
  */
 export async function waitForNavigation(
   expectedPath?: string,
-  timeout: number = DEFAULT_TIMEOUT,
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<void> {
   await waitFor(
     () => {
@@ -282,7 +282,7 @@ export async function waitForNavigation(
         expect(document.readyState).toBe("complete");
       }
     },
-    { timeout },
+    { timeout }
   );
 }
 
