@@ -24,7 +24,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   // Router options
   router?: Partial<typeof mockRouter>;
   // Initial state for providers
-  initialState?: any;
+  initialState?: Record<string, unknown>;
 }
 
 // All providers wrapper component
@@ -42,7 +42,7 @@ const AllTheProviders: React.FC<{
       enableSystem: theme === "system",
       disableTransitionOnChange: true,
     },
-    children,
+    children
   );
 };
 
@@ -52,7 +52,7 @@ const AllTheProviders: React.FC<{
  */
 export function customRender(
   ui: ReactElement,
-  options: CustomRenderOptions = {},
+  options: CustomRenderOptions = {}
 ): RenderResult {
   const { theme, user, router, initialState, ...renderOptions } = options;
 

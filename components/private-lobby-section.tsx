@@ -145,7 +145,7 @@ export function PrivateLobbySection({
                 "group-hover:-translate-x-1"
               )}
             />
-            <span>ÎNAPOI LA ÎNCEPUT</span>
+            <span>BACK TO START</span>
           </motion.button>
         </Button>
       </motion.div>
@@ -165,7 +165,7 @@ export function PrivateLobbySection({
           role="alert"
           aria-live="assertive"
         >
-          <h4 className="text-lg font-bold mb-2">Eroare</h4>
+          <h4 className="text-lg font-bold mb-2">Error</h4>
           <p className="text-sm">{error}</p>
         </motion.div>
       )}
@@ -177,10 +177,10 @@ export function PrivateLobbySection({
           "w-full grid gap-8 sm:gap-12",
           // Mobile: Stack vertically
           "grid-cols-1",
-          // Desktop: Side by side
+          // Desktop: Side by side with equal height
           "lg:grid-cols-2 lg:gap-16",
           // Ensure equal height on desktop
-          "lg:items-start"
+          "lg:items-stretch"
         )}
       >
         {/* Join With Code Section */}
@@ -192,7 +192,7 @@ export function PrivateLobbySection({
             onJoinLobby={handleJoinLobby}
             isLoading={isJoining || isLoading}
             error={joinError || (error && !createError ? error : null)}
-            className="w-full max-w-md"
+            className="w-full max-w-md h-full"
           />
         </motion.div>
 
@@ -205,7 +205,7 @@ export function PrivateLobbySection({
             onCreateLobby={handleCreateLobby}
             isLoading={isCreating || isLoading}
             createdCode={createdLobbyCode}
-            className="w-full max-w-md"
+            className="w-full max-w-md h-full"
           />
         </motion.div>
       </motion.div>
@@ -216,8 +216,8 @@ export function PrivateLobbySection({
         className="text-center max-w-2xl"
       >
         <p className="text-purple-200/60 text-sm sm:text-base font-bangers tracking-wide">
-          Alege să te alături unui lobby existent cu un cod de invitație sau
-          creează propriul tău lobby pentru a invita prietenii.
+          Choose to join an existing lobby with an invitation code or create
+          your own lobby to invite friends.
         </p>
       </motion.div>
 
@@ -237,7 +237,7 @@ export function PrivateLobbySection({
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
             <p className="text-white font-bangers text-lg tracking-wide">
-              Se procesează...
+              Processing...
             </p>
           </div>
         </motion.div>

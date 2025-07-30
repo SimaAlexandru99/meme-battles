@@ -161,11 +161,11 @@ export async function waitForElementWithRetry(
 /**
  * Waits for multiple async operations to complete
  */
-export async function waitForMultipleOperations(
-  operations: Array<() => Promise<any>>,
+export async function waitForMultipleOperations<T = unknown>(
+  operations: Array<() => Promise<T>>,
   timeout: number = DEFAULT_TIMEOUT
-): Promise<any[]> {
-  const timeoutPromise = new Promise((_, reject) => {
+): Promise<T[]> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
       reject(new Error(`Operations timeout after ${timeout}ms`));
     }, timeout);
@@ -173,7 +173,7 @@ export async function waitForMultipleOperations(
 
   const operationsPromise = Promise.all(operations.map((op) => op()));
 
-  return Promise.race([operationsPromise, timeoutPromise]) as Promise<any[]>;
+  return Promise.race([operationsPromise, timeoutPromise]) as Promise<T[]>;
 }
 
 /**

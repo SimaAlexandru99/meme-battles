@@ -1,10 +1,22 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { InvitationCodeInput } from "@/components/invitation-code-input";
 
 // Mock the input-otp library to avoid JSDOM issues
 jest.mock("@/components/ui/input-otp", () => ({
-  InputOTP: ({ children, onChange, value, onPaste, ...props }: any) => (
+  InputOTP: ({
+    children,
+    onChange,
+    value,
+    onPaste,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    onChange?: (value: string) => void;
+    value: string;
+    onPaste?: (event: React.ClipboardEvent) => void;
+    [key: string]: unknown;
+  }) => (
     <div data-testid="input-otp" {...props}>
       <input
         type="text"
@@ -16,12 +28,24 @@ jest.mock("@/components/ui/input-otp", () => ({
       {children}
     </div>
   ),
-  InputOTPGroup: ({ children, ...props }: any) => (
+  InputOTPGroup: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
     <div data-testid="input-otp-group" {...props}>
       {children}
     </div>
   ),
-  InputOTPSlot: ({ index, ...props }: any) => (
+  InputOTPSlot: ({
+    index,
+    ...props
+  }: {
+    index: number;
+    [key: string]: unknown;
+  }) => (
     <div data-testid={`input-otp-slot-${index}`} {...props}>
       Slot {index}
     </div>

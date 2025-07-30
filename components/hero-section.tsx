@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   RiGlobalLine,
@@ -24,6 +25,13 @@ import { signOut } from "@/lib/actions/auth.action";
 import ProfilePicker from "./profile-picker";
 import GameCard from "./game-card";
 import { useAvatarSetup } from "@/hooks/useAvatarSetup";
+import { PrivateLobbySection } from "@/components/private-lobby-section";
+import {
+  cardExitVariants,
+  buttonVariants,
+  microInteractionVariants,
+  lobbyEnterVariants,
+} from "@/lib/animations/private-lobby-variants";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;
@@ -45,59 +53,71 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
   } = useAvatarSetup(initialUserData);
 
   return (
-    <Card className="relative w-full max-w-[280px] sm:max-w-sm h-[240px] sm:h-[260px] md:w-56 md:h-[280px] bg-transparent md:bg-gradient-to-br md:from-slate-800 md:to-slate-700 border-0 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105">
-      <div
-        className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-lg opacity-0 md:opacity-100 shadow-none md:shadow-lg"
-        aria-hidden="true"
-      />
-      <CardContent className="relative h-full flex flex-col items-center justify-center p-4 sm:p-4 gap-3 sm:gap-4">
-        <div className="flex flex-col items-center gap-2 sm:gap-3">
-          <ProfilePicker
-            currentAvatar={currentAvatar}
-            profileURL={profileURL}
-            onAvatarChange={handleAvatarChange}
-            size="md"
-            className={isUpdatingAvatar ? "opacity-75" : ""}
-            isUpdating={isUpdatingAvatar}
-          />
-          <div className="flex flex-col items-center gap-1 sm:gap-2">
-            <p className="text-purple-200 text-center text-xs sm:text-sm md:text-xs font-bangers font-medium tracking-wide">
-              Choose your meme identity
-            </p>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <div className="relative">
-                <Input
-                  placeholder={isLoading ? "Loading..." : "Meme name"}
-                  value={nickname}
-                  onChange={handleNicknameChange}
-                  disabled={isLoading}
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-20 sm:w-28 md:w-24 text-xs sm:text-sm md:text-xs h-6 sm:h-8 md:h-7 disabled:opacity-50"
-                  maxLength={20}
-                  aria-label="Enter your meme nickname"
-                />
-                {isUpdating && (
-                  <div
-                    className="absolute -right-1 -top-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"
-                    title="Updating name..."
+    <motion.div
+      variants={cardExitVariants}
+      custom={0} // Avatar card slides left
+      className="relative w-full max-w-[280px] sm:max-w-sm h-[240px] sm:h-[260px] md:w-56 md:h-[280px]"
+    >
+      <Card className="relative w-full h-full bg-transparent md:bg-gradient-to-br md:from-slate-800 md:to-slate-700 border-0 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105">
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-lg opacity-0 md:opacity-100 shadow-none md:shadow-lg"
+          aria-hidden="true"
+        />
+        <CardContent className="relative h-full flex flex-col items-center justify-center p-4 sm:p-4 gap-3 sm:gap-4">
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
+            <ProfilePicker
+              currentAvatar={currentAvatar}
+              profileURL={profileURL}
+              onAvatarChange={handleAvatarChange}
+              size="md"
+              className={isUpdatingAvatar ? "opacity-75" : ""}
+              isUpdating={isUpdatingAvatar}
+            />
+            <div className="flex flex-col items-center gap-1 sm:gap-2">
+              <p className="text-purple-200 text-center text-xs sm:text-sm md:text-xs font-bangers font-medium tracking-wide">
+                Choose your meme identity
+              </p>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="relative">
+                  <Input
+                    placeholder={isLoading ? "Loading..." : "Meme name"}
+                    value={nickname}
+                    onChange={handleNicknameChange}
+                    disabled={isLoading}
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-20 sm:w-28 md:w-24 text-xs sm:text-sm md:text-xs h-6 sm:h-8 md:h-7 disabled:opacity-50"
+                    maxLength={20}
+                    aria-label="Enter your meme nickname"
                   />
-                )}
+                  {isUpdating && (
+                    <div
+                      className="absolute -right-1 -top-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"
+                      title="Updating name..."
+                    />
+                  )}
+                </div>
+                <motion.div
+                  variants={buttonVariants}
+                  whileHover="hover"
+                  whileTap="tap"
+                >
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-slate-600 text-slate-300 hover:bg-slate-600 w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 p-0 disabled:opacity-50"
+                    onClick={generateRandomName}
+                    disabled={isLoading}
+                    title="Generate random funny name"
+                    aria-label="Generate random funny name"
+                  >
+                    <RiDiceLine className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-2.5 md:h-2.5" />
+                  </Button>
+                </motion.div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-600 w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 p-0 disabled:opacity-50"
-                onClick={generateRandomName}
-                disabled={isLoading}
-                title="Generate random funny name"
-                aria-label="Generate random funny name"
-              >
-                <RiDiceLine className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-2.5 md:h-2.5" />
-              </Button>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 });
 
@@ -246,49 +266,62 @@ const BottomNavigation = memo(function BottomNavigation() {
 
 const GameCardsSection = memo(function GameCardsSection({
   initialUserData,
+  onPrivateWarClick,
 }: {
   initialUserData?: User | null;
+  onPrivateWarClick: () => void;
 }) {
   const handleMemeBattleClick = React.useCallback(() => {
     console.log("Starting meme battle");
   }, []);
 
-  const handlePrivateWarClick = React.useCallback(() => {
-    console.log("Starting private war");
-  }, []);
-
   return (
-    <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8 w-full max-w-sm sm:max-w-2xl md:max-w-none">
+    <motion.div
+      className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8 w-full max-w-sm sm:max-w-2xl md:max-w-none"
+      variants={microInteractionVariants}
+    >
       <AvatarSetupCard initialUserData={initialUserData} />
-      <GameCard
-        title="Meme Battle Royale"
-        description="Join the chaos! Fight for meme supremacy"
-        backgroundImage="https://makeitmeme.com/assets/static/quick-play.ClEdP5yD.png"
-        gradientFrom="from-orange-600/80"
-        gradientTo="to-red-600/80"
-        hoverShadowColor="hover:shadow-orange-500/20"
-        buttonText="Enter the arena"
-        buttonIcon={<RiFireLine className="w-3 h-3 sm:w-4 sm:h-4" />}
-        badgeText="HOT"
-        badgeColor="bg-red-500"
+      <motion.div
+        variants={cardExitVariants}
+        custom={1} // Game card slides right
         className="w-full max-w-[280px] sm:max-w-sm h-[260px] sm:h-[280px] md:w-72 md:h-[400px]"
-        onClick={handleMemeBattleClick}
-      />
-      <GameCard
-        title="Private Meme War"
-        description="Battle with friends only"
-        backgroundImage="https://makeitmeme.com/assets/static/private-game.c_DPCftE.png"
-        gradientFrom="from-green-600"
-        gradientTo="to-emerald-600"
-        hoverShadowColor="hover:shadow-green-500/20"
-        buttonText="Start war"
-        buttonIcon={<RiGroupLine className="w-3 h-3 sm:w-4 sm:h-4" />}
-        badgeText="FRIENDS"
-        badgeColor="bg-green-500"
+      >
+        <GameCard
+          title="Meme Battle Royale"
+          description="Join the chaos! Fight for meme supremacy"
+          backgroundImage="https://makeitmeme.com/assets/static/quick-play.ClEdP5yD.png"
+          gradientFrom="from-orange-600/80"
+          gradientTo="to-red-600/80"
+          hoverShadowColor="hover:shadow-orange-500/20"
+          buttonText="Enter the arena"
+          buttonIcon={<RiFireLine className="w-3 h-3 sm:w-4 sm:h-4" />}
+          badgeText="HOT"
+          badgeColor="bg-red-500"
+          className="w-full h-full"
+          onClick={handleMemeBattleClick}
+        />
+      </motion.div>
+      <motion.div
+        variants={cardExitVariants}
+        custom={2} // Game card slides right
         className="w-full max-w-[280px] sm:max-w-sm h-[220px] sm:h-[240px] md:w-56 md:h-[280px]"
-        onClick={handlePrivateWarClick}
-      />
-    </div>
+      >
+        <GameCard
+          title="Private Meme War"
+          description="Battle with friends only"
+          backgroundImage="https://makeitmeme.com/assets/static/private-game.c_DPCftE.png"
+          gradientFrom="from-green-600"
+          gradientTo="to-emerald-600"
+          hoverShadowColor="hover:shadow-green-500/20"
+          buttonText="Start war"
+          buttonIcon={<RiGroupLine className="w-3 h-3 sm:w-4 sm:h-4" />}
+          badgeText="FRIENDS"
+          badgeColor="bg-green-500"
+          className="w-full h-full"
+          onClick={onPrivateWarClick}
+        />
+      </motion.div>
+    </motion.div>
   );
 });
 
@@ -297,6 +330,96 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ initialUserData }: HeroSectionProps) {
+  // State management for view transitions
+  const [currentView, setCurrentView] = React.useState<
+    "main" | "private-lobby"
+  >("main");
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [lobbyState, setLobbyState] = React.useState({
+    isLoading: false,
+    error: null as string | null,
+    createdLobbyCode: null as string | null,
+  });
+
+  // Handle private war click with animation transition
+  const handlePrivateWarClick = React.useCallback(() => {
+    setIsTransitioning(true);
+    // Small delay to allow exit animations to complete
+    setTimeout(() => {
+      setCurrentView("private-lobby");
+      setIsTransitioning(false);
+    }, 600); // Match the duration of cardExitVariants
+  }, []);
+
+  // Handle back to main view
+  const handleBackToMain = React.useCallback(() => {
+    setCurrentView("main");
+    // Reset lobby state when going back
+    setLobbyState({
+      isLoading: false,
+      error: null,
+      createdLobbyCode: null,
+    });
+  }, []);
+
+  // Mock lobby functions (to be replaced with actual implementation)
+  const handleJoinLobby = React.useCallback(async (code: string) => {
+    setLobbyState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Simulate success/failure
+      if (code === "TEST1") {
+        console.log("Successfully joined lobby:", code);
+        // Navigate to game or show success message
+      } else {
+        throw new Error("Invalid invitation code");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to join lobby";
+      setLobbyState((prev) => ({
+        ...prev,
+        error: errorMessage,
+        isLoading: false,
+      }));
+      throw error;
+    } finally {
+      setLobbyState((prev) => ({ ...prev, isLoading: false }));
+    }
+  }, []);
+
+  const handleCreateLobby = React.useCallback(async () => {
+    setLobbyState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Generate a random lobby code
+      const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+
+      setLobbyState((prev) => ({
+        ...prev,
+        createdLobbyCode: code,
+        isLoading: false,
+      }));
+
+      return code;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create lobby";
+      setLobbyState((prev) => ({
+        ...prev,
+        error: errorMessage,
+        isLoading: false,
+      }));
+      throw error;
+    }
+  }, []);
+
   const handleBrowseLobbies = React.useCallback(() => {
     console.log("Browsing lobbies");
   }, []);
@@ -329,27 +452,77 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
           className="w-full h-full"
         />
       </div>
-      <div className="h-full flex flex-col items-center justify-center gap-3 sm:gap-4 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-20 sm:pb-24 relative ">
-        <div className="transition-transform duration-300 hover:scale-110 cursor-pointer hidden sm:flex">
-          <Image
-            src="/logo.png"
-            alt="MEME BATTLES"
-            width={200}
-            height={80}
-            className="drop-shadow-2xl w-28 h-auto sm:w-32 md:w-auto md:h-auto"
-            priority
-          />
-        </div>
-        <GameCardsSection initialUserData={initialUserData} />
-        <Button
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bangers font-semibold px-5 py-2.5 sm:px-6 sm:py-3 rounded-full shadow-lg hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 tracking-wide text-sm sm:text-base"
-          onClick={handleBrowseLobbies}
-          aria-label="Browse available game lobbies"
-        >
-          <RiGlobalLine className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          Browse lobbies
-        </Button>
+
+      <div className="h-full flex flex-col items-center justify-center gap-3 sm:gap-4 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-20 sm:pb-24 relative">
+        <AnimatePresence mode="wait">
+          {currentView === "main" && !isTransitioning && (
+            <motion.div
+              key="main-view"
+              className="flex flex-col items-center gap-3 sm:gap-4 w-full"
+              variants={microInteractionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              <motion.div
+                className="transition-transform duration-300 hover:scale-110 cursor-pointer hidden sm:flex"
+                variants={microInteractionVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <Image
+                  src="/logo.png"
+                  alt="MEME BATTLES"
+                  width={200}
+                  height={80}
+                  className="drop-shadow-2xl w-28 h-auto sm:w-32 md:w-auto md:h-auto"
+                  priority
+                />
+              </motion.div>
+              <GameCardsSection
+                initialUserData={initialUserData}
+                onPrivateWarClick={handlePrivateWarClick}
+              />
+              <motion.div
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <Button
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bangers font-semibold px-5 py-2.5 sm:px-6 sm:py-3 rounded-full shadow-lg hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 tracking-wide text-sm sm:text-base"
+                  onClick={handleBrowseLobbies}
+                  aria-label="Browse available game lobbies"
+                >
+                  <RiGlobalLine className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  Browse lobbies
+                </Button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {currentView === "private-lobby" && (
+            <motion.div
+              key="private-lobby-view"
+              className="w-full h-full flex items-center justify-center"
+              variants={lobbyEnterVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              <PrivateLobbySection
+                onBackToMain={handleBackToMain}
+                onJoinLobby={handleJoinLobby}
+                onCreateLobby={handleCreateLobby}
+                isLoading={lobbyState.isLoading}
+                error={lobbyState.error}
+                createdLobbyCode={lobbyState.createdLobbyCode}
+                className="w-full h-full flex items-center justify-center"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
       <BottomNavigation />
     </section>
   );

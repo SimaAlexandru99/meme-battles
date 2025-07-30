@@ -14,23 +14,23 @@ describe("CreateLobbySection", () => {
       <CreateLobbySection onCreateLobby={mockOnCreateLobby} isLoading={false} />
     );
 
-    // Check for Romanian text
-    expect(screen.getByText("Creează un lobby privat")).toBeInTheDocument();
+    // Check for English text
+    expect(screen.getByText("Create a private lobby")).toBeInTheDocument();
     expect(
-      screen.getByText("Creează un lobby și invită-ți prietenii")
+      screen.getByText("Create a lobby and invite your friends")
     ).toBeInTheDocument();
-    expect(screen.getByText("CREEAZĂ LOBBY-UL MEU")).toBeInTheDocument();
+    expect(screen.getByText("CREATE MY LOBBY")).toBeInTheDocument();
 
     // Check for helper text
     expect(
       screen.getByText(
-        "Vei primi un cod de invitație pe care îl poți trimite prietenilor"
+        "You will receive an invitation code that you can send to friends"
       )
     ).toBeInTheDocument();
 
     // Check for visual elements (by checking for specific classes or structure)
     const button = screen.getByRole("button", {
-      name: /creează lobby-ul meu/i,
+      name: /create my lobby/i,
     });
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
@@ -44,7 +44,7 @@ describe("CreateLobbySection", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: /creează lobby-ul meu/i,
+      name: /create my lobby/i,
     });
     fireEvent.click(button);
 
@@ -60,7 +60,7 @@ describe("CreateLobbySection", () => {
 
     const button = screen.getByRole("button");
     expect(button).toBeDisabled();
-    expect(screen.getByText("Se creează...")).toBeInTheDocument();
+    expect(screen.getByText("Creating...")).toBeInTheDocument();
   });
 
   it("shows loading state during creation", async () => {
@@ -75,13 +75,13 @@ describe("CreateLobbySection", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: /creează lobby-ul meu/i,
+      name: /create my lobby/i,
     });
     fireEvent.click(button);
 
     // Should show loading state
     await waitFor(() => {
-      expect(screen.getByText("Se creează...")).toBeInTheDocument();
+      expect(screen.getByText("Creating...")).toBeInTheDocument();
     });
 
     // Button should be disabled during loading
@@ -92,7 +92,7 @@ describe("CreateLobbySection", () => {
 
     // Wait for loading to finish
     await waitFor(() => {
-      expect(screen.queryByText("Se creează...")).not.toBeInTheDocument();
+      expect(screen.queryByText("Creating...")).not.toBeInTheDocument();
     });
   });
 
@@ -105,10 +105,10 @@ describe("CreateLobbySection", () => {
       />
     );
 
-    expect(screen.getByText("Codul tău de invitație:")).toBeInTheDocument();
+    expect(screen.getByText("Your invitation code:")).toBeInTheDocument();
     expect(screen.getByText("ABC12")).toBeInTheDocument();
     expect(
-      screen.getByText("Trimite acest cod prietenilor tăi!")
+      screen.getByText("Send this code to your friends!")
     ).toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("CreateLobbySection", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: /creează lobby-ul meu/i,
+      name: /create my lobby/i,
     });
     fireEvent.click(button);
 
@@ -149,7 +149,7 @@ describe("CreateLobbySection", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: /creează lobby-ul meu/i,
+      name: /create my lobby/i,
     });
 
     // Click multiple times rapidly
@@ -164,7 +164,7 @@ describe("CreateLobbySection", () => {
     resolvePromise!("ABC12");
 
     await waitFor(() => {
-      expect(screen.queryByText("Se creează...")).not.toBeInTheDocument();
+      expect(screen.queryByText("Creating...")).not.toBeInTheDocument();
     });
   });
 

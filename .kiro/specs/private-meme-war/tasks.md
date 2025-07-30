@@ -38,7 +38,7 @@
   - Implement responsive layout for mobile and desktop
   - _Requirements: 1.4, 5.1, 6.1, 6.2, 6.4_
 
-- [ ] 6. Implement animation system with Framer Motion
+- [x] 6. Implement animation system with Framer Motion
   - Create exit animation variants for existing game cards
   - Implement enter animation variants for private lobby interface
   - Add stagger animations for lobby sections
@@ -46,7 +46,7 @@
   - Implement micro-interactions for buttons and inputs
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 7. Integrate private lobby functionality into HeroSection
+- [x] 7. Integrate private lobby functionality into HeroSection
   - Modify HeroSection to include conditional rendering of PrivateLobbySection
   - Update PrivateMemeWarCard click handler to trigger lobby view
   - Implement state management for view transitions

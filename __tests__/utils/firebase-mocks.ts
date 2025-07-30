@@ -3,6 +3,9 @@ import {
   DocumentData,
   QuerySnapshot,
   DocumentSnapshot,
+  DocumentReference,
+  Firestore,
+  Query,
 } from "firebase/firestore";
 
 // ============================================================================
@@ -51,7 +54,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
  * Creates a mock anonymous Firebase user
  */
 function createMockAnonymousUserForFirebase(
-  overrides: Partial<User> = {},
+  overrides: Partial<User> = {}
 ): User {
   return createMockUser({
     uid: "anonymous-user-123",
@@ -81,7 +84,7 @@ export const mockFirebaseAuth = {
     mockFirebaseAuth.currentUser = user;
     // Simulate auth state change callback
     const callbacks = mockFirebaseAuth.onAuthStateChanged.mock.calls.map(
-      (call) => call[0],
+      (call) => call[0]
     );
     callbacks.forEach((callback) => callback(user));
   },
@@ -97,7 +100,7 @@ export const mockFirebaseAuth = {
 export function createMockDocumentSnapshot(
   data: DocumentData | null = null,
   id: string = "mock-doc-id",
-  exists: boolean = true,
+  exists: boolean = true
 ): DocumentSnapshot {
   return {
     id,
@@ -107,9 +110,9 @@ export function createMockDocumentSnapshot(
     ref: {
       id,
       path: `collection/${id}`,
-      parent: {} as any,
-      firestore: {} as any,
-    } as any,
+      parent: {} as DocumentReference,
+      firestore: {} as Firestore,
+    } as unknown as DocumentReference,
   } as DocumentSnapshot;
 }
 
@@ -118,7 +121,7 @@ export function createMockDocumentSnapshot(
  */
 export function createMockQuerySnapshot(
   docs: DocumentSnapshot[] = [],
-  empty: boolean = docs.length === 0,
+  empty: boolean = docs.length === 0
 ): QuerySnapshot {
   return {
     docs,
@@ -127,7 +130,7 @@ export function createMockQuerySnapshot(
     forEach: (callback: (doc: DocumentSnapshot) => void) => {
       docs.forEach(callback);
     },
-    query: {} as any,
+    query: {} as unknown as Query,
     metadata: {
       hasPendingWrites: false,
       fromCache: false,
@@ -154,13 +157,13 @@ export const mockFirestore = {
   // Helper methods for testing
   mockGetDoc: (data: DocumentData | null, exists: boolean = true) => {
     mockFirestore.getDoc.mockResolvedValue(
-      createMockDocumentSnapshot(data, "mock-doc-id", exists),
+      createMockDocumentSnapshot(data, "mock-doc-id", exists)
     );
   },
 
   mockGetDocs: (docsData: DocumentData[]) => {
     const docs = docsData.map((data, index) =>
-      createMockDocumentSnapshot(data, `doc-${index}`, true),
+      createMockDocumentSnapshot(data, `doc-${index}`, true)
     );
     mockFirestore.getDocs.mockResolvedValue(createMockQuerySnapshot(docs));
   },
