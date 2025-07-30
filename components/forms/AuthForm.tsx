@@ -1,17 +1,6 @@
 "use client";
 
 import { z } from "zod";
-
-// Import FormType
-declare global {
-  type FormType =
-    | "sign-in"
-    | "sign-up"
-    | "forgot-password"
-    | "reset-password"
-    | "verify-email"
-    | "resend-verification";
-}
 import Link from "next/link";
 import { toast } from "sonner";
 import { auth } from "@/firebase/client";
@@ -188,7 +177,7 @@ const AuthForm = ({
           firebaseError.code === "auth/account-exists-with-different-credential"
         ) {
           toast.error(
-            "An account already exists with the same email address but different sign-in credentials.",
+            "An account already exists with the same email address but different sign-in credentials."
           );
         } else {
           toast.error(`Authentication error: ${firebaseError.code}`);
@@ -220,7 +209,7 @@ const AuthForm = ({
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
-          password,
+          password
         );
 
         // Send email verification
@@ -239,7 +228,7 @@ const AuthForm = ({
         }
 
         toast.success(
-          "Account created! Please verify your email to verify your account.",
+          "Account created! Please verify your email to verify your account."
         );
         router.push("/verify-email");
       } else if (type === "verify-email") {
@@ -265,13 +254,13 @@ const AuthForm = ({
 
         try {
           toast.info(
-            "To resend the verification email, please try to sign in with your credentials. If your email is not verified, you will be redirected to verify it.",
+            "To resend the verification email, please try to sign in with your credentials. If your email is not verified, you will be redirected to verify it."
           );
           router.push("/sign-in");
         } catch (error) {
           console.error("Error:", error);
           toast.error(
-            "Cannot resend verification email. Please try to sign in.",
+            "Cannot resend verification email. Please try to sign in."
           );
           router.push("/sign-in");
         }
@@ -285,7 +274,7 @@ const AuthForm = ({
 
         await sendPasswordResetEmail(auth, email);
         toast.success(
-          "Email for password reset has been sent. Please check your inbox.",
+          "Email for password reset has been sent. Please check your inbox."
         );
         router.push("/sign-in");
       } else if (type === "reset-password") {
@@ -312,7 +301,7 @@ const AuthForm = ({
 
         await confirmPasswordReset(auth, oobCode, password);
         toast.success(
-          "Password has been reset successfully. Please sign in with your new password.",
+          "Password has been reset successfully. Please sign in with your new password."
         );
         router.push("/sign-in");
       } else {
@@ -331,7 +320,7 @@ const AuthForm = ({
         const userCredential = await signInWithEmailAndPassword(
           auth,
           email,
-          password,
+          password
         );
 
         // Check if email is verified
@@ -339,7 +328,7 @@ const AuthForm = ({
           // Offer to resend verification email
           await sendEmailVerification(userCredential.user);
           toast.error(
-            "Please verify your email before signing in. We have sent a new verification email to your inbox.",
+            "Please verify your email before signing in. We have sent a new verification email to your inbox."
           );
           router.push("/verify-email");
           return;

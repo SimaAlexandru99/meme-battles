@@ -102,21 +102,20 @@ export default function AdBanner({
         // Check if Google Ads script is loaded
         if (
           typeof window !== "undefined" &&
-          (window as unknown as GoogleAdsWindow).googletag
+          (window as GoogleAdsWindow).googletag
         ) {
-          const googletag = (window as unknown as GoogleAdsWindow).googletag;
+          const googletag = (window as GoogleAdsWindow).googletag!;
 
           googletag.cmd.push(() => {
             try {
-              const slot = googletag
-                .defineSlot(
-                  slotData.googleAdId!,
-                  [160, 600],
-                  slotData.containerId
-                )
-                ?.addService(googletag.pubads());
+              const slot = googletag.defineSlot(
+                slotData.googleAdId!,
+                [160, 600],
+                slotData.containerId
+              );
 
               if (slot) {
+                slot.addService(googletag.pubads());
                 googletag.pubads().enableSingleRequest();
                 googletag.enableServices();
                 googletag.display(slotData.containerId);
@@ -146,11 +145,8 @@ export default function AdBanner({
     return new Promise<void>((resolve, reject) => {
       try {
         // Check if Poki SDK is loaded
-        if (
-          typeof window !== "undefined" &&
-          (window as unknown as PokiWindow).PokiSDK
-        ) {
-          const PokiSDK = (window as unknown as PokiWindow).PokiSDK;
+        if (typeof window !== "undefined" && (window as PokiWindow).PokiSDK) {
+          const PokiSDK = (window as PokiWindow).PokiSDK!;
 
           // Initialize Poki ad slot
           const adContainer = document.getElementById(slotData.containerId);
@@ -200,8 +196,16 @@ export default function AdBanner({
       script.src = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
       script.async = true;
       script.onload = () => {
-        (window as any).googletag = (window as any).googletag || {};
-        (window as any).googletag.cmd = (window as any).googletag.cmd || [];
+        const googleAdsWindow = window as GoogleAdsWindow;
+        if (!googleAdsWindow.googletag) {
+          googleAdsWindow.googletag = {
+            cmd: [],
+            defineSlot: () => null,
+            pubads: () => ({ enableSingleRequest: () => {} }),
+            enableServices: () => {},
+            display: () => {},
+          };
+        }
         resolve();
       };
       script.onerror = () =>

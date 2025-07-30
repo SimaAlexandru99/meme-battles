@@ -128,26 +128,32 @@ interface AdLocalizationConfig {
   [locale: string]: AdLocalization;
 }
 
+// Google Ads types
+interface GoogleAdSlot {
+  addService: (pubads: GooglePubAds) => GoogleAdSlot;
+}
+
+interface GooglePubAds {
+  enableSingleRequest: () => void;
+}
+
 // Window interface extensions for ad networks
 interface GoogleAdsWindow extends Window {
-  googletag: {
+  googletag?: {
     cmd: Array<() => void>;
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
       div: string
-    ) => any;
-    pubads: () => {
-      enableSingleRequest: () => void;
-      enableServices: () => void;
-    };
+    ) => GoogleAdSlot | null;
+    pubads: () => GooglePubAds;
     enableServices: () => void;
     display: (div: string) => void;
   };
 }
 
 interface PokiWindow extends Window {
-  PokiSDK: {
+  PokiSDK?: {
     displayAd: (containerId: string) => Promise<void>;
   };
 }

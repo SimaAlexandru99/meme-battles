@@ -1,5 +1,5 @@
 "use client";
-import { Controller, FieldValues, Control, Path } from "react-hook-form";
+import { Controller, FieldValues } from "react-hook-form";
 import { useState } from "react";
 
 import { Eye, EyeOff } from "lucide-react";
