@@ -2,6 +2,10 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { InvitationCodeInput } from "@/components/invitation-code-input";
 
+jest.mock("@/firebase/admin", () => ({
+  initFirebaseAdmin: jest.fn(),
+}));
+
 // Mock the input-otp library to avoid JSDOM issues
 jest.mock("@/components/ui/input-otp", () => ({
   InputOTP: ({

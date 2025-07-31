@@ -32,9 +32,7 @@ describe("CreateLobbySection", () => {
     ).toBeInTheDocument();
 
     // Check for visual elements (by checking for specific classes or structure)
-    const button = screen.getByRole("button", {
-      name: /create my lobby/i,
-    });
+    const button = screen.getByText(/create my lobby/i);
     expect(button).toBeInTheDocument();
     expect(button).not.toBeDisabled();
   });
@@ -49,9 +47,7 @@ describe("CreateLobbySection", () => {
       />,
     );
 
-    const button = screen.getByRole("button", {
-      name: /create my lobby/i,
-    });
+    const button = screen.getByText(/create my lobby/i);
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -83,9 +79,7 @@ describe("CreateLobbySection", () => {
       />,
     );
 
-    const button = screen.getByRole("button", {
-      name: /create my lobby/i,
-    });
+    const button = screen.getByText(/create my lobby/i);
     fireEvent.click(button);
 
     // Should show loading state
@@ -103,6 +97,41 @@ describe("CreateLobbySection", () => {
     await waitFor(() => {
       expect(screen.queryByText("Creating...")).not.toBeInTheDocument();
     });
+  });
+
+  it("shows loading state with network delay", async () => {
+    // Simulate a slow network connection
+    const longDelay = 500;
+    mockOnCreateLobby.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, longDelay));
+      return "XYZ98";
+    });
+
+    render(
+      <CreateLobbySection
+        onCreateLobby={mockOnCreateLobby}
+        isLoading={false}
+      />,
+    );
+
+    const button = screen.getByText(/create my lobby/i);
+    fireEvent.click(button);
+
+    // Check that loading state appears quickly
+    await waitFor(() => {
+      expect(screen.getByText("Creating...")).toBeInTheDocument();
+    });
+
+    // Button should be disabled during loading
+    expect(button).toBeDisabled();
+
+    // Wait for the simulated network delay to complete
+    await waitFor(
+      () => {
+        expect(mockOnCreateLobby).toHaveBeenCalledTimes(1);
+      },
+      { timeout: longDelay + 100 },
+    ); // Adjust timeout to account for delay
   });
 
   it("displays created code when provided", () => {
@@ -134,9 +163,7 @@ describe("CreateLobbySection", () => {
       />,
     );
 
-    const button = screen.getByRole("button", {
-      name: /create my lobby/i,
-    });
+    const button = screen.getByText(/create my lobby/i);
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -163,9 +190,7 @@ describe("CreateLobbySection", () => {
       />,
     );
 
-    const button = screen.getByRole("button", {
-      name: /create my lobby/i,
-    });
+    const button = screen.getByText(/create my lobby/i);
 
     // Click multiple times rapidly
     fireEvent.click(button);

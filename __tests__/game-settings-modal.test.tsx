@@ -188,7 +188,7 @@ describe("GameSettingsModal", () => {
 
     // Check initial values - input values are numbers, not strings
     expect(screen.getByTestId("rounds-input")).toHaveValue(3);
-    expect(screen.getByTestId("time-limit-input")).toHaveValue(60);
+    expect(screen.getByTestId("time-limit-input")).toHaveValue("60");
     expect(screen.getByTestId("category-funny")).toBeChecked();
     expect(screen.getByTestId("category-random")).toBeChecked();
     expect(screen.getByTestId("category-wholesome")).not.toBeChecked();

@@ -7,6 +7,7 @@ import {
   Firestore,
   Query,
 } from "firebase/firestore";
+import { simulateNetworkDelay } from "./async-helpers";
 
 // ============================================================================
 // FIREBASE AUTH MOCKING UTILITIES
@@ -155,23 +156,47 @@ export const mockFirestore = {
   limit: jest.fn(),
 
   // Helper methods for testing
-  mockGetDoc: (data: DocumentData | null, exists: boolean = true) => {
-    mockFirestore.getDoc.mockResolvedValue(
-      createMockDocumentSnapshot(data, "mock-doc-id", exists),
-    );
+  mockGetDoc: (
+    data: DocumentData | null,
+    exists: boolean = true,
+    delayMs?: number,
+  ) => {
+    mockFirestore.getDoc.mockImplementation(async () => {
+      if (delayMs) await simulateNetworkDelay(delayMs);
+      return Promise.resolve(
+        createMockDocumentSnapshot(data, "mock-doc-id", exists),
+      );
+    });
   },
 
-  mockGetDocs: (docsData: DocumentData[]) => {
-    const docs = docsData.map((data, index) =>
-      createMockDocumentSnapshot(data, `doc-${index}`, true),
-    );
-    mockFirestore.getDocs.mockResolvedValue(createMockQuerySnapshot(docs));
+  mockGetDocs: (docsData: DocumentData[], delayMs?: number) => {
+    mockFirestore.getDocs.mockImplementation(async () => {
+      if (delayMs) await simulateNetworkDelay(delayMs);
+      const docs = docsData.map((data, index) =>
+        createMockDocumentSnapshot(data, `doc-${index}`, true),
+      );
+      return Promise.resolve(createMockQuerySnapshot(docs));
+    });
   },
 
-  mockAddDoc: (docId: string = "new-doc-id") => {
-    mockFirestore.addDoc.mockResolvedValue({
-      id: docId,
-      path: `collection/${docId}`,
+  mockAddDoc: (docId: string = "new-doc-id", delayMs?: number) => {
+    mockFirestore.addDoc.mockImplementation(async () => {
+      if (delayMs) await simulateNetworkDelay(delayMs);
+      return Promise.resolve({ id: docId, path: `collection/${docId}` });
+    });
+  },
+
+  mockUpdateDoc: (delayMs?: number) => {
+    mockFirestore.updateDoc.mockImplementation(async () => {
+      if (delayMs) await simulateNetworkDelay(delayMs);
+      return Promise.resolve(undefined);
+    });
+  },
+
+  mockDeleteDoc: (delayMs?: number) => {
+    mockFirestore.deleteDoc.mockImplementation(async () => {
+      if (delayMs) await simulateNetworkDelay(delayMs);
+      return Promise.resolve(undefined);
     });
   },
 };
@@ -227,6 +252,9 @@ export function setupFirebaseMocks() {
 
   mockFirestore.mockGetDoc(null, false); // Default to non-existent document
   mockFirestore.mockGetDocs([]); // Default to empty collection
+  mockFirestore.mockAddDoc();
+  mockFirestore.mockUpdateDoc();
+  mockFirestore.mockDeleteDoc();
 
   mockFirebaseStorage.mockUploadSuccess();
 }

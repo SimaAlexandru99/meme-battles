@@ -46,7 +46,7 @@ const config: Config = {
 
   // Files to ignore during transformation
   transformIgnorePatterns: [
-    "/node_modules/",
+    "/node_modules/(?!jose|@panva/hkdf|firebase-admin)/",
     "^.+\\.module\\.(css|sass|scss)$",
   ],
 
