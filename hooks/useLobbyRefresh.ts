@@ -1,9 +1,12 @@
 import * as React from "react";
-import { getLobbyData } from "@/lib/actions";
-import * as Sentry from "@sentry/nextjs";
+import { useLobbyData } from "./useLobbyData";
 
-// Import types from global definitions
-
+/**
+ * Legacy hook that now uses SWR under the hood
+ * Maintains backward compatibility while leveraging SWR's optimizations
+ *
+ * @deprecated Consider using useLobbyData directly for new code
+ */
 export function useLobbyRefresh({
   lobbyCode,
   enabled = true,
@@ -11,95 +14,58 @@ export function useLobbyRefresh({
   onDataUpdate,
   onError,
 }: UseLobbyRefreshOptions) {
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = React.useRef(true);
+  // Use the new SWR-based hook
+  const { lobbyData, error, isValidating, refresh } = useLobbyData(lobbyCode, {
+    enabled,
+    refreshInterval,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
 
-  // Fetch lobby data using server action
-  const fetchLobbyData = React.useCallback(async () => {
-    if (!isMountedRef.current) return;
+  // Convert dates to strings for backward compatibility if needed
+  const processedLobbyData = React.useMemo(() => {
+    if (!lobbyData) return null;
 
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Refresh Lobby Data",
-      },
-      async () => {
-        try {
-          setIsRefreshing(true);
+    // If dates are already strings, return as-is; otherwise convert to strings
+    return {
+      ...lobbyData,
+      createdAt:
+        lobbyData.createdAt instanceof Date
+          ? lobbyData.createdAt.toISOString()
+          : lobbyData.createdAt,
+      updatedAt:
+        lobbyData.updatedAt instanceof Date
+          ? lobbyData.updatedAt.toISOString()
+          : lobbyData.updatedAt,
+    } as LobbyData;
+  }, [lobbyData]);
 
-          const response = await getLobbyData(lobbyCode);
-
-          if (response.success && response.lobby) {
-            onDataUpdate?.(response.lobby as SerializedLobbyData);
-          } else {
-            throw new Error("Failed to refresh lobby data");
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Failed to refresh lobby";
-          onError?.(errorMessage);
-          Sentry.captureException(error);
-        } finally {
-          setIsRefreshing(false);
-        }
-      }
-    );
-  }, [lobbyCode, onDataUpdate, onError]);
-
-  // Start automatic refresh
-  const startAutoRefresh = React.useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    if (enabled) {
-      intervalRef.current = setInterval(() => {
-        if (isMountedRef.current) {
-          fetchLobbyData();
-        }
-      }, refreshInterval);
-    }
-  }, [enabled, refreshInterval, fetchLobbyData]);
-
-  // Stop automatic refresh
-  const stopAutoRefresh = React.useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  // Manual refresh
-  const refreshNow = React.useCallback(() => {
-    fetchLobbyData();
-  }, [fetchLobbyData]);
-
-  // Start/stop auto refresh based on enabled state
+  // Handle data updates - call callback when data changes
   React.useEffect(() => {
-    if (enabled) {
-      startAutoRefresh();
-    } else {
-      stopAutoRefresh();
+    if (processedLobbyData && onDataUpdate) {
+      onDataUpdate(processedLobbyData);
     }
+  }, [processedLobbyData, onDataUpdate]);
 
-    return () => {
-      stopAutoRefresh();
-    };
-  }, [enabled, startAutoRefresh, stopAutoRefresh]);
-
-  // Cleanup on unmount
+  // Handle errors - call callback when error occurs
   React.useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      stopAutoRefresh();
-    };
-  }, [stopAutoRefresh]);
+    if (error && onError) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to refresh lobby";
+      onError(errorMessage);
+    }
+  }, [error, onError]);
 
+  // Legacy interface compatibility
   return {
-    isRefreshing,
-    refreshNow,
-    startAutoRefresh,
-    stopAutoRefresh,
+    isRefreshing: isValidating,
+    refreshNow: refresh,
+    // These are now no-ops since SWR handles it automatically
+    startAutoRefresh: React.useCallback(() => {
+      // SWR handles this automatically based on refreshInterval
+    }, []),
+    stopAutoRefresh: React.useCallback(() => {
+      // SWR handles this automatically based on enabled state
+    }, []),
   };
 }

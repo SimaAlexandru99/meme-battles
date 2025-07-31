@@ -346,7 +346,7 @@ interface UseLobbyRefreshOptions {
   lobbyCode: string;
   enabled?: boolean;
   refreshInterval?: number;
-  onDataUpdate?: (lobbyData: SerializedLobbyData) => void;
+  onDataUpdate?: (lobbyData: LobbyData) => void;
   onError?: (error: string) => void;
 }
 
@@ -377,8 +377,8 @@ interface LobbyData {
   status: "waiting" | "started" | "finished";
   maxPlayers: number;
   players: LobbyPlayer[];
-  createdAt: Date | FirebaseFirestore.Timestamp;
-  updatedAt: Date | FirebaseFirestore.Timestamp;
+  createdAt: Date | FirebaseFirestore.Timestamp | string;
+  updatedAt: Date | FirebaseFirestore.Timestamp | string;
   settings: {
     rounds: number;
     timeLimit: number;
@@ -386,20 +386,30 @@ interface LobbyData {
   };
 }
 
-interface SerializedLobbyData {
-  code: string;
-  hostUid: string;
-  hostDisplayName: string;
-  status: "waiting" | "started" | "finished";
-  maxPlayers: number;
-  players: LobbyPlayer[];
-  createdAt: string;
-  updatedAt: string;
-  settings: {
-    rounds: number;
-    timeLimit: number;
-    categories: string[];
-  };
+// SWR Hook interfaces
+interface UseLobbyDataOptions {
+  refreshInterval?: number;
+  enabled?: boolean;
+  revalidateOnFocus?: boolean;
+  revalidateOnReconnect?: boolean;
+  keepPreviousData?: boolean;
+  errorRetryCount?: number;
+  errorRetryInterval?: number;
+  [key: string]: unknown; // Allow other SWR options
+}
+
+interface UseActiveLobbiesOptions {
+  enabled?: boolean;
+  refreshInterval?: number;
+  keepPreviousData?: boolean;
+  errorRetryCount?: number;
+  errorRetryInterval?: number;
+  [key: string]: unknown; // Allow other SWR options
+}
+
+interface UseLobbyAndActiveDataOptions {
+  lobbyOptions?: UseLobbyDataOptions;
+  activeLobbiesOptions?: UseActiveLobbiesOptions;
 }
 
 interface ProfilePickerProps {

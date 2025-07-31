@@ -22,19 +22,26 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
 import { useReconnection } from "@/hooks/useReconnection";
-import { useLobbyRefresh } from "@/hooks/useLobbyRefresh";
+
 import { GameRedirect } from "@/components/game-redirect";
 import { AuthError } from "@/components/auth-error";
-import { getLobbyData, startGame } from "@/lib/actions";
+import { startGame } from "@/lib/actions";
+import { useLobbyData } from "@/hooks/useLobbyData";
 
 // Import types from global definitions
 
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
-  const [lobbyData, setLobbyData] = React.useState<LobbyData | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
   const [isStarting, setIsStarting] = React.useState(false);
+
+  // SWR hook for lobby data with real-time updates
+  const { lobbyData, error, isLoading, isValidating, refresh, isHost } =
+    useLobbyData(lobbyCode, {
+      refreshInterval: 5000, // 5 seconds auto-refresh
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      enabled: true, // Will be controlled by reconnection logic below
+    });
 
   // Reconnection hook
   const {
@@ -53,7 +60,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     reconnectInterval: 3000,
     onReconnectSuccess: () => {
       // Refresh lobby data after successful reconnection
-      fetchLobbyData();
+      refresh();
+      resetConnectionState();
     },
     onReconnectFailure: () => {
       // Redirect to main menu if reconnection fails
@@ -64,81 +72,26 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     },
   });
 
-  // Auto-refresh hook
-  const { isRefreshing } = useLobbyRefresh({
-    lobbyCode,
-    enabled: isConnected && !isReconnecting,
-    refreshInterval: 5000,
-    onDataUpdate: (updatedLobbyData) => {
-      setLobbyData(updatedLobbyData as LobbyData);
-      setError(null);
-    },
-    onError: (errorMessage) => {
-      setError(errorMessage);
-      // Don't trigger connection loss for refresh errors
-      // Only trigger for actual connection issues
-    },
-  });
-
-  // Check if current user is the host
-  const isHost = lobbyData?.hostUid === currentUser.id;
-
-  // Fetch lobby data using server action
-  const fetchLobbyData = React.useCallback(async () => {
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Fetch Lobby Data",
-      },
-      async () => {
-        try {
-          const response = await getLobbyData(lobbyCode);
-          if (response.success && response.lobby) {
-            // Convert serialized data to proper format
-            const serializedLobby = response.lobby as SerializedLobbyData;
-            const lobbyData: LobbyData = {
-              ...serializedLobby,
-              createdAt: new Date(serializedLobby.createdAt),
-              updatedAt: new Date(serializedLobby.updatedAt),
-            };
-            setLobbyData(lobbyData);
-          } else {
-            throw new Error("Failed to load lobby data");
-          }
-          setError(null);
-
-          // Reset connection state on successful fetch
-          resetConnectionState();
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to load lobby";
-          setError(errorMessage);
-          Sentry.captureException(err);
-
-          // Handle connection loss
-          if (
-            err instanceof Error &&
-            (err.message.includes("Failed to load lobby") ||
-              err.message.includes("You are not a member of this lobby"))
-          ) {
-            handleConnectionLoss();
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    );
-  }, [lobbyCode, resetConnectionState, handleConnectionLoss]);
-
-  // Initial fetch with authentication check
+  // Handle errors and connection issues
   React.useEffect(() => {
-    // Wait a bit for authentication to be ready
-    const timer = setTimeout(() => {
-      fetchLobbyData();
-    }, 500);
+    if (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to load lobby";
 
-    return () => clearTimeout(timer);
-  }, [fetchLobbyData]);
+      // Handle connection loss for specific errors
+      if (
+        errorMessage.includes("Failed to load lobby") ||
+        errorMessage.includes("You are not a member of this lobby") ||
+        errorMessage.includes("authentication") ||
+        errorMessage.includes("unauthorized")
+      ) {
+        handleConnectionLoss();
+      }
+    }
+  }, [error, handleConnectionLoss]);
+
+  // Check if current user is the host (now using the helper from hook)
+  const isCurrentUserHost = isHost(currentUser.id);
 
   // Copy invitation code to clipboard
   const handleCopyCode = React.useCallback(async () => {
@@ -181,7 +134,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Start the game using server action
   const handleStartGame = React.useCallback(async () => {
-    if (!isHost) return;
+    if (!isCurrentUserHost) return;
 
     return Sentry.startSpan(
       {
@@ -205,7 +158,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         }
       }
     );
-  }, [lobbyCode, isHost, router]);
+  }, [lobbyCode, isCurrentUserHost, router]);
 
   // Handle back navigation
   const handleBackToMain = React.useCallback(() => {
@@ -300,7 +253,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       error.toLowerCase().includes("auth");
 
     if (isAuthError) {
-      return <AuthError error={error} onRetry={fetchLobbyData} />;
+      return <AuthError error={error} onRetry={refresh} />;
     }
 
     return (
@@ -370,7 +323,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 </h1>
                 <div className="text-sm text-purple-200/70 flex items-center justify-center gap-2">
                   <span>Waiting for players...</span>
-                  {isRefreshing && (
+                  {isValidating && (
                     <div className="w-3 h-3 border border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
                   )}
                 </div>
@@ -475,7 +428,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 <div className="space-y-2">
                   <Separator className="bg-slate-700/50" />
                   <Button
-                    onClick={fetchLobbyData}
+                    onClick={refresh}
                     variant="outline"
                     className="w-full border-slate-600/50 text-white hover:bg-slate-700/50"
                   >
@@ -485,7 +438,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 </div>
 
                 {/* Host Controls */}
-                {isHost && (
+                {isCurrentUserHost && (
                   <div className="space-y-2">
                     <Separator className="bg-slate-700/50" />
                     <div className="space-y-2">
