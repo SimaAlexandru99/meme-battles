@@ -10,6 +10,9 @@ import {
   RiSettings3Line,
   RiWifiOffLine,
   RiRefreshLine,
+  RiUserLine,
+  RiTimeLine,
+  RiGamepadLine,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +30,14 @@ import { GameRedirect } from "@/components/game-redirect";
 import { AuthError } from "@/components/auth-error";
 import { startGame } from "@/lib/actions";
 import { useLobbyData } from "@/hooks/useLobbyData";
+import {
+  buttonVariants,
+  errorVariants,
+  badgeVariants,
+  microInteractionVariants,
+  successVariants,
+  loadingVariants,
+} from "@/lib/animations/private-lobby-variants";
 
 // Import types from global definitions
 
@@ -95,41 +106,59 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Copy invitation code to clipboard
   const handleCopyCode = React.useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(lobbyCode);
-      toast.success("Invitation code copied to clipboard!");
-    } catch (err) {
-      console.error("Failed to copy invitation code", err);
-      toast.error("Failed to copy invitation code");
-    }
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Copy Invitation Code",
+      },
+      async () => {
+        try {
+          await navigator.clipboard.writeText(lobbyCode);
+          toast.success("Invitation code copied to clipboard!");
+        } catch (err) {
+          console.error("Failed to copy invitation code", err);
+          toast.error("Failed to copy invitation code");
+          Sentry.captureException(err);
+        }
+      }
+    );
   }, [lobbyCode]);
 
   // Share invitation link
   const handleShareLink = React.useCallback(async () => {
-    const shareUrl = `${window.location.origin}/game/${lobbyCode}`;
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Share Lobby Link",
+      },
+      async () => {
+        const shareUrl = `${window.location.origin}/game/${lobbyCode}`;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Join my Meme Battle lobby!",
-          text: `Join my private meme battle lobby! Code: ${lobbyCode}`,
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.error("Failed to share lobby link", err);
-        // User cancelled sharing
-        console.log("Share cancelled");
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "Join my Meme Battle lobby!",
+              text: `Join my private meme battle lobby! Code: ${lobbyCode}`,
+              url: shareUrl,
+            });
+          } catch (err) {
+            console.error("Failed to share lobby link", err);
+            // User cancelled sharing
+            console.log("Share cancelled");
+          }
+        } else {
+          // Fallback to copying link
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success("Lobby link copied to clipboard!");
+          } catch (err) {
+            console.error("Failed to copy lobby link", err);
+            toast.error("Failed to copy lobby link");
+            Sentry.captureException(err);
+          }
+        }
       }
-    } else {
-      // Fallback to copying link
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success("Lobby link copied to clipboard!");
-      } catch (err) {
-        console.error("Failed to copy lobby link", err);
-        toast.error("Failed to copy lobby link");
-      }
-    }
+    );
   }, [lobbyCode]);
 
   // Start the game using server action
@@ -165,15 +194,32 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     router.push("/");
   }, [router]);
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-          <p className="text-white font-bangers text-lg tracking-wide">
-            Loading lobby...
-          </p>
-        </div>
+        <motion.div
+          className="flex flex-col items-center gap-6 p-8"
+          variants={microInteractionVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/30"
+            variants={loadingVariants}
+            animate="animate"
+          >
+            <RiGamepadLine className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+          </motion.div>
+          <div className="text-center">
+            <h2 className="text-xl sm:text-2xl font-bangers text-white tracking-wide mb-2">
+              Loading lobby...
+            </h2>
+            <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
+              Connecting to game server
+            </p>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -182,66 +228,123 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   if (!isConnected || isReconnecting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <Card className="w-full max-w-md bg-slate-800/50 border-slate-700/50">
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
-                  <RiWifiOffLine className="w-8 h-8 text-red-400" />
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bangers text-white mb-2">
-                  {isReconnecting ? "Reconnecting..." : "Connection Lost"}
-                </h2>
-                <p className="text-purple-200/70 text-sm">
-                  {isReconnecting
-                    ? `Attempt ${reconnectAttempts} of 5...`
-                    : "Your connection to the lobby was lost."}
-                </p>
-              </div>
-
-              {isReconnecting && (
-                <div className="space-y-2">
-                  <Progress value={reconnectProgress} className="w-full" />
-                  <p className="text-xs text-purple-200/50">
-                    Attempting to reconnect...
-                  </p>
-                </div>
-              )}
-
-              {!isReconnecting && canReconnect && (
-                <Button
-                  onClick={triggerReconnection}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+        <motion.div
+          className="w-full max-w-md p-6 sm:p-8"
+          variants={microInteractionVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+            <CardContent className="p-6">
+              <div className="text-center space-y-6">
+                <motion.div
+                  className="flex justify-center"
+                  variants={microInteractionVariants}
                 >
-                  <RiRefreshLine className="w-4 h-4 mr-2" />
-                  Try Again
-                </Button>
-              )}
-
-              {!canReconnect && (
-                <div className="space-y-3">
-                  <p className="text-red-400 text-sm">
-                    Failed to reconnect after 5 attempts.
-                  </p>
-                  <Button
-                    onClick={() => router.push("/")}
-                    className="w-full bg-slate-600 hover:bg-slate-700 text-white"
+                  <motion.div
+                    className={cn(
+                      "w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center",
+                      isReconnecting
+                        ? "bg-yellow-500/20 shadow-yellow-500/30"
+                        : "bg-red-500/20 shadow-red-500/30"
+                    )}
+                    variants={
+                      isReconnecting
+                        ? loadingVariants
+                        : microInteractionVariants
+                    }
+                    animate={isReconnecting ? "animate" : "initial"}
                   >
-                    <RiArrowLeftLine className="w-4 h-4 mr-2" />
-                    Back to Main Menu
-                  </Button>
-                </div>
-              )}
+                    <RiWifiOffLine
+                      className={cn(
+                        "w-8 h-8 sm:w-10 sm:h-10",
+                        isReconnecting ? "text-yellow-400" : "text-red-400"
+                      )}
+                    />
+                  </motion.div>
+                </motion.div>
 
-              {connectionError && (
-                <p className="text-red-400 text-xs mt-2">{connectionError}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                <motion.div variants={microInteractionVariants}>
+                  <h2 className="text-xl sm:text-2xl font-bangers text-white mb-2">
+                    {isReconnecting ? "Reconnecting..." : "Connection Lost"}
+                  </h2>
+                  <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
+                    {isReconnecting
+                      ? `Attempt ${reconnectAttempts} of 5...`
+                      : "Your connection to the lobby was lost."}
+                  </p>
+                </motion.div>
+
+                {isReconnecting && (
+                  <motion.div
+                    className="space-y-3"
+                    variants={microInteractionVariants}
+                  >
+                    <Progress value={reconnectProgress} className="w-full" />
+                    <p className="text-xs text-purple-200/50 font-bangers tracking-wide">
+                      Attempting to reconnect...
+                    </p>
+                  </motion.div>
+                )}
+
+                {!isReconnecting && canReconnect && (
+                  <motion.div variants={buttonVariants}>
+                    <Button
+                      onClick={triggerReconnection}
+                      className={cn(
+                        "w-full h-12 sm:h-14",
+                        "bg-gradient-to-r from-yellow-600 to-yellow-700",
+                        "hover:from-yellow-500 hover:to-yellow-600",
+                        "text-white font-bangers text-lg sm:text-xl tracking-wide",
+                        "shadow-lg shadow-yellow-500/30",
+                        "focus-visible:ring-2 focus-visible:ring-yellow-500/50",
+                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      )}
+                    >
+                      <RiRefreshLine className="w-5 h-5 mr-2" />
+                      Try Again
+                    </Button>
+                  </motion.div>
+                )}
+
+                {!canReconnect && (
+                  <motion.div
+                    className="space-y-4"
+                    variants={microInteractionVariants}
+                  >
+                    <p className="text-red-400 text-sm font-bangers tracking-wide">
+                      Failed to reconnect after 5 attempts.
+                    </p>
+                    <Button
+                      onClick={() => router.push("/")}
+                      className={cn(
+                        "w-full h-12 sm:h-14",
+                        "bg-gradient-to-r from-slate-600 to-slate-700",
+                        "hover:from-slate-500 hover:to-slate-600",
+                        "text-white font-bangers text-lg sm:text-xl tracking-wide",
+                        "shadow-lg shadow-slate-500/30",
+                        "focus-visible:ring-2 focus-visible:ring-slate-500/50",
+                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      )}
+                    >
+                      <RiArrowLeftLine className="w-5 h-5 mr-2" />
+                      Back to Main Menu
+                    </Button>
+                  </motion.div>
+                )}
+
+                {connectionError && (
+                  <motion.p
+                    className="text-red-400 text-xs font-bangers tracking-wide"
+                    variants={errorVariants}
+                  >
+                    {connectionError}
+                  </motion.p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -258,20 +361,54 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <Card className="w-full max-w-md bg-slate-800/50 border-slate-700/50">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h2 className="text-xl font-bangers text-red-400 mb-4">
-                Lobby Not Found
-              </h2>
-              <p className="text-purple-200/70 mb-6">{error}</p>
-              <Button onClick={handleBackToMain} className="w-full">
-                <RiArrowLeftLine className="w-4 h-4 mr-2" />
-                Back to Main Menu
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          className="w-full max-w-md p-6 sm:p-8"
+          variants={microInteractionVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+            <CardContent className="p-6">
+              <div className="text-center space-y-6">
+                <motion.div
+                  className="flex justify-center"
+                  variants={microInteractionVariants}
+                >
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-500/20 flex items-center justify-center shadow-lg shadow-red-500/30">
+                    <RiWifiOffLine className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
+                  </div>
+                </motion.div>
+
+                <motion.div variants={microInteractionVariants}>
+                  <h2 className="text-xl sm:text-2xl font-bangers text-red-400 mb-2">
+                    Lobby Not Found
+                  </h2>
+                  <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
+                    {error}
+                  </p>
+                </motion.div>
+
+                <motion.div variants={buttonVariants}>
+                  <Button
+                    onClick={handleBackToMain}
+                    className={cn(
+                      "w-full h-12 sm:h-14",
+                      "bg-gradient-to-r from-slate-600 to-slate-700",
+                      "hover:from-slate-500 hover:to-slate-600",
+                      "text-white font-bangers text-lg sm:text-xl tracking-wide",
+                      "shadow-lg shadow-slate-500/30",
+                      "focus-visible:ring-2 focus-visible:ring-slate-500/50",
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                    )}
+                  >
+                    <RiArrowLeftLine className="w-5 h-5 mr-2" />
+                    Back to Main Menu
+                  </Button>
+                </motion.div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
@@ -307,55 +444,70 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Button
-              onClick={handleBackToMain}
-              variant="ghost"
-              className="text-white hover:bg-slate-800/50"
-            >
-              <RiArrowLeftLine className="w-5 h-5 mr-2" />
-              Back
-            </Button>
+            <motion.div variants={buttonVariants}>
+              <Button
+                onClick={handleBackToMain}
+                variant="ghost"
+                className="text-white hover:bg-slate-800/50 font-bangers tracking-wide"
+              >
+                <RiArrowLeftLine className="w-5 h-5 mr-2" />
+                Back
+              </Button>
+            </motion.div>
 
             <div className="flex items-center gap-4">
-              <div className="text-center">
-                <h1 className="text-xl font-bangers text-white tracking-wide">
+              <motion.div
+                className="text-center"
+                variants={microInteractionVariants}
+              >
+                <h1 className="text-xl sm:text-2xl font-bangers text-white tracking-wide">
                   Game Lobby
                 </h1>
-                <div className="text-sm text-purple-200/70 flex items-center justify-center gap-2">
+                <div className="text-sm text-purple-200/70 flex items-center justify-center gap-2 font-bangers tracking-wide">
                   <span>Waiting for players...</span>
                   {isValidating && (
-                    <div className="w-3 h-3 border border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                    <motion.div
+                      className="w-3 h-3 border border-purple-400/30 border-t-purple-400 rounded-full"
+                      variants={loadingVariants}
+                      animate="animate"
+                    />
                   )}
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="bg-green-500/20 text-green-400 border-green-500/30"
-              >
-                {lobbyData.players.length}/{lobbyData.maxPlayers} Players
-              </Badge>
+              <motion.div variants={badgeVariants}>
+                <Badge
+                  variant="secondary"
+                  className="bg-green-500/20 text-green-400 border-green-500/30 font-bangers tracking-wide"
+                >
+                  {lobbyData.players.length}/{lobbyData.maxPlayers} Players
+                </Badge>
+              </motion.div>
 
               {/* Connection Status */}
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "flex items-center gap-1",
-                  isConnected
-                    ? "bg-green-500/20 text-green-400 border-green-500/30"
-                    : "bg-red-500/20 text-red-400 border-red-500/30"
-                )}
-              >
-                <div
+              <motion.div variants={badgeVariants}>
+                <Badge
+                  variant="secondary"
                   className={cn(
-                    "w-2 h-2 rounded-full",
-                    isConnected ? "bg-green-400" : "bg-red-400"
+                    "flex items-center gap-1 font-bangers tracking-wide",
+                    isConnected
+                      ? "bg-green-500/20 text-green-400 border-green-500/30"
+                      : "bg-red-500/20 text-red-400 border-red-500/30"
                   )}
-                />
-                {isConnected ? "Connected" : "Disconnected"}
-              </Badge>
+                >
+                  <motion.div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      isConnected ? "bg-green-400" : "bg-red-400"
+                    )}
+                    animate={isConnected ? { scale: [1, 1.2, 1] } : {}}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  {isConnected ? "Connected" : "Disconnected"}
+                </Badge>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -370,98 +522,164 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-1"
           >
-            <Card className="bg-slate-800/50 border-slate-700/50">
+            <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
               <CardHeader>
                 <CardTitle className="text-white font-bangers text-xl tracking-wide">
                   Lobby Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* Invitation Code */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-purple-200/70">
+                <motion.div
+                  className="space-y-3"
+                  variants={microInteractionVariants}
+                >
+                  <label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
                     Invitation Code
                   </label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2">
+                    <motion.div
+                      className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2"
+                      variants={microInteractionVariants}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
                       <code className="text-lg font-mono text-white tracking-widest">
                         {lobbyCode}
                       </code>
-                    </div>
-                    <Button
-                      onClick={handleCopyCode}
-                      size="sm"
-                      variant="outline"
-                      className="border-slate-600/50 text-white hover:bg-slate-700/50"
-                    >
-                      <RiFileCopyLine className="w-4 h-4" />
-                    </Button>
+                    </motion.div>
+                    <motion.div variants={buttonVariants}>
+                      <Button
+                        onClick={handleCopyCode}
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
+                      >
+                        <RiFileCopyLine className="w-4 h-4" />
+                      </Button>
+                    </motion.div>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Share Link */}
-                <Button
-                  onClick={handleShareLink}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <RiShareLine className="w-4 h-4 mr-2" />
-                  Share Lobby Link
-                </Button>
+                <motion.div variants={buttonVariants}>
+                  <Button
+                    onClick={handleShareLink}
+                    className={cn(
+                      "w-full h-12",
+                      "bg-gradient-to-r from-purple-600 to-purple-700",
+                      "hover:from-purple-500 hover:to-purple-600",
+                      "text-white font-bangers text-lg tracking-wide",
+                      "shadow-lg shadow-purple-500/30",
+                      "focus-visible:ring-2 focus-visible:ring-purple-500/50",
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                    )}
+                  >
+                    <RiShareLine className="w-5 h-5 mr-2" />
+                    Share Lobby Link
+                  </Button>
+                </motion.div>
 
                 {/* Game Settings */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-purple-200/70">
+                <motion.div
+                  className="space-y-3"
+                  variants={microInteractionVariants}
+                >
+                  <label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
                     Game Settings
                   </label>
-                  <div className="space-y-1 text-sm text-purple-200/70">
-                    <div>Rounds: {lobbyData.settings.rounds}</div>
-                    <div>
-                      Time Limit: {lobbyData.settings.timeLimit}s per round
+                  <div className="space-y-2 text-sm text-purple-200/70 font-bangers tracking-wide">
+                    <div className="flex items-center gap-2">
+                      <RiTimeLine className="w-4 h-4" />
+                      <span>Rounds: {lobbyData.settings.rounds}</span>
                     </div>
-                    <div>
-                      Categories: {lobbyData.settings.categories.join(", ")}
+                    <div className="flex items-center gap-2">
+                      <RiTimeLine className="w-4 h-4" />
+                      <span>
+                        Time Limit: {lobbyData.settings.timeLimit}s per round
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RiGamepadLine className="w-4 h-4" />
+                      <span>
+                        Categories: {lobbyData.settings.categories.join(", ")}
+                      </span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Refresh Lobby Data */}
-                <div className="space-y-2">
+                <motion.div
+                  className="space-y-3"
+                  variants={microInteractionVariants}
+                >
                   <Separator className="bg-slate-700/50" />
                   <Button
                     onClick={refresh}
                     variant="outline"
-                    className="w-full border-slate-600/50 text-white hover:bg-slate-700/50"
+                    className="w-full border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
                   >
                     <RiRefreshLine className="w-4 h-4 mr-2" />
                     Refresh Lobby
                   </Button>
-                </div>
+                </motion.div>
 
                 {/* Host Controls */}
                 {isCurrentUserHost && (
-                  <div className="space-y-2">
+                  <motion.div
+                    className="space-y-3"
+                    variants={microInteractionVariants}
+                  >
                     <Separator className="bg-slate-700/50" />
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-purple-200/70">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
                         Host Controls
                       </label>
-                      <Button
-                        onClick={handleStartGame}
-                        disabled={lobbyData.players.length < 2 || isStarting}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <RiPlayLine className="w-4 h-4 mr-2" />
-                        {isStarting ? "Starting..." : "Start Game"}
-                      </Button>
+                      <motion.div variants={buttonVariants}>
+                        <Button
+                          onClick={handleStartGame}
+                          disabled={lobbyData.players.length < 2 || isStarting}
+                          className={cn(
+                            "w-full h-12",
+                            "bg-gradient-to-r from-green-600 to-green-700",
+                            "hover:from-green-500 hover:to-green-600",
+                            "disabled:from-slate-600 disabled:to-slate-700",
+                            "text-white font-bangers text-lg tracking-wide",
+                            "shadow-lg shadow-green-500/30",
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
+                            "focus-visible:ring-2 focus-visible:ring-green-500/50",
+                            "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                          )}
+                        >
+                          {isStarting ? (
+                            <motion.div
+                              className="flex items-center gap-2"
+                              variants={successVariants}
+                              animate="animate"
+                            >
+                              <div
+                                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                                aria-hidden="true"
+                              />
+                              <span>Starting...</span>
+                            </motion.div>
+                          ) : (
+                            <>
+                              <RiPlayLine className="w-5 h-5 mr-2" />
+                              Start Game
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
                       <Button
                         variant="outline"
-                        className="w-full border-slate-600/50 text-white hover:bg-slate-700/50"
+                        className="w-full border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
                       >
                         <RiSettings3Line className="w-4 h-4 mr-2" />
                         Game Settings
                       </Button>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
               </CardContent>
             </Card>
@@ -473,7 +691,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-2"
           >
-            <Card className="bg-slate-800/50 border-slate-700/50">
+            <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
               <CardHeader>
                 <CardTitle className="text-white font-bangers text-xl tracking-wide">
                   Players ({lobbyData.players.length}/{lobbyData.maxPlayers})
@@ -494,15 +712,20 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           "bg-slate-700/30 border border-slate-600/30",
                           "hover:bg-slate-700/50 transition-colors duration-200"
                         )}
+                        variants={microInteractionVariants}
+                        whileHover="hover"
+                        whileTap="tap"
                       >
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={player.profileURL || undefined} />
-                          <AvatarFallback className="bg-purple-600 text-white font-bangers">
-                            {(player.displayName || "A")
-                              .charAt(0)
-                              .toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <motion.div variants={microInteractionVariants}>
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={player.profileURL || undefined} />
+                            <AvatarFallback className="bg-purple-600 text-white font-bangers">
+                              {(player.displayName || "A")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </motion.div>
 
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -510,23 +733,27 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                               {player.displayName || "Anonymous Player"}
                             </span>
                             {player.isHost && (
-                              <Badge
-                                variant="secondary"
-                                className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                              >
-                                Host
-                              </Badge>
+                              <motion.div variants={badgeVariants}>
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bangers tracking-wide"
+                                >
+                                  Host
+                                </Badge>
+                              </motion.div>
                             )}
                             {player.uid === currentUser.id && (
-                              <Badge
-                                variant="secondary"
-                                className="bg-blue-500/20 text-blue-400 border-blue-500/30"
-                              >
-                                You
-                              </Badge>
+                              <motion.div variants={badgeVariants}>
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide"
+                                >
+                                  You
+                                </Badge>
+                              </motion.div>
                             )}
                           </div>
-                          <p className="text-sm text-purple-200/70">
+                          <p className="text-sm text-purple-200/70 font-bangers tracking-wide">
                             Joined {formatJoinTime(player.joinedAt)}
                           </p>
                         </div>
@@ -543,9 +770,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       className="flex items-center gap-4 p-4 rounded-lg bg-slate-700/10 border border-slate-600/20 border-dashed"
+                      variants={microInteractionVariants}
                     >
                       <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
-                        <span className="text-slate-500 text-lg">?</span>
+                        <RiUserLine className="w-6 h-6 text-slate-500" />
                       </div>
                       <div className="flex-1">
                         <span className="text-slate-500 font-bangers tracking-wide">
