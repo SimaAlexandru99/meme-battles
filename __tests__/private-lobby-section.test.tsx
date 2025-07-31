@@ -92,7 +92,9 @@ describe("PrivateLobbySection", () => {
     render(<PrivateLobbySection {...mockProps} />);
 
     expect(
-      screen.getByText(/Choose to join an existing lobby/),
+      screen.getByText(
+        /Choose to join an existing lobby with an invitation code/,
+      ),
     ).toBeInTheDocument();
   });
 });

@@ -1,26 +1,7 @@
 import useSWR from "swr";
 import { getLobbyData } from "@/lib/actions";
 import * as Sentry from "@sentry/nextjs";
-
-/**
- * Helper function to ensure a timestamp is converted to a Date object
- */
-function ensureDate(
-  timestamp: Date | string | FirebaseFirestore.Timestamp
-): Date {
-  if (timestamp instanceof Date) {
-    return timestamp;
-  }
-  if (typeof timestamp === "string") {
-    return new Date(timestamp);
-  }
-  // Handle Firestore Timestamp
-  if (timestamp && typeof timestamp === "object" && "toDate" in timestamp) {
-    return (timestamp as FirebaseFirestore.Timestamp).toDate();
-  }
-  // Fallback
-  return new Date(timestamp as string);
-}
+import { ensureDate } from "@/lib/utils";
 
 /**
  * SWR hook for lobby data with real-time updates

@@ -6,6 +6,26 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Helper function to ensure a timestamp is converted to a Date object
+ */
+export function ensureDate(
+  timestamp: Date | string | FirebaseFirestore.Timestamp,
+): Date {
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  if (typeof timestamp === "string") {
+    return new Date(timestamp);
+  }
+  // Handle Firestore Timestamp
+  if (timestamp && typeof timestamp === "object" && "toDate" in timestamp) {
+    return (timestamp as FirebaseFirestore.Timestamp).toDate();
+  }
+  // Fallback
+  return new Date(timestamp as string);
+}
+
+/**
  * Safely converts a date value (Firestore Timestamp, Date, string, etc.) to a readable time string
  * @param dateValue - The date value to convert
  * @returns A formatted time string or "Unknown" if conversion fails
