@@ -526,3 +526,133 @@ interface GameLobbyPageProps {
     code: string;
   }>;
 }
+
+// Meme Battle Game Types
+enum GamePhase {
+  LOADING = "loading",
+  SUBMISSION = "submission",
+  VOTING = "voting",
+  RESULTS = "results",
+  GAME_OVER = "game_over",
+}
+
+interface MemeCard {
+  id: string;
+  filename: string;
+  url: string;
+  alt: string;
+}
+
+interface Player {
+  id: string;
+  name: string;
+  profileURL?: string;
+  score: number;
+  isConnected: boolean;
+  hand: MemeCard[];
+}
+
+interface Submission {
+  id: string;
+  playerId: string;
+  playerName: string;
+  memeCard: MemeCard;
+  votes: number;
+  submittedAt: Date;
+  isWinner?: boolean;
+}
+
+interface Vote {
+  id: string;
+  voterId: string;
+  submissionId: string;
+  votedAt: Date;
+}
+
+interface ChatMessage {
+  id: string;
+  playerId: string;
+  playerName: string;
+  message: string;
+  timestamp: Date;
+}
+
+interface GameState {
+  // Game Meta
+  lobbyCode: string;
+  gameId: string;
+  currentRound: number;
+  totalRounds: number;
+  phase: GamePhase;
+
+  // Players
+  players: Player[];
+  currentPlayer: Player;
+  hostId: string;
+
+  // Game Content
+  currentSituation: string;
+  playerHand: MemeCard[];
+  submissions: Submission[];
+  votes: Vote[];
+
+  // Timers
+  phaseTimer: number;
+  phaseStartTime: Date;
+
+  // UI State
+  selectedCard: MemeCard | null;
+  hasSubmitted: boolean;
+  hasVoted: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+interface GameDocument {
+  // Meta
+  id: string;
+  lobbyCode: string;
+  status: "waiting" | "playing" | "finished";
+  createdAt: Date | FirebaseFirestore.Timestamp;
+  updatedAt: Date | FirebaseFirestore.Timestamp;
+
+  // Game Settings
+  settings: {
+    rounds: number;
+    submissionTime: number; // seconds
+    votingTime: number; // seconds
+  };
+
+  // Current State
+  currentRound: number;
+  phase: GamePhase;
+  phaseStartTime: Date | FirebaseFirestore.Timestamp;
+  currentSituation: string;
+
+  // Players
+  players: {
+    [playerId: string]: {
+      id: string;
+      name: string;
+      profileURL?: string;
+      score: number;
+      isConnected: boolean;
+      hand: string[]; // meme filenames
+    };
+  };
+
+  // Round Data
+  submissions: {
+    [playerId: string]: {
+      memeFilename: string;
+      submittedAt: Date | FirebaseFirestore.Timestamp;
+    };
+  };
+
+  votes: {
+    [playerId: string]: string; // voted submission playerId
+  };
+
+  // Chat
+  chat: ChatMessage[];
+}
