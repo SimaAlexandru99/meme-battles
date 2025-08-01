@@ -13,6 +13,7 @@ import {
   RiUserLine,
   RiTimeLine,
   RiGamepadLine,
+  RiAlertLine,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,16 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn, formatJoinTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -28,7 +39,7 @@ import { useReconnection } from "@/hooks/useReconnection";
 
 import { GameRedirect } from "@/components/game-redirect";
 import { AuthError } from "@/components/auth-error";
-import { startGame } from "@/lib/actions";
+import { startGame, leaveLobby } from "@/lib/actions";
 import { useLobbyData } from "@/hooks/useLobbyData";
 import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
 import { updateLobbySettingsService } from "@/lib/services/lobby.service";
@@ -50,6 +61,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
   const [settingsError, setSettingsError] = React.useState<string | null>(null);
   const [isSavingSettings, setIsSavingSettings] = React.useState(false);
+  const [showExitDialog, setShowExitDialog] = React.useState(false);
+  const [isLeaving, setIsLeaving] = React.useState(false);
 
   // SWR hook for lobby data with real-time updates
   const { lobbyData, error, isLoading, isValidating, refresh, isHost } =
@@ -89,6 +102,46 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     },
   });
 
+  // Handle beforeunload event to show confirmation dialog
+  React.useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (lobbyData && lobbyData.status === "waiting") {
+        event.preventDefault();
+        event.returnValue = "";
+        return "";
+      }
+    };
+
+    // Handle visibility change (tab switching, minimizing)
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "hidden" &&
+        lobbyData &&
+        lobbyData.status === "waiting"
+      ) {
+        // Log that user left the tab while in lobby
+        Sentry.addBreadcrumb({
+          category: "navigation",
+          message: "User left tab while in game lobby",
+          level: "info",
+          data: {
+            lobbyCode,
+            lobbyStatus: lobbyData.status,
+            playerCount: lobbyData.players.length,
+          },
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [lobbyData, lobbyCode]);
+
   // Handle errors and connection issues
   React.useEffect(() => {
     if (error) {
@@ -126,7 +179,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           toast.error("Failed to copy invitation code");
           Sentry.captureException(err);
         }
-      },
+      }
     );
   }, [lobbyCode]);
 
@@ -163,7 +216,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(err);
           }
         }
-      },
+      }
     );
   }, [lobbyCode]);
 
@@ -191,14 +244,66 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         } finally {
           setIsStarting(false);
         }
-      },
+      }
     );
   }, [lobbyCode, isCurrentUserHost, router]);
 
-  // Handle back navigation
+  // Handle back navigation with confirmation
   const handleBackToMain = React.useCallback(() => {
-    router.push("/");
-  }, [router]);
+    if (lobbyData && lobbyData.status === "waiting") {
+      setShowExitDialog(true);
+    } else {
+      router.push("/");
+    }
+  }, [router, lobbyData]);
+
+  // Handle leaving the lobby
+  const handleLeaveLobby = React.useCallback(async () => {
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Leave Lobby",
+      },
+      async () => {
+        setIsLeaving(true);
+        try {
+          await leaveLobby(lobbyCode);
+          toast.success("Successfully left the lobby");
+          router.push("/");
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error ? err.message : "Failed to leave lobby";
+          toast.error(errorMessage);
+          Sentry.captureException(err);
+        } finally {
+          setIsLeaving(false);
+          setShowExitDialog(false);
+        }
+      }
+    );
+  }, [lobbyCode, router]);
+
+  // Handle canceling exit
+  const handleCancelExit = React.useCallback(() => {
+    setShowExitDialog(false);
+  }, []);
+
+  // Handle keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showExitDialog) {
+        handleCancelExit();
+      }
+    };
+
+    if (showExitDialog) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showExitDialog, handleCancelExit]);
 
   // Handle opening settings modal
   const handleOpenSettings = React.useCallback(() => {
@@ -248,10 +353,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           } finally {
             setIsSavingSettings(false);
           }
-        },
+        }
       );
     },
-    [lobbyCode, isCurrentUserHost, refresh],
+    [lobbyCode, isCurrentUserHost, refresh]
   );
 
   // Loading state
@@ -306,7 +411,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center",
                       isReconnecting
                         ? "bg-yellow-500/20 shadow-yellow-500/30"
-                        : "bg-red-500/20 shadow-red-500/30",
+                        : "bg-red-500/20 shadow-red-500/30"
                     )}
                     variants={
                       isReconnecting
@@ -318,7 +423,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     <RiWifiOffLine
                       className={cn(
                         "w-8 h-8 sm:w-10 sm:h-10",
-                        isReconnecting ? "text-yellow-400" : "text-red-400",
+                        isReconnecting ? "text-yellow-400" : "text-red-400"
                       )}
                     />
                   </motion.div>
@@ -358,7 +463,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         "text-white font-bangers text-lg sm:text-xl tracking-wide",
                         "shadow-lg shadow-yellow-500/30",
                         "focus-visible:ring-2 focus-visible:ring-yellow-500/50",
-                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                       )}
                     >
                       <RiRefreshLine className="w-5 h-5 mr-2" />
@@ -384,7 +489,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         "text-white font-bangers text-lg sm:text-xl tracking-wide",
                         "shadow-lg shadow-slate-500/30",
                         "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                       )}
                     >
                       <RiArrowLeftLine className="w-5 h-5 mr-2" />
@@ -443,9 +548,16 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   <h2 className="text-xl sm:text-2xl font-bangers text-red-400 mb-2">
                     Lobby Not Found
                   </h2>
-                  <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
-                    {error}
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
+                      {error}
+                    </p>
+                    <div className="text-xs text-purple-200/50 font-bangers tracking-wide space-y-1">
+                      <p>• Check that the lobby code is correct</p>
+                      <p>• Ensure the lobby hasn&apos;t been deleted</p>
+                      <p>• Try refreshing the page</p>
+                    </div>
+                  </div>
                 </motion.div>
 
                 <motion.div variants={buttonVariants}>
@@ -458,7 +570,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg sm:text-xl tracking-wide",
                       "shadow-lg shadow-slate-500/30",
                       "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                     )}
                   >
                     <RiArrowLeftLine className="w-5 h-5 mr-2" />
@@ -502,32 +614,32 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-20 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <motion.div variants={buttonVariants}>
               <Button
                 onClick={handleBackToMain}
                 variant="ghost"
-                className="text-white hover:bg-slate-800/50 font-bangers tracking-wide"
+                className="text-white hover:bg-slate-800/50 font-bangers tracking-wide h-10 sm:h-11"
               >
-                <RiArrowLeftLine className="w-5 h-5 mr-2" />
-                Back
+                <RiArrowLeftLine className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
             </motion.div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <motion.div
                 className="text-center"
                 variants={microInteractionVariants}
               >
-                <h1 className="text-xl sm:text-2xl font-bangers text-white tracking-wide">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bangers text-white tracking-wide">
                   Game Lobby
                 </h1>
-                <div className="text-sm text-purple-200/70 flex items-center justify-center gap-2 font-bangers tracking-wide">
+                <div className="text-xs sm:text-sm text-purple-200/70 flex items-center justify-center gap-2 font-bangers tracking-wide">
                   <span>Waiting for players...</span>
                   {isValidating && (
                     <motion.div
-                      className="w-3 h-3 border border-purple-400/30 border-t-purple-400 rounded-full"
+                      className="w-2 h-2 sm:w-3 sm:h-3 border border-purple-400/30 border-t-purple-400 rounded-full"
                       variants={loadingVariants}
                       animate="animate"
                     />
@@ -536,13 +648,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
               </motion.div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <motion.div variants={badgeVariants}>
                 <Badge
                   variant="secondary"
-                  className="bg-green-500/20 text-green-400 border-green-500/30 font-bangers tracking-wide"
+                  className="bg-green-500/20 text-green-400 border-green-500/30 font-bangers tracking-wide text-xs sm:text-sm"
                 >
-                  {lobbyData.players.length}/{lobbyData.maxPlayers} Players
+                  {lobbyData.players.length}/{lobbyData.maxPlayers}
                 </Badge>
               </motion.div>
 
@@ -551,21 +663,23 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 <Badge
                   variant="secondary"
                   className={cn(
-                    "flex items-center gap-1 font-bangers tracking-wide",
+                    "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
                     isConnected
                       ? "bg-green-500/20 text-green-400 border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border-red-500/30",
+                      : "bg-red-500/20 text-red-400 border-red-500/30"
                   )}
                 >
                   <motion.div
                     className={cn(
-                      "w-2 h-2 rounded-full",
-                      isConnected ? "bg-green-400" : "bg-red-400",
+                      "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
+                      isConnected ? "bg-green-400" : "bg-red-400"
                     )}
                     animate={isConnected ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
-                  {isConnected ? "Connected" : "Disconnected"}
+                  <span className="hidden sm:inline">
+                    {isConnected ? "Connected" : "Disconnected"}
+                  </span>
                 </Badge>
               </motion.div>
             </div>
@@ -574,8 +688,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       </motion.div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid gap-8 lg:grid-cols-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid gap-6 sm:gap-8 lg:grid-cols-3">
           {/* Lobby Info */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -632,7 +746,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg tracking-wide",
                       "shadow-lg shadow-purple-500/30",
                       "focus-visible:ring-2 focus-visible:ring-purple-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                     )}
                   >
                     <RiShareLine className="w-5 h-5 mr-2" />
@@ -700,15 +814,19 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           onClick={handleStartGame}
                           disabled={lobbyData.players.length < 2 || isStarting}
                           className={cn(
-                            "w-full h-12",
+                            "w-full h-14 sm:h-12",
                             "bg-gradient-to-r from-green-600 to-green-700",
                             "hover:from-green-500 hover:to-green-600",
                             "disabled:from-slate-600 disabled:to-slate-700",
-                            "text-white font-bangers text-lg tracking-wide",
+                            "text-white font-bangers text-lg sm:text-lg tracking-wide",
                             "shadow-lg shadow-green-500/30",
                             "disabled:opacity-50 disabled:cursor-not-allowed",
+                            // Enhanced visual weight for critical action
+                            "ring-2 ring-green-500/20 hover:ring-green-500/40",
                             "focus-visible:ring-2 focus-visible:ring-green-500/50",
                             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                            // Mobile-specific enhancements
+                            "sm:ring-1 sm:hover:ring-2"
                           )}
                         >
                           {isStarting ? (
@@ -771,18 +889,18 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ delay: index * 0.1 }}
                         className={cn(
-                          "flex items-center gap-4 p-4 rounded-lg",
+                          "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg",
                           "bg-slate-700/30 border border-slate-600/30",
-                          "hover:bg-slate-700/50 transition-colors duration-200",
+                          "hover:bg-slate-700/50 transition-colors duration-200"
                         )}
                         variants={microInteractionVariants}
                         whileHover="hover"
                         whileTap="tap"
                       >
                         <motion.div variants={microInteractionVariants}>
-                          <Avatar className="w-12 h-12">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                             <AvatarImage src={player.profileURL || undefined} />
-                            <AvatarFallback className="bg-purple-600 text-white font-bangers">
+                            <AvatarFallback className="bg-purple-600 text-white font-bangers text-sm sm:text-base">
                               {(player.displayName || "A")
                                 .charAt(0)
                                 .toUpperCase()}
@@ -790,33 +908,35 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           </Avatar>
                         </motion.div>
 
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bangers text-white tracking-wide">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
                               {player.displayName || "Anonymous Player"}
                             </span>
-                            {player.isHost && (
-                              <motion.div variants={badgeVariants}>
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bangers tracking-wide"
-                                >
-                                  Host
-                                </Badge>
-                              </motion.div>
-                            )}
-                            {player.uid === currentUser.id && (
-                              <motion.div variants={badgeVariants}>
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide"
-                                >
-                                  You
-                                </Badge>
-                              </motion.div>
-                            )}
+                            <div className="flex flex-wrap gap-1 sm:gap-2">
+                              {player.isHost && (
+                                <motion.div variants={badgeVariants}>
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bangers tracking-wide text-xs"
+                                  >
+                                    Host
+                                  </Badge>
+                                </motion.div>
+                              )}
+                              {player.uid === currentUser.id && (
+                                <motion.div variants={badgeVariants}>
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide text-xs"
+                                  >
+                                    You
+                                  </Badge>
+                                </motion.div>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-sm text-purple-200/70 font-bangers tracking-wide">
+                          <p className="text-xs sm:text-sm text-purple-200/70 font-bangers tracking-wide mt-1">
                             Joined {formatJoinTime(player.joinedAt)}
                           </p>
                         </div>
@@ -832,14 +952,14 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       key={`empty-${index}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex items-center gap-4 p-4 rounded-lg bg-slate-700/10 border border-slate-600/20 border-dashed"
+                      className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-slate-700/10 border border-slate-600/20 border-dashed"
                       variants={microInteractionVariants}
                     >
-                      <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
-                        <RiUserLine className="w-6 h-6 text-slate-500" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
+                        <RiUserLine className="w-5 h-5 sm:w-6 sm:h-6 text-slate-500" />
                       </div>
                       <div className="flex-1">
-                        <span className="text-slate-500 font-bangers tracking-wide">
+                        <span className="text-slate-500 font-bangers tracking-wide text-sm sm:text-base">
                           Waiting for player...
                         </span>
                       </div>
@@ -863,6 +983,51 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           error={settingsError}
         />
       )}
+
+      {/* Exit Confirmation Dialog */}
+      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <AlertDialogContent className="bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 shadow-2xl shadow-red-500/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white font-bangers text-xl tracking-wide flex items-center">
+              <RiAlertLine className="w-6 h-6 text-red-400 mr-2" />
+              Are you sure you want to leave the lobby?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-purple-200/70 font-bangers tracking-wide">
+              You are currently in a game lobby. Leaving now will abandon the
+              game and remove you from the lobby.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={handleCancelExit}
+              className="border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLeaveLobby}
+              disabled={isLeaving}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bangers tracking-wide shadow-lg shadow-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLeaving ? (
+                <motion.div
+                  className="flex items-center gap-2"
+                  variants={successVariants}
+                  animate="animate"
+                >
+                  <div
+                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                    aria-hidden="true"
+                  />
+                  <span>Leaving...</span>
+                </motion.div>
+              ) : (
+                "Leave Lobby"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

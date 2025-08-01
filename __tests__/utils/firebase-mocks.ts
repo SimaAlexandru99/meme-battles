@@ -55,7 +55,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
  * Creates a mock anonymous Firebase user
  */
 function createMockAnonymousUserForFirebase(
-  overrides: Partial<User> = {},
+  overrides: Partial<User> = {}
 ): User {
   return createMockUser({
     uid: "anonymous-user-123",
@@ -85,7 +85,7 @@ export const mockFirebaseAuth = {
     mockFirebaseAuth.currentUser = user;
     // Simulate auth state change callback
     const callbacks = mockFirebaseAuth.onAuthStateChanged.mock.calls.map(
-      (call) => call[0],
+      (call) => call[0]
     );
     callbacks.forEach((callback) => callback(user));
   },
@@ -101,7 +101,7 @@ export const mockFirebaseAuth = {
 export function createMockDocumentSnapshot(
   data: DocumentData | null = null,
   id: string = "mock-doc-id",
-  exists: boolean = true,
+  exists: boolean = true
 ): DocumentSnapshot {
   return {
     id,
@@ -122,7 +122,7 @@ export function createMockDocumentSnapshot(
  */
 export function createMockQuerySnapshot(
   docs: DocumentSnapshot[] = [],
-  empty: boolean = docs.length === 0,
+  empty: boolean = docs.length === 0
 ): QuerySnapshot {
   return {
     docs,
@@ -159,12 +159,12 @@ export const mockFirestore = {
   mockGetDoc: (
     data: DocumentData | null,
     exists: boolean = true,
-    delayMs?: number,
+    delayMs?: number
   ) => {
     mockFirestore.getDoc.mockImplementation(async () => {
       if (delayMs) await simulateNetworkDelay(delayMs);
       return Promise.resolve(
-        createMockDocumentSnapshot(data, "mock-doc-id", exists),
+        createMockDocumentSnapshot(data, "mock-doc-id", exists)
       );
     });
   },
@@ -173,7 +173,7 @@ export const mockFirestore = {
     mockFirestore.getDocs.mockImplementation(async () => {
       if (delayMs) await simulateNetworkDelay(delayMs);
       const docs = docsData.map((data, index) =>
-        createMockDocumentSnapshot(data, `doc-${index}`, true),
+        createMockDocumentSnapshot(data, `doc-${index}`, true)
       );
       return Promise.resolve(createMockQuerySnapshot(docs));
     });
@@ -276,10 +276,6 @@ export function mockFirebaseApp() {
     options: {},
     automaticDataCollectionEnabled: false,
   };
-
-  require("firebase/app").getApps.mockReturnValue([mockApp]);
-  require("firebase/app").getApp.mockReturnValue(mockApp);
-  require("firebase/app").initializeApp.mockReturnValue(mockApp);
 
   return mockApp;
 }

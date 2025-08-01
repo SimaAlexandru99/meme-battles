@@ -6,34 +6,6 @@ import { Timestamp } from "firebase/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 
 // ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
-
-interface Player {
-  uid: string;
-  displayName: string;
-  profileURL: string | null;
-  joinedAt: string;
-  isHost: boolean;
-}
-
-interface LobbyData {
-  code: string;
-  hostUid: string;
-  hostDisplayName: string;
-  status: "waiting" | "started" | "finished";
-  maxPlayers: number;
-  players: Player[];
-  createdAt: string;
-  updatedAt: string;
-  settings: {
-    rounds: number;
-    timeLimit: number;
-    categories: string[];
-  };
-}
-
-// ============================================================================
 // CONSTANTS & CONFIGURATION
 // ============================================================================
 
@@ -41,7 +13,7 @@ interface LobbyData {
 const DEFAULT_MAX_PLAYERS = 8;
 const DEFAULT_ROUNDS = 5;
 const DEFAULT_TIME_LIMIT = 60; // seconds
-const DEFAULT_CATEGORIES = ["funny", "relatable", "random"];
+const DEFAULT_CATEGORIES = ["funny", "wholesome", "random"];
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -164,7 +136,7 @@ export async function createLobby(settings?: {
       try {
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -242,7 +214,7 @@ export async function createLobby(settings?: {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -273,7 +245,7 @@ export async function joinLobby(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -307,7 +279,7 @@ export async function joinLobby(invitationCode: string) {
 
         // Check if user is already in the lobby
         const isUserInLobby = lobbyData.players.some(
-          (player: { uid: string }) => player.uid === uid,
+          (player: { uid: string }) => player.uid === uid
         );
 
         if (isUserInLobby) {
@@ -340,7 +312,7 @@ export async function joinLobby(invitationCode: string) {
 
         span.setAttribute(
           "lobby.player_count",
-          updatedLobbyData?.players.length,
+          updatedLobbyData?.players.length
         );
 
         return {
@@ -351,7 +323,7 @@ export async function joinLobby(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -382,7 +354,7 @@ export async function getLobbyData(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -411,18 +383,63 @@ export async function getLobbyData(invitationCode: string) {
 
         // Check if user is in the lobby
         const isUserInLobby = lobbyData.players.some(
-          (player: { uid: string }) => player.uid === uid,
+          (player: { uid: string }) => player.uid === uid
         );
 
         if (!isUserInLobby) {
           throw new Error("You are not a member of this lobby");
         }
 
+        // Migrate categories if needed
+        const allowedCategories = [
+          "funny",
+          "wholesome",
+          "dark",
+          "random",
+          "trending",
+        ];
+
+        const currentCategories =
+          lobbyData.settings?.categories || DEFAULT_CATEGORIES;
+        const validCategories = currentCategories.filter((category: string) =>
+          allowedCategories.includes(category)
+        );
+
+        // If categories need migration, update the lobby
+        if (validCategories.length !== currentCategories.length) {
+          const finalCategories =
+            validCategories.length > 0
+              ? validCategories
+              : ["funny", "wholesome"];
+
+          const removedCategories = currentCategories.filter(
+            (category: string) => !allowedCategories.includes(category)
+          );
+
+          console.warn(
+            `Migrating lobby ${normalizedCode} categories: removed ${removedCategories.join(", ")} and replaced with ${finalCategories.join(", ")}`
+          );
+
+          // Update the lobby with migrated categories
+          await lobbyRef.update({
+            "settings.categories": finalCategories,
+            updatedAt: new Date().toISOString(),
+          });
+
+          // Update the lobby data for serialization
+          lobbyData.settings = {
+            ...lobbyData.settings,
+            categories: finalCategories,
+          };
+        }
+
         // Serialize Firestore Timestamps
-        const serializedPlayers = lobbyData.players.map((player: Player) => ({
-          ...player,
-          joinedAt: serializeTimestamp(player.joinedAt),
-        }));
+        const serializedPlayers = lobbyData.players.map(
+          (player: LobbyPlayer) => ({
+            ...player,
+            joinedAt: serializeTimestamp(player.joinedAt as Date),
+          })
+        ) as LobbyPlayer[];
 
         const serializedLobby = {
           ...lobbyData,
@@ -442,7 +459,7 @@ export async function getLobbyData(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -469,7 +486,7 @@ export async function startGame(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -524,7 +541,7 @@ export async function startGame(invitationCode: string) {
         span.setAttribute("lobby.status", "started");
         span.setAttribute(
           "lobby.player_count",
-          updatedLobbyData?.players.length,
+          updatedLobbyData?.players.length
         );
 
         return {
@@ -535,7 +552,7 @@ export async function startGame(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -562,7 +579,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -591,7 +608,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Find the player to remove
         const playerIndex = lobbyData.players.findIndex(
-          (player: { uid: string }) => player.uid === uid,
+          (player: { uid: string }) => player.uid === uid
         );
 
         if (playerIndex === -1) {
@@ -602,7 +619,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Remove player from lobby
         const updatedPlayers = lobbyData.players.filter(
-          (player: { uid: string }) => player.uid !== uid,
+          (player: { uid: string }) => player.uid !== uid
         );
 
         // If host is leaving, assign new host or delete lobby
@@ -640,7 +657,7 @@ export async function leaveLobby(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -660,7 +677,7 @@ export async function updateLobbySettings(
     rounds: number;
     timeLimit: number;
     categories: string[];
-  },
+  }
 ) {
   return Sentry.startSpan(
     {
@@ -679,7 +696,7 @@ export async function updateLobbySettings(
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -717,13 +734,23 @@ export async function updateLobbySettings(
           "random",
           "trending",
         ];
-        const invalidCategories = settings.categories.filter(
-          (category) => !allowedCategories.includes(category),
+
+        // Filter out invalid categories and replace with valid defaults
+        const validCategories = settings.categories.filter((category) =>
+          allowedCategories.includes(category)
         );
 
-        if (invalidCategories.length > 0) {
-          throw new Error(
-            `Invalid categories: ${invalidCategories.join(", ")}`,
+        // If no valid categories remain, use default categories
+        const finalCategories =
+          validCategories.length > 0 ? validCategories : ["funny", "wholesome"];
+
+        // Log migration if categories were changed
+        if (validCategories.length !== settings.categories.length) {
+          const removedCategories = settings.categories.filter(
+            (category) => !allowedCategories.includes(category)
+          );
+          console.warn(
+            `Migrated lobby categories: removed ${removedCategories.join(", ")} and replaced with ${finalCategories.join(", ")}`
           );
         }
 
@@ -755,7 +782,7 @@ export async function updateLobbySettings(
           settings: {
             rounds: settings.rounds,
             timeLimit: settings.timeLimit,
-            categories: settings.categories,
+            categories: finalCategories,
           },
           updatedAt: new Date().toISOString(),
         });
@@ -766,10 +793,10 @@ export async function updateLobbySettings(
 
         // Serialize Firestore Timestamps
         const serializedPlayers = updatedLobbyData?.players.map(
-          (player: Player) => ({
+          (player: LobbyPlayer) => ({
             ...player,
-            joinedAt: serializeTimestamp(player.joinedAt),
-          }),
+            joinedAt: serializeTimestamp(player.joinedAt as Date),
+          })
         );
 
         const serializedLobby = {
@@ -781,7 +808,7 @@ export async function updateLobbySettings(
 
         span.setAttribute("lobby.rounds", settings.rounds);
         span.setAttribute("lobby.time_limit", settings.timeLimit);
-        span.setAttribute("lobby.categories", settings.categories.join(","));
+        span.setAttribute("lobby.categories", finalCategories.join(","));
 
         return {
           success: true,
@@ -792,7 +819,7 @@ export async function updateLobbySettings(
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -814,7 +841,7 @@ export async function getUserActiveLobbies() {
       try {
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies(),
+          cookies()
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -840,7 +867,7 @@ export async function getUserActiveLobbies() {
 
           // Check if user is in this lobby
           const isUserInLobby = lobbyData.players.some(
-            (player: Player) => player.uid === uid,
+            (player: LobbyPlayer) => player.uid === uid
           );
 
           if (!isUserInLobby) {
@@ -848,10 +875,12 @@ export async function getUserActiveLobbies() {
           }
 
           // Serialize Firestore Timestamps
-          const serializedPlayers = lobbyData.players.map((player: Player) => ({
-            ...player,
-            joinedAt: serializeTimestamp(player.joinedAt),
-          }));
+          const serializedPlayers = lobbyData.players.map(
+            (player: LobbyPlayer) => ({
+              ...player,
+              joinedAt: serializeTimestamp(player.joinedAt as Date),
+            })
+          ) as LobbyPlayer[];
 
           const serializedLobby = {
             ...lobbyData,
@@ -873,6 +902,6 @@ export async function getUserActiveLobbies() {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }

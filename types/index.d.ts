@@ -169,7 +169,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string,
+      div: string
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;
@@ -181,15 +181,6 @@ interface PokiWindow extends Window {
   PokiSDK?: {
     displayAd: (containerId: string) => Promise<void>;
   };
-}
-
-// Lobby-related interfaces
-interface LobbyPlayer {
-  uid: string;
-  displayName: string;
-  profileURL?: string | null;
-  joinedAt: Date | string | { toDate: () => Date }; // Can be Date, ISO string, or Firestore Timestamp
-  isHost: boolean;
 }
 
 interface LobbySettings {
@@ -297,7 +288,7 @@ interface PrivateLobby {
   id: string;
   invitationCode: string;
   hostId: string;
-  players: Player[];
+  players: LobbyPlayer[];
   status: "waiting" | "starting" | "in-progress" | "completed";
   createdAt: Date;
   settings: {
@@ -307,13 +298,13 @@ interface PrivateLobby {
   };
 }
 
-interface Player {
-  id: string;
-  nickname: string;
-  avatarId: string;
-  profileURL?: string;
+// Lobby-related interfaces
+interface LobbyPlayer {
+  uid: string;
+  displayName: string;
+  profileURL?: string | null;
+  joinedAt: Date | string | { toDate: () => Date }; // Can be Date, ISO string, or Firestore Timestamp
   isHost: boolean;
-  joinedAt: Date;
 }
 
 type LobbyError =

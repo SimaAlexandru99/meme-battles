@@ -30,7 +30,7 @@ interface UseGameSettingsFormReturn {
   // Actions
   updateSetting: <K extends keyof GameSettingsFormData>(
     key: K,
-    value: GameSettingsFormData[K],
+    value: GameSettingsFormData[K]
   ) => void;
   resetForm: () => void;
   submitForm: () => Promise<void>;
@@ -46,13 +46,24 @@ export function useGameSettingsForm({
   onSubmit,
 }: UseGameSettingsFormProps = {}): UseGameSettingsFormReturn {
   // Initialize form data with defaults merged with initial settings
-  const [originalSettings] = useState<GameSettingsFormData>(() => ({
-    ...DEFAULT_GAME_SETTINGS,
-    ...initialSettings,
-  }));
+  const [originalSettings, setOriginalSettings] =
+    useState<GameSettingsFormData>(() => ({
+      ...DEFAULT_GAME_SETTINGS,
+      ...initialSettings,
+    }));
 
   const [settings, setSettings] =
     useState<GameSettingsFormData>(originalSettings);
+
+  // Update original settings when initialSettings change
+  useEffect(() => {
+    const newOriginalSettings = {
+      ...DEFAULT_GAME_SETTINGS,
+      ...initialSettings,
+    };
+    setOriginalSettings(newOriginalSettings);
+    setSettings(newOriginalSettings);
+  }, [initialSettings]);
   const [errors, setErrors] = useState<GameSettingsValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,7 +75,7 @@ export function useGameSettingsForm({
   const updateSetting = useCallback(
     <K extends keyof GameSettingsFormData>(
       key: K,
-      value: GameSettingsFormData[K],
+      value: GameSettingsFormData[K]
     ) => {
       setSettings((prev) => ({
         ...prev,
@@ -80,7 +91,7 @@ export function useGameSettingsForm({
         });
       }
     },
-    [errors],
+    [errors]
   );
 
   // Validate a specific field
@@ -100,7 +111,7 @@ export function useGameSettingsForm({
         return newErrors;
       });
     },
-    [settings],
+    [settings]
   );
 
   // Validate entire form

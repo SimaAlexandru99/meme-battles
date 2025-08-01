@@ -3,14 +3,12 @@
 // ============================================================================
 
 // Re-export all testing utilities for easy importing
-export * from "./test-utils";
 export * from "./firebase-mocks";
 export * from "./form-helpers";
 export * from "./async-helpers";
 export * from "./mock-data";
 
 // Default exports for common utilities
-export { customRender as render } from "./test-utils";
 export {
   setupFirebaseMocks,
   cleanupFirebaseMocks,

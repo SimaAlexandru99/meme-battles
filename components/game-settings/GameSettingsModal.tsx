@@ -105,7 +105,7 @@ function UnsavedChangesDialog({
               "bg-gradient-to-r from-purple-600 to-purple-700",
               "hover:from-purple-500 hover:to-purple-600",
               "text-white font-bangers tracking-wide",
-              "shadow-lg shadow-purple-500/30",
+              "shadow-lg shadow-purple-500/30"
             )}
           >
             {isSaving ? (
@@ -135,6 +135,7 @@ export function GameSettingsModal({
   error = null,
 }: GameSettingsModalProps) {
   const [showUnsavedDialog, setShowUnsavedDialog] = React.useState(false);
+  const [isModalLoading, setIsModalLoading] = React.useState(false);
 
   // Initialize form with current settings
   const {
@@ -154,6 +155,19 @@ export function GameSettingsModal({
       onClose();
     },
   });
+
+  // Reset form when currentSettings change
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsModalLoading(true);
+      resetForm();
+      // Simulate loading time for better UX
+      const timer = setTimeout(() => {
+        setIsModalLoading(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, currentSettings, resetForm]);
 
   // Handle modal close with unsaved changes check
   const handleClose = React.useCallback(() => {
@@ -194,13 +208,6 @@ export function GameSettingsModal({
     }
   }, [error, isDirty, clearErrors]);
 
-  // Reset form when modal opens with new settings
-  React.useEffect(() => {
-    if (isOpen) {
-      resetForm();
-    }
-  }, [isOpen, resetForm]);
-
   // Keyboard shortcuts
   React.useEffect(() => {
     if (!isOpen) return;
@@ -231,11 +238,12 @@ export function GameSettingsModal({
         <DialogContent
           className={cn(
             "bg-slate-800/95 backdrop-blur-sm border-slate-700/50",
-            "max-w-2xl w-full max-h-[90vh] overflow-hidden",
-            // Mobile: full screen
-            "sm:max-w-2xl sm:max-h-[90vh]",
-            // Desktop: centered
-            "lg:max-w-3xl",
+            // Mobile: full screen with proper padding
+            "w-full h-full max-w-none max-h-none p-4",
+            // Tablet: constrained width
+            "sm:max-w-2xl sm:max-h-[90vh] sm:p-6",
+            // Desktop: larger modal
+            "lg:max-w-3xl lg:p-8"
           )}
           showCloseButton={false}
         >
@@ -291,9 +299,16 @@ export function GameSettingsModal({
                       <div className="flex items-start gap-3">
                         <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-red-200 font-bangers tracking-wide">
+                          <p className="text-sm text-red-200 font-bangers tracking-wide mb-2">
                             {error}
                           </p>
+                          <div className="text-xs text-red-200/70 font-bangers tracking-wide space-y-1">
+                            <p>• Check your internet connection</p>
+                            <p>
+                              • Ensure you have permission to modify settings
+                            </p>
+                            <p>• Try saving again in a few moments</p>
+                          </div>
                         </div>
                         <button
                           onClick={clearErrors}
@@ -310,7 +325,7 @@ export function GameSettingsModal({
                     <FormErrorDisplay errors={errors} onDismiss={clearErrors} />
                   )}
 
-                  {/* Form Fields */}
+                  {/* Form Fields with Skeleton Loading */}
                   <div className="space-y-8">
                     {/* Rounds Selector */}
                     <motion.div
@@ -318,12 +333,19 @@ export function GameSettingsModal({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
                     >
-                      <RoundsSelector
-                        value={settings.rounds}
-                        onChange={(rounds) => updateSetting("rounds", rounds)}
-                        disabled={isLoading || isSubmitting}
-                        error={errors.rounds}
-                      />
+                      {isLoading || isModalLoading ? (
+                        <div className="space-y-2">
+                          <div className="h-4 bg-slate-700/50 rounded w-1/3 animate-pulse" />
+                          <div className="h-12 bg-slate-700/50 rounded animate-pulse" />
+                        </div>
+                      ) : (
+                        <RoundsSelector
+                          value={settings.rounds}
+                          onChange={(rounds) => updateSetting("rounds", rounds)}
+                          disabled={isLoading || isSubmitting}
+                          error={errors.rounds}
+                        />
+                      )}
                     </motion.div>
 
                     {/* Time Limit Slider */}
@@ -332,14 +354,24 @@ export function GameSettingsModal({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
                     >
-                      <TimeLimitSlider
-                        value={settings.timeLimit}
-                        onChange={(timeLimit) =>
-                          updateSetting("timeLimit", timeLimit)
-                        }
-                        disabled={isLoading || isSubmitting}
-                        error={errors.timeLimit}
-                      />
+                      {isLoading || isModalLoading ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="h-4 bg-slate-700/50 rounded w-1/2 animate-pulse" />
+                            <div className="h-6 bg-slate-700/50 rounded w-16 animate-pulse" />
+                          </div>
+                          <div className="h-8 bg-slate-700/50 rounded animate-pulse" />
+                        </div>
+                      ) : (
+                        <TimeLimitSlider
+                          value={settings.timeLimit}
+                          onChange={(timeLimit) =>
+                            updateSetting("timeLimit", timeLimit)
+                          }
+                          disabled={isLoading || isSubmitting}
+                          error={errors.timeLimit}
+                        />
+                      )}
                     </motion.div>
 
                     {/* Categories Selector */}
@@ -348,14 +380,28 @@ export function GameSettingsModal({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
                     >
-                      <CategoriesSelector
-                        value={settings.categories}
-                        onChange={(categories) =>
-                          updateSetting("categories", categories)
-                        }
-                        disabled={isLoading || isSubmitting}
-                        error={errors.categories}
-                      />
+                      {isLoading || isModalLoading ? (
+                        <div className="space-y-4">
+                          <div className="h-4 bg-slate-700/50 rounded w-1/3 animate-pulse" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <div
+                                key={i}
+                                className="h-20 bg-slate-700/50 rounded animate-pulse"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <CategoriesSelector
+                          value={settings.categories}
+                          onChange={(categories) =>
+                            updateSetting("categories", categories)
+                          }
+                          disabled={isLoading || isSubmitting}
+                          error={errors.categories}
+                        />
+                      )}
                     </motion.div>
                   </div>
                 </div>
@@ -364,9 +410,9 @@ export function GameSettingsModal({
 
                 {/* Footer */}
                 <DialogFooter className="flex-shrink-0 pt-4">
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between w-full gap-4">
                     {/* Dirty state indicator */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center sm:justify-start">
                       {isDirty && (
                         <motion.div
                           initial={{ opacity: 0, scale: 0.8 }}
@@ -380,12 +426,12 @@ export function GameSettingsModal({
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                       <Button
                         variant="outline"
                         onClick={handleCancel}
                         disabled={isSubmitting}
-                        className="border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
+                        className="w-full sm:w-auto border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
                       >
                         Cancel
                       </Button>
@@ -394,12 +440,17 @@ export function GameSettingsModal({
                         onClick={handleSave}
                         disabled={!isValid || !isDirty || isSubmitting}
                         className={cn(
+                          "w-full sm:w-auto h-12 sm:h-10",
                           "bg-gradient-to-r from-purple-600 to-purple-700",
                           "hover:from-purple-500 hover:to-purple-600",
                           "disabled:from-slate-600 disabled:to-slate-700",
-                          "text-white font-bangers tracking-wide",
+                          "text-white font-bangers text-lg sm:text-base tracking-wide",
                           "shadow-lg shadow-purple-500/30",
                           "disabled:opacity-50 disabled:cursor-not-allowed",
+                          // Enhanced visual weight for critical action
+                          "ring-2 ring-purple-500/20 hover:ring-purple-500/40",
+                          "focus-visible:ring-2 focus-visible:ring-purple-500/50",
+                          "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-800"
                         )}
                       >
                         {isSubmitting ? (
