@@ -31,7 +31,6 @@ export function GameSettingsForm({
 
   const {
     settings,
-    originalSettings,
     errors,
     isValid,
     isDirty,

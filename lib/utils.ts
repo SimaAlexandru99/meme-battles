@@ -106,7 +106,7 @@ export function formatJoinTime(dateValue: unknown): string {
     console.warn(
       "formatJoinTime: Unsupported date type:",
       typeof dateValue,
-      dateValue
+      dateValue,
     );
     return "Unknown";
   } catch (error) {

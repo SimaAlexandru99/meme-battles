@@ -48,10 +48,10 @@ export function useLobbyOperations(): UseLobbyOperationsReturn {
 
             throw error;
           }
-        }
+        },
       );
     },
-    [router]
+    [router],
   );
 
   const handleCreateLobby = React.useCallback(async () => {
@@ -89,7 +89,7 @@ export function useLobbyOperations(): UseLobbyOperationsReturn {
 
           throw error;
         }
-      }
+      },
     );
   }, [router]);
 

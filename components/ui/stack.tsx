@@ -78,7 +78,7 @@ export default function Stack({
             id: 4,
             img: "https://images.unsplash.com/photo-1572120360610-d971b9d7767c?q=80&w=500&auto=format",
           },
-        ]
+        ],
   );
 
   const sendToBack = (id: number) => {

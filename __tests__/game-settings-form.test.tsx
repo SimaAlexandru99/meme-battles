@@ -60,7 +60,7 @@ describe("useGameSettingsForm", () => {
   it("should handle form submission", async () => {
     const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() =>
-      useGameSettingsForm({ onSubmit: mockOnSubmit })
+      useGameSettingsForm({ onSubmit: mockOnSubmit }),
     );
 
     act(() => {
@@ -82,7 +82,7 @@ describe("useGameSettingsForm", () => {
       .fn()
       .mockRejectedValue(new Error("Network error"));
     const { result } = renderHook(() =>
-      useGameSettingsForm({ onSubmit: mockOnSubmit })
+      useGameSettingsForm({ onSubmit: mockOnSubmit }),
     );
 
     await act(async () => {

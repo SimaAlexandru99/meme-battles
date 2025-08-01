@@ -8,6 +8,7 @@ import { TimeLimitSlider } from "./TimeLimitSlider";
 import { CategoriesSelector } from "./CategoriesSelector";
 import {
   GameSettingsFormData,
+  GameSettingsValidationErrors,
   DEFAULT_GAME_SETTINGS,
   validateGameSettings,
   hasValidationErrors,
@@ -15,13 +16,13 @@ import {
 
 export function GameSettingsTest() {
   const [settings, setSettings] = React.useState<GameSettingsFormData>(
-    DEFAULT_GAME_SETTINGS
+    DEFAULT_GAME_SETTINGS,
   );
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [errors, setErrors] = React.useState<GameSettingsValidationErrors>({});
 
   const handleSettingsChange = (
     key: keyof GameSettingsFormData,
-    value: any
+    value: GameSettingsFormData[keyof GameSettingsFormData],
   ) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);

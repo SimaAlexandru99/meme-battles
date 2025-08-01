@@ -169,7 +169,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string
+      div: string,
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;

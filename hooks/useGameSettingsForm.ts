@@ -30,7 +30,7 @@ interface UseGameSettingsFormReturn {
   // Actions
   updateSetting: <K extends keyof GameSettingsFormData>(
     key: K,
-    value: GameSettingsFormData[K]
+    value: GameSettingsFormData[K],
   ) => void;
   resetForm: () => void;
   submitForm: () => Promise<void>;
@@ -64,7 +64,7 @@ export function useGameSettingsForm({
   const updateSetting = useCallback(
     <K extends keyof GameSettingsFormData>(
       key: K,
-      value: GameSettingsFormData[K]
+      value: GameSettingsFormData[K],
     ) => {
       setSettings((prev) => ({
         ...prev,
@@ -80,7 +80,7 @@ export function useGameSettingsForm({
         });
       }
     },
-    [errors]
+    [errors],
   );
 
   // Validate a specific field
@@ -100,7 +100,7 @@ export function useGameSettingsForm({
         return newErrors;
       });
     },
-    [settings]
+    [settings],
   );
 
   // Validate entire form

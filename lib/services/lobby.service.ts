@@ -5,6 +5,7 @@ import {
   getLobbyData,
   startGame,
   leaveLobby,
+  updateLobbySettings,
 } from "@/lib/actions";
 
 /**
@@ -13,7 +14,7 @@ import {
  * @returns Promise with lobby data or error
  */
 export async function joinLobbyService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<JoinLobbyResponse> {
   return Sentry.startSpan(
     {
@@ -36,7 +37,7 @@ export async function joinLobbyService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -66,7 +67,7 @@ export async function createLobbyService(): Promise<CreateLobbyResponse> {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -76,7 +77,7 @@ export async function createLobbyService(): Promise<CreateLobbyResponse> {
  * @returns Promise with lobby data or error
  */
 export async function getLobbyDataService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<{ success: boolean; lobby: Lobby }> {
   return Sentry.startSpan(
     {
@@ -99,7 +100,7 @@ export async function getLobbyDataService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -109,7 +110,7 @@ export async function getLobbyDataService(
  * @returns Promise with updated lobby data or error
  */
 export async function startGameService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<{ success: boolean; lobby: Lobby }> {
   return Sentry.startSpan(
     {
@@ -132,7 +133,7 @@ export async function startGameService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -142,7 +143,7 @@ export async function startGameService(
  * @returns Promise with success response or error
  */
 export async function leaveLobbyService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<{ success: boolean; message: string }> {
   return Sentry.startSpan(
     {
@@ -165,7 +166,7 @@ export async function leaveLobbyService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -191,4 +192,44 @@ export function validateInvitationCode(code: string): boolean {
  */
 export function normalizeInvitationCode(code: string): string {
   return code.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+/**
+ * Updates lobby settings (host only)
+ * @param invitationCode - The 5-character invitation code
+ * @param settings - The new lobby settings
+ * @returns Promise with updated lobby data or error
+ */
+export async function updateLobbySettingsService(
+  invitationCode: string,
+  settings: {
+    rounds: number;
+    timeLimit: number;
+    categories: string[];
+  },
+): Promise<{ success: boolean; lobby: Lobby; message: string }> {
+  return Sentry.startSpan(
+    {
+      op: "ui.action",
+      name: `Update Lobby Settings Service`,
+    },
+    async () => {
+      try {
+        const response = await updateLobbySettings(invitationCode, settings);
+
+        if (response.success && response.lobby) {
+          return {
+            success: true,
+            lobby: response.lobby,
+            message: response.message || "Settings updated successfully",
+          } as unknown as { success: boolean; lobby: Lobby; message: string };
+        } else {
+          throw new Error("Failed to update lobby settings");
+        }
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    },
+  );
 }

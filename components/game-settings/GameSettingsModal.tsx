@@ -105,7 +105,7 @@ function UnsavedChangesDialog({
               "bg-gradient-to-r from-purple-600 to-purple-700",
               "hover:from-purple-500 hover:to-purple-600",
               "text-white font-bangers tracking-wide",
-              "shadow-lg shadow-purple-500/30"
+              "shadow-lg shadow-purple-500/30",
             )}
           >
             {isSaving ? (
@@ -235,7 +235,7 @@ export function GameSettingsModal({
             // Mobile: full screen
             "sm:max-w-2xl sm:max-h-[90vh]",
             // Desktop: centered
-            "lg:max-w-3xl"
+            "lg:max-w-3xl",
           )}
           showCloseButton={false}
         >
@@ -399,7 +399,7 @@ export function GameSettingsModal({
                           "disabled:from-slate-600 disabled:to-slate-700",
                           "text-white font-bangers tracking-wide",
                           "shadow-lg shadow-purple-500/30",
-                          "disabled:opacity-50 disabled:cursor-not-allowed"
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
                         )}
                       >
                         {isSubmitting ? (

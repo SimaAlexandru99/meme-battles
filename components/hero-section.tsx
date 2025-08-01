@@ -333,7 +333,7 @@ interface HeroSectionProps {
 export default function HeroSection({ initialUserData }: HeroSectionProps) {
   // State management for view transitions
   const [currentView, setCurrentView] = useState<"main" | "private-lobby">(
-    "main"
+    "main",
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 

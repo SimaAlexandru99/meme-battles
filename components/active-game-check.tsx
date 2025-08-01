@@ -18,7 +18,7 @@ interface ActiveGameCheckProps {
       uid: string;
       displayName: string;
       profileURL?: string | null;
-      joinedAt: string | Date | any; // Can be ISO string, Date, or Firestore Timestamp
+      joinedAt: string | Date; // Can be ISO string, Date, or Firestore Timestamp
       isHost: boolean;
     }>;
     settings: {

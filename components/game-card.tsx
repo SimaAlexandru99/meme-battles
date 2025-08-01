@@ -57,7 +57,7 @@ export default function GameCard({
         handleClick();
       }
     },
-    [handleClick]
+    [handleClick],
   );
 
   // Announce card interaction to screen readers

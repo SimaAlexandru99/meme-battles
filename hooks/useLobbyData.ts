@@ -9,7 +9,7 @@ import { ensureDate } from "@/lib/utils";
  */
 export function useLobbyData(
   lobbyCode: string | null,
-  options: UseLobbyDataOptions = {}
+  options: UseLobbyDataOptions = {},
 ) {
   const {
     refreshInterval = 5000, // 5 seconds
@@ -53,7 +53,7 @@ export function useLobbyData(
           Sentry.captureException(error);
           throw error;
         }
-      }
+      },
     );
   };
 
@@ -136,7 +136,7 @@ export function useActiveLobbies(options: UseActiveLobbiesOptions = {}) {
           Sentry.captureException(error);
           throw error;
         }
-      }
+      },
     );
   };
 
@@ -176,7 +176,7 @@ export function useActiveLobbies(options: UseActiveLobbiesOptions = {}) {
  */
 export function useLobbyAndActiveData(
   lobbyCode: string | null,
-  options: UseLobbyAndActiveDataOptions = {}
+  options: UseLobbyAndActiveDataOptions = {},
 ) {
   const { lobbyOptions = {}, activeLobbiesOptions = {} } = options;
 

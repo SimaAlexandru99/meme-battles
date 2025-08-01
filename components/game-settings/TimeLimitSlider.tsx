@@ -68,7 +68,7 @@ export function TimeLimitSlider({
             "[&_[role=slider]]:focus-visible:ring-2 [&_[role=slider]]:focus-visible:ring-purple-500/50",
             "[&_.slider-track]:bg-slate-700/50",
             "[&_.slider-range]:bg-gradient-to-r [&_.slider-range]:from-purple-600 [&_.slider-range]:to-purple-700",
-            error && "[&_[role=slider]]:border-red-500/50"
+            error && "[&_[role=slider]]:border-red-500/50",
           )}
         />
 

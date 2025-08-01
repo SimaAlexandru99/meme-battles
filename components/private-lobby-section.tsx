@@ -62,7 +62,7 @@ export function PrivateLobbySection({
         setIsJoining(false);
       }
     },
-    [onJoinLobby]
+    [onJoinLobby],
   );
 
   // Handle create lobby with error management
@@ -91,7 +91,7 @@ export function PrivateLobbySection({
         onBackToMain();
       }
     },
-    [onBackToMain]
+    [onBackToMain],
   );
 
   // Determine if any operation is in progress
@@ -182,7 +182,7 @@ export function PrivateLobbySection({
         "w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
         "flex flex-col items-center gap-8 sm:gap-12",
         "min-h-full py-8 sm:py-12", // Add padding to ensure button is clickable
-        className
+        className,
       )}
       role="main"
       aria-label="Private lobby interface"
@@ -209,7 +209,7 @@ export function PrivateLobbySection({
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             "z-10 relative", // Ensure button is above other elements
             "min-h-[48px] min-w-[160px]", // Ensure minimum touch target size
-            "cursor-pointer" // Explicitly set cursor
+            "cursor-pointer", // Explicitly set cursor
           )}
           aria-label="Navigate back to main menu"
           aria-describedby="back-button-description"
@@ -217,7 +217,7 @@ export function PrivateLobbySection({
           <RiArrowLeftLine
             className={cn(
               "w-5 h-5 transition-transform duration-300",
-              "group-hover:-translate-x-1"
+              "group-hover:-translate-x-1",
             )}
             aria-hidden="true"
           />
@@ -238,7 +238,7 @@ export function PrivateLobbySection({
             "w-full max-w-2xl p-4 rounded-lg",
             "bg-red-500/10 border border-red-500/30",
             "text-red-400 text-center font-bangers tracking-wide",
-            "shadow-lg shadow-red-500/10"
+            "shadow-lg shadow-red-500/10",
           )}
           role="alert"
           aria-live="assertive"
@@ -263,7 +263,7 @@ export function PrivateLobbySection({
           // Desktop: Side by side with equal height
           "lg:grid-cols-2 lg:gap-16",
           // Ensure equal height on desktop
-          "lg:items-stretch"
+          "lg:items-stretch",
         )}
         role="region"
         aria-label="Lobby options"
@@ -323,7 +323,7 @@ export function PrivateLobbySection({
           exit={{ opacity: 0 }}
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center",
-            "bg-slate-900/80 backdrop-blur-sm"
+            "bg-slate-900/80 backdrop-blur-sm",
           )}
           role="dialog"
           aria-modal="true"

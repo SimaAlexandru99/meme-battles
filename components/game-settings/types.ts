@@ -62,7 +62,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettingsFormData = {
 
 // Validation function
 export function validateGameSettings(
-  settings: Partial<GameSettingsFormData>
+  settings: Partial<GameSettingsFormData>,
 ): GameSettingsValidationErrors {
   const errors: GameSettingsValidationErrors = {};
 
@@ -102,7 +102,7 @@ export function validateGameSettings(
     // Check if all categories are valid
     const invalidCategories = settings.categories.filter(
       (category) =>
-        !GAME_SETTINGS_VALIDATION.categories.allowedValues.includes(category)
+        !GAME_SETTINGS_VALIDATION.categories.allowedValues.includes(category),
     );
     if (invalidCategories.length > 0) {
       errors.categories = `Invalid categories: ${invalidCategories.join(", ")}`;
@@ -114,22 +114,22 @@ export function validateGameSettings(
 
 // Check if settings have validation errors
 export function hasValidationErrors(
-  errors: GameSettingsValidationErrors
+  errors: GameSettingsValidationErrors,
 ): boolean {
   return Object.keys(errors).length > 0;
 }
 
 // Get a clean settings object with only valid properties
 export function sanitizeGameSettings(
-  settings: Partial<GameSettingsFormData>
+  settings: Partial<GameSettingsFormData>,
 ): GameSettingsFormData {
   return {
     rounds: Math.max(
       GAME_SETTINGS_VALIDATION.rounds.min,
       Math.min(
         GAME_SETTINGS_VALIDATION.rounds.max,
-        settings.rounds || DEFAULT_GAME_SETTINGS.rounds
-      )
+        settings.rounds || DEFAULT_GAME_SETTINGS.rounds,
+      ),
     ),
     timeLimit: Math.max(
       GAME_SETTINGS_VALIDATION.timeLimit.min,
@@ -137,13 +137,13 @@ export function sanitizeGameSettings(
         GAME_SETTINGS_VALIDATION.timeLimit.max,
         Math.round(
           (settings.timeLimit || DEFAULT_GAME_SETTINGS.timeLimit) /
-            GAME_SETTINGS_VALIDATION.timeLimit.step
-        ) * GAME_SETTINGS_VALIDATION.timeLimit.step
-      )
+            GAME_SETTINGS_VALIDATION.timeLimit.step,
+        ) * GAME_SETTINGS_VALIDATION.timeLimit.step,
+      ),
     ),
     categories: (settings.categories || DEFAULT_GAME_SETTINGS.categories)
       .filter((category) =>
-        GAME_SETTINGS_VALIDATION.categories.allowedValues.includes(category)
+        GAME_SETTINGS_VALIDATION.categories.allowedValues.includes(category),
       )
       .slice(0, GAME_SETTINGS_VALIDATION.categories.maxLength),
   };

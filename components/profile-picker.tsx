@@ -43,7 +43,7 @@ export default function ProfilePicker({
     // we should update our local state to reflect this
     if (profileURL) {
       const currentAvatarData = ICON_AVATARS.find(
-        (avatar) => avatar.id === selectedAvatar
+        (avatar) => avatar.id === selectedAvatar,
       );
       if (currentAvatarData && profileURL !== currentAvatarData.src) {
         // Profile URL is different from our current avatar, so we should use the profile URL
@@ -93,7 +93,7 @@ export default function ProfilePicker({
         }
       }
     },
-    [onAvatarChange, isUpdating, currentAvatar]
+    [onAvatarChange, isUpdating, currentAvatar],
   );
 
   // If we have a Firebase profile URL, use it as the primary avatar

@@ -44,7 +44,7 @@ export function useUnsavedChanges({
       }
       return confirmed;
     },
-    [hasUnsavedChanges, message]
+    [hasUnsavedChanges, message],
   );
 
   return {

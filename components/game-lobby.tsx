@@ -30,6 +30,9 @@ import { GameRedirect } from "@/components/game-redirect";
 import { AuthError } from "@/components/auth-error";
 import { startGame } from "@/lib/actions";
 import { useLobbyData } from "@/hooks/useLobbyData";
+import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
+import { updateLobbySettingsService } from "@/lib/services/lobby.service";
+import { GameSettingsFormData } from "@/components/game-settings/types";
 import {
   buttonVariants,
   errorVariants,
@@ -44,6 +47,9 @@ import {
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
   const [isStarting, setIsStarting] = React.useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
+  const [settingsError, setSettingsError] = React.useState<string | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = React.useState(false);
 
   // SWR hook for lobby data with real-time updates
   const { lobbyData, error, isLoading, isValidating, refresh, isHost } =
@@ -120,7 +126,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           toast.error("Failed to copy invitation code");
           Sentry.captureException(err);
         }
-      }
+      },
     );
   }, [lobbyCode]);
 
@@ -157,7 +163,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(err);
           }
         }
-      }
+      },
     );
   }, [lobbyCode]);
 
@@ -185,7 +191,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         } finally {
           setIsStarting(false);
         }
-      }
+      },
     );
   }, [lobbyCode, isCurrentUserHost, router]);
 
@@ -193,6 +199,60 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const handleBackToMain = React.useCallback(() => {
     router.push("/");
   }, [router]);
+
+  // Handle opening settings modal
+  const handleOpenSettings = React.useCallback(() => {
+    if (!isCurrentUserHost) return;
+    setSettingsError(null);
+    setIsSettingsModalOpen(true);
+  }, [isCurrentUserHost]);
+
+  // Handle closing settings modal
+  const handleCloseSettings = React.useCallback(() => {
+    setIsSettingsModalOpen(false);
+    setSettingsError(null);
+  }, []);
+
+  // Handle saving settings
+  const handleSaveSettings = React.useCallback(
+    async (settings: GameSettingsFormData) => {
+      if (!isCurrentUserHost) return;
+
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Save Game Settings",
+        },
+        async () => {
+          setIsSavingSettings(true);
+          setSettingsError(null);
+
+          try {
+            await updateLobbySettingsService(lobbyCode, settings);
+
+            // Refresh lobby data to show updated settings
+            await refresh();
+
+            // Show success notification
+            toast.success("Game settings updated successfully!");
+
+            // Close modal
+            setIsSettingsModalOpen(false);
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : "Failed to update settings";
+            setSettingsError(errorMessage);
+            toast.error(errorMessage);
+            Sentry.captureException(err);
+            throw err; // Re-throw to let the form handle it
+          } finally {
+            setIsSavingSettings(false);
+          }
+        },
+      );
+    },
+    [lobbyCode, isCurrentUserHost, refresh],
+  );
 
   // Loading state
   if (isLoading) {
@@ -246,7 +306,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center",
                       isReconnecting
                         ? "bg-yellow-500/20 shadow-yellow-500/30"
-                        : "bg-red-500/20 shadow-red-500/30"
+                        : "bg-red-500/20 shadow-red-500/30",
                     )}
                     variants={
                       isReconnecting
@@ -258,7 +318,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     <RiWifiOffLine
                       className={cn(
                         "w-8 h-8 sm:w-10 sm:h-10",
-                        isReconnecting ? "text-yellow-400" : "text-red-400"
+                        isReconnecting ? "text-yellow-400" : "text-red-400",
                       )}
                     />
                   </motion.div>
@@ -298,7 +358,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         "text-white font-bangers text-lg sm:text-xl tracking-wide",
                         "shadow-lg shadow-yellow-500/30",
                         "focus-visible:ring-2 focus-visible:ring-yellow-500/50",
-                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                       )}
                     >
                       <RiRefreshLine className="w-5 h-5 mr-2" />
@@ -324,7 +384,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         "text-white font-bangers text-lg sm:text-xl tracking-wide",
                         "shadow-lg shadow-slate-500/30",
                         "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                       )}
                     >
                       <RiArrowLeftLine className="w-5 h-5 mr-2" />
@@ -398,7 +458,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg sm:text-xl tracking-wide",
                       "shadow-lg shadow-slate-500/30",
                       "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     )}
                   >
                     <RiArrowLeftLine className="w-5 h-5 mr-2" />
@@ -494,13 +554,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     "flex items-center gap-1 font-bangers tracking-wide",
                     isConnected
                       ? "bg-green-500/20 text-green-400 border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border-red-500/30"
+                      : "bg-red-500/20 text-red-400 border-red-500/30",
                   )}
                 >
                   <motion.div
                     className={cn(
                       "w-2 h-2 rounded-full",
-                      isConnected ? "bg-green-400" : "bg-red-400"
+                      isConnected ? "bg-green-400" : "bg-red-400",
                     )}
                     animate={isConnected ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
@@ -572,7 +632,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg tracking-wide",
                       "shadow-lg shadow-purple-500/30",
                       "focus-visible:ring-2 focus-visible:ring-purple-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     )}
                   >
                     <RiShareLine className="w-5 h-5 mr-2" />
@@ -648,7 +708,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             "shadow-lg shadow-green-500/30",
                             "disabled:opacity-50 disabled:cursor-not-allowed",
                             "focus-visible:ring-2 focus-visible:ring-green-500/50",
-                            "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                            "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                           )}
                         >
                           {isStarting ? (
@@ -671,13 +731,16 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           )}
                         </Button>
                       </motion.div>
-                      <Button
-                        variant="outline"
-                        className="w-full border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
-                      >
-                        <RiSettings3Line className="w-4 h-4 mr-2" />
-                        Game Settings
-                      </Button>
+                      <motion.div variants={buttonVariants}>
+                        <Button
+                          onClick={handleOpenSettings}
+                          variant="outline"
+                          className="w-full border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
+                        >
+                          <RiSettings3Line className="w-4 h-4 mr-2" />
+                          Game Settings
+                        </Button>
+                      </motion.div>
                     </div>
                   </motion.div>
                 )}
@@ -710,7 +773,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         className={cn(
                           "flex items-center gap-4 p-4 rounded-lg",
                           "bg-slate-700/30 border border-slate-600/30",
-                          "hover:bg-slate-700/50 transition-colors duration-200"
+                          "hover:bg-slate-700/50 transition-colors duration-200",
                         )}
                         variants={microInteractionVariants}
                         whileHover="hover"
@@ -788,6 +851,18 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           </motion.div>
         </div>
       </div>
+
+      {/* Game Settings Modal */}
+      {lobbyData && (
+        <GameSettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={handleCloseSettings}
+          currentSettings={lobbyData.settings}
+          onSave={handleSaveSettings}
+          isLoading={isSavingSettings}
+          error={settingsError}
+        />
+      )}
     </div>
   );
 }

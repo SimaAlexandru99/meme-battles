@@ -43,7 +43,7 @@ export function useReconnection({
           Sentry.captureException(error);
           throw error;
         }
-      }
+      },
     );
   }, [lobbyCode]);
 
@@ -67,7 +67,7 @@ export function useReconnection({
           Sentry.captureException(error);
           throw error;
         }
-      }
+      },
     );
   }, [lobbyCode]);
 
@@ -141,7 +141,7 @@ export function useReconnection({
         // If we've exceeded max attempts, give up
         if (state.reconnectAttempts >= maxReconnectAttempts) {
           toast.error(
-            `Failed to reconnect after ${maxReconnectAttempts} attempts`
+            `Failed to reconnect after ${maxReconnectAttempts} attempts`,
           );
           onReconnectFailure?.();
           return false;

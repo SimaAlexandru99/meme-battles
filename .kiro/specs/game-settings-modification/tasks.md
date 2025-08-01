@@ -24,7 +24,7 @@
   - Implement unsaved changes warning dialog on close attempt
   - _Requirements: 1.2, 1.3, 7.1, 7.4, 6.5, 9.3, 9.4_
 
-- [ ] 4. Create SettingsPreview component for change visualization
+- [x] 4. Create SettingsPreview component for change visualization
   - Build preview component showing current vs new settings side-by-side
   - Add visual indicators for changed values with color coding
   - Implement estimated game duration calculation based on rounds and time limit
@@ -32,7 +32,7 @@
   - Add smooth animations for preview updates
   - _Requirements: 6.1, 6.2_
 
-- [ ] 5. Implement settings save and cancel functionality
+- [x] 5. Implement settings save and cancel functionality
   - Create save settings function with API integration for lobby updates
   - Add cancel functionality that discards unsaved changes
   - Implement loading states during save operations with spinner indicators
@@ -40,7 +40,7 @@
   - Create confirmation dialog for unsaved changes on modal close
   - _Requirements: 6.3, 6.4, 6.5, 6.6, 8.1, 8.3_
 
-- [ ] 6. Integrate settings modal into GameLobby component
+- [x] 6. Integrate settings modal into GameLobby component
   - Modify GameLobby component to include settings modal state management
   - Update "Game Settings" button to open modal (host only)
   - Add modal trigger and state management to host controls section
@@ -56,8 +56,7 @@
   - Ensure new players see current settings immediately upon joining
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 8. Create API endpoint for updating lobby settings
-  - Implement PUT /api/lobbies/{code}/settings endpoint
+- [ ] 8. Create Use Server endpoint for updating lobby settings
   - Add server-side validation for all settings parameters
   - Implement host authorization checking in API endpoint
   - Add proper error responses for validation failures and permission errors

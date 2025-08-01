@@ -27,7 +27,7 @@ export function FormErrorDisplay({
       className={cn(
         "rounded-lg border border-red-500/50 bg-red-500/10 p-4",
         "animate-in slide-in-from-top-2 duration-300",
-        className
+        className,
       )}
       role="alert"
       aria-live="polite"
@@ -59,7 +59,7 @@ export function FormErrorDisplay({
             className={cn(
               "flex-shrink-0 p-1 rounded-md text-red-400 hover:text-red-300",
               "hover:bg-red-500/20 transition-colors duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-red-500/50"
+              "focus:outline-none focus:ring-2 focus:ring-red-500/50",
             )}
             aria-label="Dismiss errors"
           >
@@ -86,7 +86,7 @@ export function FieldError({ error, className }: FieldErrorProps) {
       className={cn(
         "text-sm text-red-400 font-bangers tracking-wide",
         "animate-in slide-in-from-top-1 duration-200",
-        className
+        className,
       )}
       role="alert"
       aria-live="polite"
@@ -112,7 +112,7 @@ export function FormSuccessDisplay({
       className={cn(
         "rounded-lg border border-green-500/50 bg-green-500/10 p-4",
         "animate-in slide-in-from-top-2 duration-300",
-        className
+        className,
       )}
       role="alert"
       aria-live="polite"
@@ -132,7 +132,7 @@ export function FormSuccessDisplay({
             className={cn(
               "flex-shrink-0 p-1 rounded-md text-green-400 hover:text-green-300",
               "hover:bg-green-500/20 transition-colors duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-green-500/50"
+              "focus:outline-none focus:ring-2 focus:ring-green-500/50",
             )}
             aria-label="Dismiss success message"
           >

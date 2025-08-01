@@ -36,31 +36,48 @@ describe("Auth Actions", () => {
 
   describe("signUp", () => {
     it("should create a new user if one does not exist", async () => {
-      (db.get as jest.Mock).mockResolvedValue({ exists: false });
+      // Mock the document reference methods
+      const mockDocRef = {
+        get: jest.fn().mockResolvedValue({ exists: false }),
+        set: jest.fn().mockResolvedValue(undefined),
+      };
+
+      (db.collection as jest.Mock).mockReturnValue({
+        doc: jest.fn().mockReturnValue(mockDocRef),
+      });
 
       const result = await signUp({
         uid: "test-uid",
         name: "Test User",
         email: "test@example.com",
+        password: "testpassword",
       });
 
       expect(result.success).toBe(true);
       expect(db.collection).toHaveBeenCalledWith("users");
-      expect(db.doc).toHaveBeenCalledWith("test-uid");
-      expect(db.set).toHaveBeenCalled();
+      expect(mockDocRef.set).toHaveBeenCalled();
     });
 
     it("should not create a new user if one already exists", async () => {
-      (db.get as jest.Mock).mockResolvedValue({ exists: true });
+      // Mock the document reference methods
+      const mockDocRef = {
+        get: jest.fn().mockResolvedValue({ exists: true }),
+        set: jest.fn().mockResolvedValue(undefined),
+      };
+
+      (db.collection as jest.Mock).mockReturnValue({
+        doc: jest.fn().mockReturnValue(mockDocRef),
+      });
 
       const result = await signUp({
         uid: "test-uid",
         name: "Test User",
         email: "test@example.com",
+        password: "testpassword",
       });
 
       expect(result.success).toBe(false);
-      expect(db.set).not.toHaveBeenCalled();
+      expect(mockDocRef.set).not.toHaveBeenCalled();
     });
   });
 });

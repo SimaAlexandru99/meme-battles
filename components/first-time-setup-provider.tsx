@@ -43,7 +43,7 @@ export default function FirstTimeSetupProvider({
             } else {
               span.setAttribute("dialog.shown", false);
             }
-          }
+          },
         );
       } catch (error) {
         console.error("Error checking first-time user status:", error);

@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { RiArrowLeftLine, RiGamepadLine, RiEmotionLine } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User } from "@/types";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -19,7 +18,7 @@ interface GamePlayProps {
   currentUser: User;
 }
 
-export function GamePlay({ lobbyCode, currentUser }: GamePlayProps) {
+export function GamePlay({ lobbyCode }: GamePlayProps) {
   const router = useRouter();
 
   const handleBackToMain = React.useCallback(() => {
@@ -98,9 +97,9 @@ export function GamePlay({ lobbyCode, currentUser }: GamePlayProps) {
               <CardContent className="text-center space-y-6">
                 <motion.div variants={microInteractionVariants}>
                   <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide mb-4">
-                    The meme battle game is currently under development. You'll
-                    be able to create, vote, and laugh with friends in real-time
-                    meme battles!
+                    The meme battle game is currently under development.
+                    You&apos;ll be able to create, vote, and laugh with friends
+                    in real-time meme battles!
                   </p>
                   <div className="flex items-center justify-center gap-2 text-purple-200/50 text-xs font-bangers tracking-wide">
                     <RiEmotionLine className="w-4 h-4" />

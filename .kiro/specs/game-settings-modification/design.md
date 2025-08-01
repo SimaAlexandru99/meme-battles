@@ -48,7 +48,7 @@ interface GameSettingsActions {
   closeSettings: () => void;
   updateSetting: <K extends keyof LobbySettings>(
     key: K,
-    value: LobbySettings[K]
+    value: LobbySettings[K],
   ) => void;
   saveSettings: () => Promise<void>;
   resetSettings: () => void;

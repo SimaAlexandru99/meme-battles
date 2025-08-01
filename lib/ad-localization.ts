@@ -45,7 +45,7 @@ export const defaultAdLocalizations: AdLocalizationConfig = {
  */
 export function getAdLocalization(
   locale: string = "en",
-  customLocalizations?: AdLocalizationConfig
+  customLocalizations?: AdLocalizationConfig,
 ): AdLocalization {
   // Check custom localizations first
   if (customLocalizations && customLocalizations[locale]) {
@@ -71,7 +71,7 @@ export function getAdLocalization(
 export function getRemoveAdsText(
   locale?: string,
   customText?: string,
-  customLocalizations?: AdLocalizationConfig
+  customLocalizations?: AdLocalizationConfig,
 ): string {
   // If custom text is provided, use it directly
   if (customText) {

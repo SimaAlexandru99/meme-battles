@@ -42,6 +42,7 @@ export {
   getLobbyData,
   startGame,
   leaveLobby,
+  updateLobbySettings,
 
   // Lobby queries
   getUserActiveLobbies,

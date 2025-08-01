@@ -2,7 +2,36 @@
 
 import { auth, db } from "@/firebase/admin";
 import * as Sentry from "@sentry/nextjs";
-import { getRandomAvatar } from "@/lib/utils";
+import { Timestamp } from "firebase/firestore";
+import { FieldValue } from "firebase-admin/firestore";
+
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
+
+interface Player {
+  uid: string;
+  displayName: string;
+  profileURL: string | null;
+  joinedAt: string;
+  isHost: boolean;
+}
+
+interface LobbyData {
+  code: string;
+  hostUid: string;
+  hostDisplayName: string;
+  status: "waiting" | "started" | "finished";
+  maxPlayers: number;
+  players: Player[];
+  createdAt: string;
+  updatedAt: string;
+  settings: {
+    rounds: number;
+    timeLimit: number;
+    categories: string[];
+  };
+}
 
 // ============================================================================
 // CONSTANTS & CONFIGURATION
@@ -96,12 +125,14 @@ async function getUserProfileURL(uid: string): Promise<string | null> {
  * @param timestamp - Firestore Timestamp, Date, or string
  * @returns ISO string representation
  */
-function serializeTimestamp(timestamp: any): string {
-  if (timestamp && typeof timestamp === "object" && "toDate" in timestamp) {
+function serializeTimestamp(timestamp: Timestamp | Date | string): string {
+  if (
+    timestamp &&
+    typeof timestamp === "object" &&
+    "toDate" in timestamp &&
+    timestamp.toDate
+  ) {
     return timestamp.toDate().toISOString();
-  }
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
   }
   if (typeof timestamp === "string") {
     return timestamp;
@@ -133,7 +164,7 @@ export async function createLobby(settings?: {
       try {
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
+          cookies(),
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -211,7 +242,7 @@ export async function createLobby(settings?: {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -242,7 +273,7 @@ export async function joinLobby(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
+          cookies(),
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -276,7 +307,7 @@ export async function joinLobby(invitationCode: string) {
 
         // Check if user is already in the lobby
         const isUserInLobby = lobbyData.players.some(
-          (player: { uid: string }) => player.uid === uid
+          (player: { uid: string }) => player.uid === uid,
         );
 
         if (isUserInLobby) {
@@ -299,7 +330,7 @@ export async function joinLobby(invitationCode: string) {
         };
 
         await lobbyRef.update({
-          players: db.FieldValue.arrayUnion(newPlayer),
+          players: FieldValue.arrayUnion(newPlayer),
           updatedAt: new Date().toISOString(),
         });
 
@@ -309,7 +340,7 @@ export async function joinLobby(invitationCode: string) {
 
         span.setAttribute(
           "lobby.player_count",
-          updatedLobbyData?.players.length
+          updatedLobbyData?.players.length,
         );
 
         return {
@@ -320,7 +351,7 @@ export async function joinLobby(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -351,7 +382,7 @@ export async function getLobbyData(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
+          cookies(),
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -380,7 +411,7 @@ export async function getLobbyData(invitationCode: string) {
 
         // Check if user is in the lobby
         const isUserInLobby = lobbyData.players.some(
-          (player: { uid: string }) => player.uid === uid
+          (player: { uid: string }) => player.uid === uid,
         );
 
         if (!isUserInLobby) {
@@ -388,7 +419,7 @@ export async function getLobbyData(invitationCode: string) {
         }
 
         // Serialize Firestore Timestamps
-        const serializedPlayers = lobbyData.players.map((player: any) => ({
+        const serializedPlayers = lobbyData.players.map((player: Player) => ({
           ...player,
           joinedAt: serializeTimestamp(player.joinedAt),
         }));
@@ -398,7 +429,7 @@ export async function getLobbyData(invitationCode: string) {
           players: serializedPlayers,
           createdAt: serializeTimestamp(lobbyData.createdAt),
           updatedAt: serializeTimestamp(lobbyData.updatedAt),
-        };
+        } as LobbyData;
 
         span.setAttribute("lobby.player_count", serializedLobby.players.length);
         span.setAttribute("lobby.status", serializedLobby.status);
@@ -411,7 +442,7 @@ export async function getLobbyData(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -438,7 +469,7 @@ export async function startGame(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
+          cookies(),
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -493,7 +524,7 @@ export async function startGame(invitationCode: string) {
         span.setAttribute("lobby.status", "started");
         span.setAttribute(
           "lobby.player_count",
-          updatedLobbyData?.players.length
+          updatedLobbyData?.players.length,
         );
 
         return {
@@ -504,7 +535,7 @@ export async function startGame(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -531,7 +562,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
+          cookies(),
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -560,7 +591,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Find the player to remove
         const playerIndex = lobbyData.players.findIndex(
-          (player: { uid: string }) => player.uid === uid
+          (player: { uid: string }) => player.uid === uid,
         );
 
         if (playerIndex === -1) {
@@ -571,7 +602,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Remove player from lobby
         const updatedPlayers = lobbyData.players.filter(
-          (player: { uid: string }) => player.uid !== uid
+          (player: { uid: string }) => player.uid !== uid,
         );
 
         // If host is leaving, assign new host or delete lobby
@@ -609,7 +640,159 @@ export async function leaveLobby(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
+  );
+}
+
+// ============================================================================
+// LOBBY SETTINGS FUNCTIONS
+// ============================================================================
+
+/**
+ * Updates lobby settings (host only)
+ * @param invitationCode - The 5-character invitation code
+ * @param settings - The new lobby settings
+ * @returns Updated lobby data or error
+ */
+export async function updateLobbySettings(
+  invitationCode: string,
+  settings: {
+    rounds: number;
+    timeLimit: number;
+    categories: string[];
+  },
+) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.update_settings",
+      name: "Update Lobby Settings",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+
+        // Get session cookie
+        const cookieStore = await import("next/headers").then(({ cookies }) =>
+          cookies(),
+        );
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Validate settings
+        if (!settings.rounds || settings.rounds < 1 || settings.rounds > 10) {
+          throw new Error("Rounds must be between 1 and 10");
+        }
+
+        if (
+          !settings.timeLimit ||
+          settings.timeLimit < 30 ||
+          settings.timeLimit > 300
+        ) {
+          throw new Error("Time limit must be between 30 and 300 seconds");
+        }
+
+        if (!settings.categories || settings.categories.length === 0) {
+          throw new Error("At least one category must be selected");
+        }
+
+        const allowedCategories = [
+          "funny",
+          "wholesome",
+          "dark",
+          "random",
+          "trending",
+        ];
+        const invalidCategories = settings.categories.filter(
+          (category) => !allowedCategories.includes(category),
+        );
+
+        if (invalidCategories.length > 0) {
+          throw new Error(
+            `Invalid categories: ${invalidCategories.join(", ")}`,
+          );
+        }
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is the host
+        if (lobbyData.hostUid !== uid) {
+          throw new Error("Only the host can modify lobby settings");
+        }
+
+        // Check if game is already started
+        if (lobbyData.status !== "waiting") {
+          throw new Error("Cannot modify settings after game has started");
+        }
+
+        // Update lobby settings
+        await lobbyRef.update({
+          settings: {
+            rounds: settings.rounds,
+            timeLimit: settings.timeLimit,
+            categories: settings.categories,
+          },
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Get updated lobby data
+        const updatedLobbyDoc = await lobbyRef.get();
+        const updatedLobbyData = updatedLobbyDoc.data();
+
+        // Serialize Firestore Timestamps
+        const serializedPlayers = updatedLobbyData?.players.map(
+          (player: Player) => ({
+            ...player,
+            joinedAt: serializeTimestamp(player.joinedAt),
+          }),
+        );
+
+        const serializedLobby = {
+          ...updatedLobbyData,
+          players: serializedPlayers,
+          createdAt: serializeTimestamp(updatedLobbyData?.createdAt),
+          updatedAt: serializeTimestamp(updatedLobbyData?.updatedAt),
+        } as LobbyData;
+
+        span.setAttribute("lobby.rounds", settings.rounds);
+        span.setAttribute("lobby.time_limit", settings.timeLimit);
+        span.setAttribute("lobby.categories", settings.categories.join(","));
+
+        return {
+          success: true,
+          lobby: serializedLobby,
+          message: "Settings updated successfully",
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    },
   );
 }
 
@@ -631,7 +814,7 @@ export async function getUserActiveLobbies() {
       try {
         // Get session cookie
         const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
+          cookies(),
         );
         const sessionCookie = cookieStore.get("session")?.value;
 
@@ -646,18 +829,26 @@ export async function getUserActiveLobbies() {
         span.setAttribute("user.uid", uid);
 
         // Query for lobbies where user is a player
-        const lobbiesSnapshot = await db
-          .collection("lobbies")
-          .where("players", "array-contains", { uid })
-          .get();
+        // Note: Firebase Admin SDK doesn't support array-contains with objects
+        // We'll need to fetch all lobbies and filter client-side
+        const lobbiesSnapshot = await db.collection("lobbies").get();
 
         const activeLobbies = [];
 
         for (const doc of lobbiesSnapshot.docs) {
           const lobbyData = doc.data();
 
+          // Check if user is in this lobby
+          const isUserInLobby = lobbyData.players.some(
+            (player: Player) => player.uid === uid,
+          );
+
+          if (!isUserInLobby) {
+            continue;
+          }
+
           // Serialize Firestore Timestamps
-          const serializedPlayers = lobbyData.players.map((player: any) => ({
+          const serializedPlayers = lobbyData.players.map((player: Player) => ({
             ...player,
             joinedAt: serializeTimestamp(player.joinedAt),
           }));
@@ -667,7 +858,7 @@ export async function getUserActiveLobbies() {
             players: serializedPlayers,
             createdAt: serializeTimestamp(lobbyData.createdAt),
             updatedAt: serializeTimestamp(lobbyData.updatedAt),
-          };
+          } as LobbyData;
 
           activeLobbies.push(serializedLobby);
         }
@@ -682,6 +873,6 @@ export async function getUserActiveLobbies() {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }

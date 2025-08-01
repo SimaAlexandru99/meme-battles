@@ -46,7 +46,7 @@ export function InvitationCodeInput({
         onComplete(normalizedValue);
       }
     },
-    [onChange, onComplete]
+    [onChange, onComplete],
   );
 
   const handlePaste = React.useCallback(
@@ -62,7 +62,7 @@ export function InvitationCodeInput({
         }
       }
     },
-    [onChange, onComplete]
+    [onChange, onComplete],
   );
 
   // Announce input changes to screen readers
@@ -173,7 +173,7 @@ export function InvitationCodeInput({
 
                     // Animation for filled slots
                     value[index] &&
-                      "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10"
+                      "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10",
                   )}
                   aria-label={`Character ${index + 1} of invitation code`}
                   aria-describedby={`slot-${index}-description`}
@@ -215,7 +215,7 @@ export function InvitationCodeInput({
           className={cn(
             "text-xs sm:text-sm font-bangers tracking-wide transition-colors duration-200",
             error ? "text-red-400" : "text-purple-200/70",
-            disabled && "opacity-50"
+            disabled && "opacity-50",
           )}
           id={error ? "otp-error-message" : undefined}
           role="status"

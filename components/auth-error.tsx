@@ -32,6 +32,7 @@ export function AuthError({
         window.location.reload();
       }
     } catch (err) {
+      console.error(err);
       toast.error("Retry failed. Please try refreshing the page.");
     } finally {
       setIsRetrying(false);

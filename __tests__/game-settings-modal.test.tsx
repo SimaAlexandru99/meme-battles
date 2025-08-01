@@ -150,12 +150,12 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     expect(screen.getByText("Game Settings")).toBeInTheDocument();
     expect(
-      screen.getByText("Customize your game experience")
+      screen.getByText("Customize your game experience"),
     ).toBeInTheDocument();
   });
 
@@ -166,7 +166,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     expect(screen.queryByText("Game Settings")).not.toBeInTheDocument();
@@ -179,7 +179,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     expect(screen.getByTestId("rounds-selector")).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     // Change rounds value
@@ -220,7 +220,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     const saveButton = screen.getByRole("button", { name: /save changes/i });
@@ -242,7 +242,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     // Change settings
@@ -276,7 +276,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     // Make changes
@@ -295,8 +295,8 @@ describe("GameSettingsModal", () => {
       expect(screen.getByText("Unsaved Changes")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "You have unsaved changes to your game settings. What would you like to do?"
-        )
+          "You have unsaved changes to your game settings. What would you like to do?",
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -308,7 +308,7 @@ describe("GameSettingsModal", () => {
         onClose={mockOnClose}
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
-      />
+      />,
     );
 
     // Make changes
@@ -342,7 +342,7 @@ describe("GameSettingsModal", () => {
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
         error="Network error occurred"
-      />
+      />,
     );
 
     // The error is displayed directly in the modal, not using FormErrorDisplay
@@ -357,7 +357,7 @@ describe("GameSettingsModal", () => {
         currentSettings={mockCurrentSettings}
         onSave={mockOnSave}
         isLoading={true}
-      />
+      />,
     );
 
     // Form components should be disabled when loading
