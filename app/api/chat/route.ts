@@ -1,8 +1,8 @@
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const { text } = await generateText({
       model: google("gemini-2.5-flash"),
