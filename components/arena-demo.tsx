@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
 
 import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { MemeCardHand } from "@/components/meme-card-hand";
 import {
   RiFireLine,
   RiSwordLine,
@@ -163,6 +164,11 @@ export function ArenaDemo() {
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  // Mobile UI state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isPlayersOpen, setIsPlayersOpen] = useState(false);
+  const isMobile = useIsMobile();
+
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -179,6 +185,14 @@ export function ArenaDemo() {
     };
     initializePlayers();
   }, []);
+
+  // Auto-close panels when switching to mobile
+  useEffect(() => {
+    if (isMobile) {
+      setIsChatOpen(false);
+      setIsPlayersOpen(false);
+    }
+  }, [isMobile]);
 
   // Timer countdown
   useEffect(() => {
@@ -332,17 +346,70 @@ export function ArenaDemo() {
         </div>
       </div>
 
-      {/* Chat Panel (Left Side) */}
+      {/* Mobile Chat Toggle Button */}
+      {isMobile && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="fixed top-20 left-4 z-50"
+        >
+          <Button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            size="sm"
+            variant="secondary"
+            className="min-h-[44px] min-w-[44px] rounded-full shadow-lg bg-blue-500 hover:bg-blue-600 text-white border-0 touch-manipulation"
+            aria-label={isChatOpen ? "Close chat" : "Open chat"}
+          >
+            <RiChat1Line className="w-5 h-5" />
+            {chatMessages.filter((msg) => msg.type === "chat").length > 0 && (
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-xs text-white font-bold">
+                  {Math.min(
+                    chatMessages.filter((msg) => msg.type === "chat").length,
+                    9
+                  )}
+                </span>
+              </div>
+            )}
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Chat Panel - Responsive */}
       <motion.div
         initial={{ opacity: 0, x: -100 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="absolute top-20 left-4 bottom-4 w-64 z-40"
+        animate={{
+          opacity: isMobile ? (isChatOpen ? 1 : 0) : 1,
+          x: isMobile ? (isChatOpen ? 0 : -100) : 0,
+        }}
+        className={cn(
+          "absolute z-40",
+          isMobile
+            ? "top-16 left-0 right-0 bottom-20 mx-4"
+            : "top-20 left-4 bottom-4 w-64"
+        )}
+        style={{
+          pointerEvents: isMobile && !isChatOpen ? "none" : "auto",
+        }}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">
           <CardHeader className="pb-3 border-b shrink-0">
-            <CardTitle className="text-card-foreground text-lg flex items-center gap-2">
-              <RiChat1Line className="w-5 h-5 text-blue-500" />
-              Chat
+            <CardTitle className="text-card-foreground text-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <RiChat1Line className="w-5 h-5 text-blue-500" />
+                Chat
+              </div>
+              {isMobile && (
+                <Button
+                  onClick={() => setIsChatOpen(false)}
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  aria-label="Close chat"
+                >
+                  ✕
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0 min-h-0">
@@ -420,15 +487,21 @@ export function ArenaDemo() {
                     }
                   }}
                   placeholder="Type a message..."
-                  className="text-sm bg-background/50 flex-1"
+                  className={cn(
+                    "flex-1 bg-background/50",
+                    isMobile ? "text-base min-h-[44px]" : "text-sm"
+                  )}
                   maxLength={200}
                   disabled={!currentPlayer}
                 />
                 <Button
                   type="submit"
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   disabled={!newMessage.trim() || !currentPlayer}
                   aria-label="Send message"
+                  className={cn(
+                    isMobile && "min-h-[44px] min-w-[44px] touch-manipulation"
+                  )}
                 >
                   <RiSendPlaneLine className="w-4 h-4" />
                 </Button>
@@ -438,17 +511,67 @@ export function ArenaDemo() {
         </Card>
       </motion.div>
 
-      {/* TFT-Style Player List (Right Side) */}
+      {/* Mobile Players Toggle Button */}
+      {isMobile && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="fixed top-20 right-4 z-50"
+        >
+          <Button
+            onClick={() => setIsPlayersOpen(!isPlayersOpen)}
+            size="sm"
+            variant="secondary"
+            className="min-h-[44px] min-w-[44px] rounded-full shadow-lg bg-orange-500 hover:bg-orange-600 text-white border-0 touch-manipulation"
+            aria-label={
+              isPlayersOpen ? "Close players list" : "Open players list"
+            }
+          >
+            <RiFireLine className="w-5 h-5" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+              <span className="text-xs text-white font-bold">
+                {players.length}
+              </span>
+            </div>
+          </Button>
+        </motion.div>
+      )}
+
+      {/* TFT-Style Player List - Responsive */}
       <motion.div
         initial={{ opacity: 0, x: 100 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="absolute top-20 right-4 bottom-4 w-64 z-40"
+        animate={{
+          opacity: isMobile ? (isPlayersOpen ? 1 : 0) : 1,
+          x: isMobile ? (isPlayersOpen ? 0 : 100) : 0,
+        }}
+        className={cn(
+          "absolute z-40",
+          isMobile
+            ? "top-16 left-0 right-0 bottom-20 mx-4"
+            : "top-20 right-4 bottom-4 w-64"
+        )}
+        style={{
+          pointerEvents: isMobile && !isPlayersOpen ? "none" : "auto",
+        }}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">
           <CardHeader className="pb-3 border-b shrink-0">
-            <CardTitle className="text-card-foreground text-lg flex items-center gap-2">
-              <RiFireLine className="w-5 h-5 text-orange-500" />
-              Players
+            <CardTitle className="text-card-foreground text-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <RiFireLine className="w-5 h-5 text-orange-500" />
+                Players
+              </div>
+              {isMobile && (
+                <Button
+                  onClick={() => setIsPlayersOpen(false)}
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  aria-label="Close players list"
+                >
+                  ✕
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0 min-h-0">
@@ -488,13 +611,28 @@ export function ArenaDemo() {
                               ? "default"
                               : "destructive"
                           }
-                          className="text-xs font-bold px-2 py-0.5"
+                          className={cn(
+                            "text-xs font-bold px-2 py-0.5 flex items-center gap-1",
+                            // Color-blind friendly: Add patterns/shapes + high contrast
+                            currentPlayer.status === "submitted"
+                              ? "bg-green-700 text-white border-2 border-green-900 shadow-lg"
+                              : "bg-orange-600 text-white border-2 border-orange-800 animate-pulse shadow-lg"
+                          )}
                         >
-                          {currentPlayer.status === "submitted"
-                            ? "✓ DONE"
-                            : "YOU"}
+                          {/* Visual indicators beyond just color */}
+                          {currentPlayer.status === "submitted" ? (
+                            <>
+                              <div className="w-2 h-2 bg-white rounded-full" />✓
+                              DONE
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-2 h-2 bg-white animate-ping rounded-full" />
+                              YOU
+                            </>
+                          )}
                         </Badge>
-                        <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                        <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full border border-muted-foreground/30">
                           {currentPlayer.cards.length} cards
                         </div>
                       </div>
@@ -585,20 +723,32 @@ export function ArenaDemo() {
                             <Badge
                               variant={isSubmitted ? "default" : "outline"}
                               className={cn(
-                                "text-xs font-medium px-2 py-0.5",
+                                "text-xs font-medium px-2 py-0.5 flex items-center gap-1",
+                                // Color-blind friendly: Better contrast + visual patterns
                                 isSubmitted
-                                  ? "bg-green-600 hover:bg-green-700"
-                                  : "border-muted-foreground/30 text-muted-foreground"
+                                  ? "bg-green-700 hover:bg-green-800 text-white border-2 border-green-900 shadow-md"
+                                  : "border-2 border-blue-400 text-blue-700 bg-blue-50 hover:bg-blue-100 animate-pulse"
                               )}
                             >
-                              {isSubmitted ? "✓ DONE" : "THINKING"}
+                              {/* Shape indicators beyond color */}
+                              {isSubmitted ? (
+                                <>
+                                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                                  ✓ DONE
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-1.5 h-1.5 bg-blue-700 rounded-full animate-pulse" />
+                                  THINKING
+                                </>
+                              )}
                             </Badge>
                             <div
                               className={cn(
-                                "text-xs px-2 py-0.5 rounded-full",
+                                "text-xs px-2 py-0.5 rounded-full border",
                                 isSubmitted
-                                  ? "text-green-600 bg-green-100"
-                                  : "text-muted-foreground bg-muted/50"
+                                  ? "text-green-700 bg-green-50 border-green-300"
+                                  : "text-muted-foreground bg-muted/50 border-muted-foreground/30"
                               )}
                             >
                               {player.cards.length} cards
@@ -632,7 +782,7 @@ export function ArenaDemo() {
               key={gameState.currentPrompt}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-foreground text-lg font-medium mb-6 leading-relaxed"
+              className="text-foreground text-base md:text-lg font-medium mb-4 md:mb-6 leading-relaxed px-4"
             >
               &ldquo;{gameState.currentPrompt}&rdquo;
             </motion.p>
@@ -642,89 +792,113 @@ export function ArenaDemo() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Action Buttons - Centered under prompt */}
+        {currentPlayer && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-4 flex items-center justify-center gap-3"
+          >
+            <Button
+              onClick={() => {
+                handleSubmitCard();
+                if ("vibrate" in navigator) {
+                  navigator.vibrate([100, 50, 100]);
+                }
+              }}
+              disabled={!selectedCard}
+              size="default"
+              className="font-bold min-h-[48px] min-w-[48px] px-8 py-3 touch-manipulation"
+              aria-label="Submit selected meme card"
+            >
+              <RiSwordLine className="w-4 h-4 mr-2" />
+              Submit
+            </Button>
+
+            <Button
+              variant="outline"
+              size="default"
+              className="font-medium min-h-[48px] min-w-[48px] px-6 py-3 touch-manipulation"
+              onClick={() => {
+                // Skip current card selection
+                if ("vibrate" in navigator) {
+                  navigator.vibrate(25);
+                }
+              }}
+              aria-label="Skip card selection"
+            >
+              Skip
+            </Button>
+
+            <Button
+              onClick={clearSelection}
+              variant="outline"
+              disabled={!selectedCard}
+              size="default"
+              className="min-h-[48px] px-6 py-3 touch-manipulation"
+              aria-label="Clear card selection"
+            >
+              Clear
+            </Button>
+          </motion.div>
+        )}
       </motion.div>
 
-      {/* Minimized Player's Hand (Bottom) */}
+      {/* One-handed play mode: Floating action button */}
+      {isMobile && currentPlayer && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="fixed bottom-20 right-4 z-50"
+        >
+          <Button
+            size="lg"
+            className="w-14 h-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+            onClick={() => {
+              // Quick submit with one hand
+              if (selectedCard) {
+                handleSubmitCard();
+                if ("vibrate" in navigator) {
+                  navigator.vibrate([100, 50, 100]);
+                }
+              }
+            }}
+            disabled={!selectedCard}
+            aria-label="Quick submit card"
+          >
+            <RiSwordLine className="w-6 h-6" />
+            {/* One-handed mode indicator */}
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white" />
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Mobile-Optimized Player's Hand */}
       {currentPlayer && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-20"
+          className="absolute bottom-0 left-0 right-0 z-20"
         >
-          <Card className="bg-background/95 backdrop-blur-sm border shadow-lg">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-3">
-                {/* Submit Button */}
-                <Button
-                  onClick={handleSubmitCard}
-                  disabled={!selectedCard}
-                  size="sm"
-                  className="font-bold shrink-0"
-                >
-                  <RiSwordLine className="w-4 h-4 mr-1" />
-                  Submit
-                </Button>
-
-                {/* Minimized Hand */}
-                <div className="flex gap-3 items-center">
-                  {currentPlayer.cards.slice(0, 7).map((card, index) => (
-                    <motion.div
-                      key={card.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={cn(
-                        "relative cursor-pointer transition-all duration-200 hover:scale-110 hover:z-10",
-                        selectedCard?.id === card.id &&
-                          "scale-110 ring-2 ring-primary"
-                      )}
-                      onClick={() => selectCard(card)}
-                      style={{
-                        transform: `rotate(${(index - 3) * 0.8}deg) translateY(${index % 2 === 0 ? -3 : 3}px)`,
-                        zIndex: selectedCard?.id === card.id ? 10 : 7 - index,
-                      }}
-                    >
-                      <div className="w-24 h-32 bg-gradient-to-br from-amber-100 to-orange-200 rounded border border-amber-300 shadow-sm overflow-hidden">
-                        <Image
-                          src={card.url}
-                          alt={card.alt}
-                          width={96}
-                          height={128}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                          <div className="text-white text-xs font-medium truncate">
-                            {card.filename.replace(/\.[^/.]+$/, "")}
-                          </div>
-                        </div>
-                      </div>
-                      {selectedCard?.id === card.id && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full border-2 border-background flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full" />
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Clear Button */}
-                <Button
-                  onClick={clearSelection}
-                  variant="outline"
-                  disabled={!selectedCard}
-                  size="sm"
-                  className="shrink-0"
-                >
-                  Clear
-                </Button>
-
-                {/* Hand Info */}
-                <div className="text-xs text-muted-foreground shrink-0">
-                  {currentPlayer.cards.length} cards
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Mobile: Full-width bottom drawer */}
+          <div className="md:absolute md:bottom-2 md:left-1/2 md:transform md:-translate-x-1/2 md:w-auto ">
+            <Card className="bg-background/95 backdrop-blur-sm border-t md:border md:rounded-lg shadow-lg">
+              <CardContent>
+                <MemeCardHand
+                  cards={currentPlayer.cards.slice(0, 7)}
+                  selectedCard={selectedCard}
+                  onCardSelect={selectCard}
+                  disabled={false}
+                  layout="professional"
+                  theme="hearthstone"
+                  showRarity={false}
+                  className="w-full"
+                />
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
       )}
     </div>

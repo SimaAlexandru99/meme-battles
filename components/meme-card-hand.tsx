@@ -4,8 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { MemeCard, CardTheme } from "@/components/meme-card";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export type HandLayout =
   | "professional"
@@ -18,7 +16,6 @@ interface MemeCardHandProps {
   cards: MemeCard[];
   selectedCard: MemeCard | null;
   onCardSelect: (card: MemeCard) => void;
-  onCardClear?: () => void;
   disabled?: boolean;
   className?: string;
   layout?: HandLayout;
@@ -30,7 +27,6 @@ export function MemeCardHand({
   cards,
   selectedCard,
   onCardSelect,
-  onCardClear,
   disabled = false,
   className,
   layout = "professional",
@@ -86,129 +82,85 @@ export function MemeCardHand({
   // Professional layout - inspired by MTG Arena
   const renderProfessionalLayout = () => (
     <div className="w-full max-w-7xl mx-auto">
-      {/* Hand area with professional styling */}
-      <div className="relative bg-gradient-to-b from-slate-900/50 to-slate-800/30 rounded-2xl border border-slate-700/50 p-6 backdrop-blur-sm">
-        {/* Hand label */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Badge
-              variant="outline"
-              className="bg-slate-800/50 text-slate-200 border-slate-600"
-            >
-              Your Hand
-            </Badge>
-            <span className="text-sm text-slate-400">{cards.length} cards</span>
-            {selectedCard && (
-              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
-                1 selected
-              </Badge>
-            )}
-          </div>
-          <div className="text-xs text-slate-500 uppercase tracking-wider">
-            {theme} • {layout}
-          </div>
-        </div>
-
-        {/* Cards display area */}
-        <div className="relative min-h-[280px] flex items-center justify-center">
-          {cards.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700/50 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-slate-500 rounded border-dashed"></div>
-              </div>
-              <p className="text-slate-400 font-medium">No cards in hand</p>
-              <p className="text-slate-500 text-sm mt-1">
-                Deal some cards to get started
-              </p>
+      {/* Cards display area */}
+      <div className="relative min-h-[200px] flex items-center justify-center">
+        {cards.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700/50 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-slate-500 rounded border-dashed"></div>
             </div>
-          ) : (
-            <ScrollArea className="w-full" ref={scrollAreaRef}>
-              <div className="flex gap-4 justify-center p-12">
-                {cards.map((card, index) => {
-                  const isSelected = selectedCard?.id === card.id;
-                  const isHovered = hoveredCard === card.id;
-                  const isAnimating = animatingCards.has(card.id);
-                  const rarity = getCardRarity(card.id);
-
-                  // Natural hand positioning - slight arc
-                  const totalCards = cards.length;
-                  const centerIndex = (totalCards - 1) / 2;
-                  const distanceFromCenter = index - centerIndex;
-                  const arcOffset =
-                    distanceFromCenter * distanceFromCenter * 0.5; // Subtle arc
-
-                  return (
-                    <div
-                      key={card.id}
-                      className={cn(
-                        "relative transition-all duration-400 ease-out",
-                        "transform-gpu", // Use GPU acceleration
-                        isHovered && "scale-110 -translate-y-3 z-50",
-                        isSelected && "scale-115 -translate-y-5 z-40",
-                        isAnimating && "scale-95",
-                        "hover:z-50"
-                      )}
-                      style={{
-                        transitionDelay: `${index * 60}ms`, // Staggered animation
-                        transform: `translateY(${arcOffset}px)`, // Natural arc
-                      }}
-                      onMouseEnter={() => handleCardHover(card.id)}
-                      onMouseLeave={() => handleCardHover(null)}
-                    >
-                      <MemeCard
-                        card={card}
-                        isSelected={isSelected}
-                        onSelect={handleCardSelect}
-                        disabled={disabled}
-                        theme={theme}
-                        rarity={rarity}
-                        size="md"
-                        className={cn(
-                          "cursor-pointer transition-all duration-300",
-                          "shadow-lg hover:shadow-xl",
-                          isSelected && "ring-2 ring-blue-400 ring-opacity-75",
-                          isHovered && "shadow-2xl",
-                          rarity === "legendary" && "shadow-orange-400/30",
-                          rarity === "epic" && "shadow-purple-400/30",
-                          rarity === "rare" && "shadow-blue-400/30"
-                        )}
-                      />
-
-                      {/* Selection indicator - glowing border */}
-                      {isSelected && (
-                        <div className="absolute inset-0 rounded-lg border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)] animate-pulse pointer-events-none"></div>
-                      )}
-
-                      {/* Hover glow effect */}
-                      {isHovered && !isSelected && (
-                        <div className="absolute inset-0 bg-white/10 rounded-lg animate-pulse pointer-events-none"></div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          )}
-        </div>
-
-        {/* Bottom controls */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-700/50">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>💡 Tip:</span>
-            <span>Click cards to select, hover for preview</span>
+            <p className="text-slate-400 font-medium">No cards in hand</p>
+            <p className="text-slate-500 text-sm mt-1">
+              Deal some cards to get started
+            </p>
           </div>
+        ) : (
+          <ScrollArea className="w-full" ref={scrollAreaRef}>
+            <div className="flex gap-3 justify-center p-6">
+              {cards.map((card, index) => {
+                const isSelected = selectedCard?.id === card.id;
+                const isHovered = hoveredCard === card.id;
+                const isAnimating = animatingCards.has(card.id);
+                const rarity = getCardRarity(card.id);
 
-          {selectedCard && onCardClear && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCardClear}
-              className="bg-slate-800/50 border-slate-600 hover:bg-slate-700/50"
-            >
-              Deselect Card
-            </Button>
-          )}
-        </div>
+                // Natural hand positioning - slight arc
+                const totalCards = cards.length;
+                const centerIndex = (totalCards - 1) / 2;
+                const distanceFromCenter = index - centerIndex;
+                const arcOffset = distanceFromCenter * distanceFromCenter * 0.5; // Subtle arc
+
+                return (
+                  <div
+                    key={card.id}
+                    className={cn(
+                      "relative transition-all duration-400 ease-out",
+                      "transform-gpu", // Use GPU acceleration
+                      isHovered && "scale-110 z-50",
+                      isSelected && "scale-115 z-40",
+                      isAnimating && "scale-95",
+                      "hover:z-50"
+                    )}
+                    style={{
+                      transitionDelay: `${index * 60}ms`, // Staggered animation
+                      transform: `translateY(${arcOffset}px)`, // Natural arc
+                    }}
+                    onMouseEnter={() => handleCardHover(card.id)}
+                    onMouseLeave={() => handleCardHover(null)}
+                  >
+                    <MemeCard
+                      card={card}
+                      isSelected={isSelected}
+                      onSelect={handleCardSelect}
+                      disabled={disabled}
+                      theme={theme}
+                      rarity={rarity}
+                      size="md"
+                      className={cn(
+                        "cursor-pointer transition-all duration-300",
+                        "shadow-lg hover:shadow-xl",
+                        isSelected && "ring-2 ring-blue-400 ring-opacity-75",
+                        isHovered && "shadow-2xl",
+                        rarity === "legendary" && "shadow-orange-400/30",
+                        rarity === "epic" && "shadow-purple-400/30",
+                        rarity === "rare" && "shadow-blue-400/30"
+                      )}
+                    />
+
+                    {/* Selection indicator - glowing border */}
+                    {isSelected && (
+                      <div className="absolute inset-0 rounded-lg border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)] animate-pulse pointer-events-none"></div>
+                    )}
+
+                    {/* Hover glow effect */}
+                    {isHovered && !isSelected && (
+                      <div className="absolute inset-0 bg-white/10 rounded-lg animate-pulse pointer-events-none"></div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
       </div>
     </div>
   );
@@ -449,28 +401,23 @@ export function MemeCardHand({
       {/* Desktop Layout */}
       <div className="hidden md:block">{renderLayout()}</div>
 
-      {/* Mobile Layout - Always professional but compact */}
+      {/* Mobile Layout - Compact and touch-friendly */}
       <div className="block md:hidden">
-        <div className="bg-slate-900/50 rounded-lg border border-slate-700/50 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <Badge variant="outline" className="text-xs">
-              Hand ({cards.length})
-            </Badge>
-            {selectedCard && (
-              <Badge className="bg-blue-500/20 text-blue-300 text-xs">
-                Selected
-              </Badge>
-            )}
-          </div>
-
+        <div className="bg-slate-900/30 rounded-lg border border-slate-700/30 p-3">
           <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2">
-              {cards.map((card) => {
+            <div className="flex gap-3 pb-2 justify-center">
+              {cards.map((card, index) => {
                 const isSelected = selectedCard?.id === card.id;
                 const rarity = getCardRarity(card.id);
 
                 return (
-                  <div key={card.id} className="flex-shrink-0">
+                  <div
+                    key={card.id}
+                    className="flex-shrink-0 transition-all duration-300 ease-out"
+                    style={{
+                      transform: `translateY(${index % 2 === 0 ? -2 : 2}px)`,
+                    }}
+                  >
                     <MemeCard
                       card={card}
                       isSelected={isSelected}
@@ -478,8 +425,16 @@ export function MemeCardHand({
                       disabled={disabled}
                       theme={theme}
                       rarity={rarity}
-                      size="sm"
-                      className="transition-transform duration-200 active:scale-95"
+                      size="md"
+                      className={cn(
+                        "transition-all duration-300",
+                        "hover:scale-105 active:scale-95",
+                        isSelected &&
+                          "scale-110 ring-2 ring-blue-400 ring-opacity-75",
+                        rarity === "legendary" && "shadow-orange-400/30",
+                        rarity === "epic" && "shadow-purple-400/30",
+                        rarity === "rare" && "shadow-blue-400/30"
+                      )}
                     />
                   </div>
                 );

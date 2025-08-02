@@ -254,7 +254,6 @@ export function MemeCardDemo() {
               cards={cards}
               selectedCard={selectedCard}
               onCardSelect={selectCard}
-              onCardClear={clearSelection}
               disabled={isLoading}
               layout={currentLayout}
               theme={currentTheme}
