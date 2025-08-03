@@ -140,3 +140,5 @@
 [debug] [2025-08-01T10:12:17.560Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/fcm.googleapis.com [omitted]
 [debug] [2025-08-01T10:12:17.569Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/identitytoolkit.googleapis.com 200
 [debug] [2025-08-01T10:12:17.569Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/identitytoolkit.googleapis.com [omitted]
+[debug] [2025-08-03T20:32:25.689Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-03T20:32:25.692Z] > authorizing via signed-in user (sima.alex33@gmail.com)

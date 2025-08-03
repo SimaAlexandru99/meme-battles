@@ -4,6 +4,13 @@ import { useCallback, useState } from "react";
 import { MemeCard, CardTheme } from "@/components/meme-card";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface MemeCardHandProps {
   cards: MemeCard[];
@@ -165,76 +172,88 @@ export function MemeCardHand({
         </div>
       </div>
 
-      {/* Mobile Layout */}
+      {/* Mobile Layout - Carousel */}
       <div className="block md:hidden">
-        <div className="w-full flex justify-center items-center min-h-[350px] relative">
+        <div className="w-full min-h-[280px] relative">
           {/* Background effects */}
           <div className="absolute inset-0 bg-gradient-radial from-muted/20 via-background to-transparent"></div>
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-[350px] h-14 bg-gradient-to-t from-black/20 to-transparent rounded-full blur-xl"></div>
 
-          <div className="relative">
-            {cards.map((card, index) => {
-              const totalCards = cards.length;
-              const centerIndex = (totalCards - 1) / 2;
-              const distanceFromCenter = index - centerIndex;
+          <div className="flex items-center justify-center h-full py-8">
+            <Carousel
+              opts={{
+                align: "center",
+                loop: true,
+              }}
+              className="w-full max-w-xs"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {cards.map((card) => {
+                  const isSelected = selectedCard?.id === card.id;
+                  const rarity = getCardRarity(card.id);
 
-              // Simplified positioning
-              const maxAngle = Math.min(60, totalCards * 8);
-              const anglePerCard = maxAngle / Math.max(totalCards - 1, 1);
-              const angle = distanceFromCenter * anglePerCard;
-              const radius = 140 + totalCards * 5;
-
-              const angleRad = (angle * Math.PI) / 180;
-              const x = Math.sin(angleRad) * radius;
-              const y = Math.cos(angleRad) * radius * 0.3 - 50;
-
-              const isSelected = selectedCard?.id === card.id;
-              const isHovered = hoveredCard === card.id;
-              const rarity = getCardRarity(card.id);
-              const zIndex = 50 + totalCards - Math.abs(distanceFromCenter);
-
-              return (
-                <div
-                  key={card.id}
-                  className="absolute transition-all duration-500 ease-out"
-                  style={{
-                    transform: `translate(${x}px, ${y}px) rotate(${angle}deg)`,
-                    transformOrigin: "center bottom",
-                    zIndex: isHovered || isSelected ? 100 : zIndex,
-                  }}
-                  onMouseEnter={() => handleCardHover(card.id)}
-                  onMouseLeave={() => handleCardHover(null)}
-                >
-                  <MemeCard
-                    card={card}
-                    isSelected={isSelected}
-                    onSelect={handleCardSelect}
-                    disabled={disabled}
-                    theme={theme}
-                    rarity={rarity}
-                    size="sm"
-                    className={cn(
-                      "transition-all duration-500 ease-out cursor-pointer",
-                      "shadow-lg hover:shadow-xl",
-                      isHovered && "scale-110 -translate-y-8 rotate-0 z-50",
-                      isSelected && "scale-110 -translate-y-8 rotate-0 z-50",
-                      rarity === "legendary" && "shadow-orange-400/20",
-                      rarity === "epic" && "shadow-purple-400/20",
-                      rarity === "rare" && "shadow-blue-400/20"
-                    )}
-                  />
-
-                  {/* Selection indicator */}
-                  {isSelected && (
-                    <div className="absolute inset-0 rounded-lg border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)] animate-pulse pointer-events-none"></div>
-                  )}
-                </div>
-              );
-            })}
+                  return (
+                    <CarouselItem
+                      key={card.id}
+                      className="pl-2 md:pl-4 basis-4/5"
+                    >
+                      <div className="flex items-center justify-center">
+                        <MemeCard
+                          card={card}
+                          isSelected={isSelected}
+                          onSelect={handleCardSelect}
+                          disabled={disabled}
+                          theme={theme}
+                          rarity={rarity}
+                          size="md"
+                          className={cn(
+                            "transition-all duration-300 cursor-pointer",
+                            "shadow-lg hover:shadow-xl active:scale-95",
+                            isSelected &&
+                              "scale-110 ring-2 ring-blue-400 ring-opacity-75",
+                            rarity === "legendary" && "shadow-orange-400/30",
+                            rarity === "epic" && "shadow-purple-400/30",
+                            rarity === "rare" && "shadow-blue-400/30"
+                          )}
+                        />
+                      </div>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+              <CarouselPrevious
+                className="left-2 bg-background/80 backdrop-blur-sm border-muted-foreground/20"
+                disabled={disabled}
+              />
+              <CarouselNext
+                className="right-2 bg-background/80 backdrop-blur-sm border-muted-foreground/20"
+                disabled={disabled}
+              />
+            </Carousel>
           </div>
 
-          {/* Guide line */}
-          <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-[300px] h-1 bg-gradient-to-r from-transparent via-muted-foreground/10 to-transparent rounded-full"></div>
+          {/* Card indicator */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+            <div className="flex gap-1">
+              {cards.map((card) => (
+                <div
+                  key={card.id}
+                  className={cn(
+                    "w-2 h-2 rounded-full transition-all duration-200",
+                    selectedCard?.id === card.id
+                      ? "bg-blue-400 scale-125"
+                      : "bg-muted-foreground/30"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Card info */}
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground/60 text-center">
+            {selectedCard
+              ? `Selected: ${selectedCard.alt}`
+              : "Swipe to browse cards"}
+          </div>
         </div>
       </div>
 
