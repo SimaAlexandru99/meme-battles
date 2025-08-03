@@ -546,10 +546,12 @@ interface MemeCard {
 interface Player {
   id: string;
   name: string;
-  profileURL?: string;
+  avatar: string;
   score: number;
-  isConnected: boolean;
-  hand: MemeCard[];
+  status: "waiting" | "playing" | "submitted" | "winner";
+  cards: MemeCard[];
+  selectedCard?: MemeCard;
+  isCurrentPlayer?: boolean;
 }
 
 interface Submission {
@@ -575,37 +577,15 @@ interface ChatMessage {
   playerName: string;
   message: string;
   timestamp: Date;
+  type: "chat" | "system" | "action";
 }
-
 interface GameState {
-  // Game Meta
-  lobbyCode: string;
-  gameId: string;
   currentRound: number;
   totalRounds: number;
-  phase: GamePhase;
-
-  // Players
-  players: Player[];
-  currentPlayer: Player;
-  hostId: string;
-
-  // Game Content
-  currentSituation: string;
-  playerHand: MemeCard[];
-  submissions: Submission[];
-  votes: Vote[];
-
-  // Timers
-  phaseTimer: number;
-  phaseStartTime: Date;
-
-  // UI State
-  selectedCard: MemeCard | null;
-  hasSubmitted: boolean;
-  hasVoted: boolean;
-  isLoading: boolean;
-  error: string | null;
+  timeLeft: number;
+  phase: "waiting" | "prompt" | "playing" | "voting" | "results";
+  currentPrompt: string;
+  winner?: Player;
 }
 
 interface GameDocument {
