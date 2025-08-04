@@ -184,7 +184,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
       setChatMessages((prev) => [...prev, chatMessage]);
     },
-    [currentPlayer]
+    [currentPlayer],
   );
 
   const handleSubmitCard = useCallback(() => {
@@ -195,8 +195,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       prev.map((p) =>
         p.id === currentPlayer.id
           ? { ...p, selectedCard, status: "submitted" }
-          : p
-      )
+          : p,
+      ),
     );
 
     const actionMessage: ChatMessage = {
@@ -218,7 +218,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     // For now, go back to main menu since game should be in progress
     if (
       confirm(
-        "Are you sure you want to leave the game? You won't be able to rejoin this round."
+        "Are you sure you want to leave the game? You won't be able to rejoin this round.",
       )
     ) {
       router.push("/");
@@ -368,7 +368,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                       "hover:from-green-500 hover:to-green-600",
                       "disabled:from-slate-600 disabled:to-slate-700",
                       "shadow-lg shadow-green-500/30",
-                      "focus-visible:ring-2 focus-visible:ring-green-500/50"
+                      "focus-visible:ring-2 focus-visible:ring-green-500/50",
                     )}
                     aria-label="Submit selected meme card"
                   >
@@ -385,7 +385,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                     "font-bangers text-lg tracking-wide min-h-[48px] px-6 py-3",
                     "border-purple-500/50 text-purple-300 hover:bg-purple-500/20",
                     "hover:border-purple-400/70 hover:text-purple-200",
-                    "shadow-lg shadow-purple-500/20"
+                    "shadow-lg shadow-purple-500/20",
                   )}
                   aria-label="Generate new situation"
                 >

@@ -82,7 +82,7 @@ export function CategoriesSelector({
         }
       }
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   return (
@@ -117,7 +117,7 @@ export function CategoriesSelector({
                   ? "bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-500/20"
                   : "bg-slate-700/30 border-slate-600/30 hover:bg-slate-700/50",
                 disabled && "opacity-50 cursor-not-allowed",
-                error && "border-red-500/50"
+                error && "border-red-500/50",
               )}
               onClick={() => {
                 if (!disabled && !isOnlySelected) {
@@ -136,7 +136,7 @@ export function CategoriesSelector({
                 disabled={disabled || isOnlySelected}
                 className={cn(
                   "mt-0.5 border-slate-500/50 data-[state=checked]:bg-purple-600",
-                  "data-[state=checked]:border-purple-600 focus-visible:ring-purple-500/50"
+                  "data-[state=checked]:border-purple-600 focus-visible:ring-purple-500/50",
                 )}
               />
 
@@ -154,7 +154,7 @@ export function CategoriesSelector({
                     className={cn(
                       "font-bangers tracking-wide cursor-pointer",
                       isSelected ? "text-white" : "text-purple-200/90",
-                      disabled && "cursor-not-allowed"
+                      disabled && "cursor-not-allowed",
                     )}
                   >
                     {category.label}
@@ -163,7 +163,7 @@ export function CategoriesSelector({
                 <p
                   className={cn(
                     "text-sm font-bangers tracking-wide",
-                    isSelected ? "text-purple-200/80" : "text-slate-400"
+                    isSelected ? "text-purple-200/80" : "text-slate-400",
                   )}
                 >
                   {category.description}

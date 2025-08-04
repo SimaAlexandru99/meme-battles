@@ -75,7 +75,7 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
         }, LONG_PRESS_DURATION);
       }
     },
-    [callbacks, getDistance]
+    [callbacks, getDistance],
   );
 
   const handleTouchMove = useCallback(
@@ -102,7 +102,7 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
         isPinching: touches.length === 2,
       }));
     },
-    [getDistance]
+    [getDistance],
   );
 
   const handleTouchEnd = useCallback(
@@ -174,7 +174,7 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
         isPinching: false,
       }));
     },
-    [gestureState, callbacks]
+    [gestureState, callbacks],
   );
 
   return {

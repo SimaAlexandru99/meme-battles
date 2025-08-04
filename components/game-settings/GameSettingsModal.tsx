@@ -63,18 +63,10 @@ export function GameSettingsModal({
   isLoading = false,
   error = null,
 }: GameSettingsModalProps) {
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
-
   // Clear errors when modal opens/closes
   React.useEffect(() => {
-    if (isOpen) {
-      setErrors({});
-    }
+    // Reset any form state when modal opens
   }, [isOpen]);
-
-  const clearErrors = React.useCallback(() => {
-    setErrors({});
-  }, []);
 
   // Handle modal close with unsaved changes warning
   const handleClose = React.useCallback(() => {
@@ -187,7 +179,7 @@ export function GameSettingsModal({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={clearErrors}
+                        onClick={handleClose}
                         className="flex-shrink-0 p-1 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors duration-200"
                         aria-label="Dismiss error"
                       >

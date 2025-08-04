@@ -26,7 +26,7 @@ export function GameSettingsForm({
   className,
 }: GameSettingsFormProps) {
   const [successMessage, setSuccessMessage] = React.useState<string | null>(
-    null
+    null,
   );
 
   const {
@@ -127,7 +127,7 @@ export function GameSettingsForm({
               "disabled:cursor-not-allowed disabled:opacity-50",
               "text-white shadow-lg transition-all duration-200",
               "focus:outline-none focus:ring-2 focus:ring-purple-500/50",
-              "active:scale-95"
+              "active:scale-95",
             )}
           >
             {isSubmitting ? (
@@ -151,7 +151,7 @@ export function GameSettingsForm({
               "text-white border border-slate-600/50",
               "transition-all duration-200",
               "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-              "active:scale-95"
+              "active:scale-95",
             )}
           >
             Cancel
@@ -168,7 +168,7 @@ export function GameSettingsForm({
               "text-slate-400 hover:text-white",
               "hover:bg-slate-700/30 transition-all duration-200",
               "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-              "disabled:cursor-not-allowed disabled:opacity-50"
+              "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           >
             Reset

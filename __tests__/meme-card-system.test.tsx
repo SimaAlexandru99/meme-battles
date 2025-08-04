@@ -153,7 +153,7 @@ describe("MemeCardPool class", () => {
 
     // Check no overlap
     const intersection = new Set(
-      [...firstIds].filter((id) => secondIds.has(id))
+      [...firstIds].filter((id) => secondIds.has(id)),
     );
     expect(intersection.size).toBe(0);
   });
@@ -236,7 +236,7 @@ describe("MemeCardHand Component", () => {
         cards={mockCards}
         selectedCard={null}
         onCardSelect={jest.fn()}
-      />
+      />,
     );
 
     expect(screen.getAllByRole("button")).toHaveLength(6); // 3 cards x 2 layouts (desktop + mobile)
@@ -250,7 +250,7 @@ describe("MemeCardHand Component", () => {
         cards={mockCards}
         selectedCard={mockCards[0]}
         onCardSelect={jest.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText("1 selected")).toBeInTheDocument();
@@ -263,7 +263,7 @@ describe("MemeCardHand Component", () => {
         cards={mockCards}
         selectedCard={null}
         onCardSelect={onCardSelect}
-      />
+      />,
     );
 
     fireEvent.click(screen.getAllByRole("button")[0]);
@@ -272,12 +272,12 @@ describe("MemeCardHand Component", () => {
 
   test("shows empty state", () => {
     render(
-      <MemeCardHand cards={[]} selectedCard={null} onCardSelect={jest.fn()} />
+      <MemeCardHand cards={[]} selectedCard={null} onCardSelect={jest.fn()} />,
     );
 
     expect(screen.getByText("No cards available")).toBeInTheDocument();
     expect(
-      screen.getByText("Waiting for cards to be dealt...")
+      screen.getByText("Waiting for cards to be dealt..."),
     ).toBeInTheDocument();
   });
 });
@@ -294,7 +294,7 @@ describe("useMemeCardSelection Hook", () => {
       <TestMemeCardSelection
         cards={mockCards}
         onSelectionChange={onSelectionChange}
-      />
+      />,
     );
 
     expect(screen.getByTestId("selected-card")).toHaveTextContent("none");
@@ -313,7 +313,7 @@ describe("useMemeCardSelection Hook", () => {
       <TestMemeCardSelection
         cards={mockCards}
         onSelectionChange={onSelectionChange}
-      />
+      />,
     );
 
     // Select first
@@ -333,7 +333,7 @@ describe("useMemeCardSelection Hook", () => {
         cards={mockCards}
         onSelectionChange={onSelectionChange}
         disabled={true}
-      />
+      />,
     );
 
     fireEvent.click(screen.getByTestId("select-first"));

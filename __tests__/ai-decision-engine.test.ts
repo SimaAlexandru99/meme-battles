@@ -8,7 +8,7 @@ import { generateText } from "ai";
 // Mock Sentry
 jest.mock("@sentry/nextjs", () => ({
   startSpan: jest.fn((options, callback) =>
-    callback({ setAttribute: jest.fn() })
+    callback({ setAttribute: jest.fn() }),
   ),
   logger: {
     info: jest.fn(),
@@ -118,7 +118,7 @@ describe("AIDecisionEngine", () => {
 
     // Mock getPersonalityById
     (getPersonalityById as jest.Mock).mockImplementation((id: string) =>
-      mockPersonalities.find((p) => p.id === id)
+      mockPersonalities.find((p) => p.id === id),
     );
   });
 
@@ -298,7 +298,7 @@ describe("AIDecisionEngine", () => {
       expect(result.success).toBe(true);
       // Should vote for one of the human submissions, not the AI submission
       expect(["sub1", "sub2"]).toContain(
-        result.decision?.decision.votedSubmissionId
+        result.decision?.decision.votedSubmissionId,
       );
     });
 
@@ -349,7 +349,7 @@ describe("AIDecisionEngine", () => {
 
       expect(result.success).toBe(true);
       expect(["sub1", "sub2"]).toContain(
-        result.decision?.decision.votedSubmissionId
+        result.decision?.decision.votedSubmissionId,
       );
     });
   });
@@ -375,7 +375,7 @@ describe("AIDecisionEngine", () => {
       expect(result.success).toBe(true);
       expect(result.decision?.type).toBe("chat-message");
       expect(result.decision?.decision.chatMessage).toBe(
-        "This is a great game! 😄"
+        "This is a great game! 😄",
       );
       expect(result.decision?.decision.confidence).toBeGreaterThan(0);
     });
@@ -490,7 +490,7 @@ describe("AIDecisionEngine", () => {
         decisionEngine as unknown as {
           calculateConfidence: (
             personality: AIPersonality,
-            aiResponse: string
+            aiResponse: string,
           ) => number;
         }
       ).calculateConfidence(personality, aiResponse);
@@ -508,7 +508,7 @@ describe("AIDecisionEngine", () => {
         decisionEngine as unknown as {
           calculateConfidence: (
             personality: AIPersonality,
-            aiResponse: string
+            aiResponse: string,
           ) => number;
         }
       ).calculateConfidence(personality1, aiResponse);
@@ -516,7 +516,7 @@ describe("AIDecisionEngine", () => {
         decisionEngine as unknown as {
           calculateConfidence: (
             personality: AIPersonality,
-            aiResponse: string
+            aiResponse: string,
           ) => number;
         }
       ).calculateConfidence(personality2, aiResponse);
@@ -536,7 +536,7 @@ describe("AIDecisionEngine", () => {
         decisionEngine as unknown as {
           shouldSendChatMessage: (
             personality: AIPersonality,
-            context: AIDecisionEngineOptions["context"]
+            context: AIDecisionEngineOptions["context"],
           ) => boolean;
         }
       ).shouldSendChatMessage(personality, {});
@@ -548,7 +548,7 @@ describe("AIDecisionEngine", () => {
         decisionEngine as unknown as {
           shouldSendChatMessage: (
             personality: AIPersonality,
-            context: AIDecisionEngineOptions["context"]
+            context: AIDecisionEngineOptions["context"],
           ) => boolean;
         }
       ).shouldSendChatMessage(personality, {});
@@ -585,10 +585,10 @@ describe("AIDecisionEngine", () => {
           decisionEngine as unknown as {
             shouldSendChatMessage: (
               personality: AIPersonality,
-              context: AIDecisionEngineOptions["context"]
+              context: AIDecisionEngineOptions["context"],
             ) => boolean;
           }
-        ).shouldSendChatMessage(lowFrequencyPersonality, {})
+        ).shouldSendChatMessage(lowFrequencyPersonality, {}),
       ).toBe(true);
 
       // Test medium frequency (50% chance)
@@ -598,10 +598,10 @@ describe("AIDecisionEngine", () => {
           decisionEngine as unknown as {
             shouldSendChatMessage: (
               personality: AIPersonality,
-              context: AIDecisionEngineOptions["context"]
+              context: AIDecisionEngineOptions["context"],
             ) => boolean;
           }
-        ).shouldSendChatMessage(mediumFrequencyPersonality, {})
+        ).shouldSendChatMessage(mediumFrequencyPersonality, {}),
       ).toBe(true);
 
       // Test high frequency (80% chance)
@@ -611,10 +611,10 @@ describe("AIDecisionEngine", () => {
           decisionEngine as unknown as {
             shouldSendChatMessage: (
               personality: AIPersonality,
-              context: AIDecisionEngineOptions["context"]
+              context: AIDecisionEngineOptions["context"],
             ) => boolean;
           }
-        ).shouldSendChatMessage(highFrequencyPersonality, {})
+        ).shouldSendChatMessage(highFrequencyPersonality, {}),
       ).toBe(true);
     });
   });

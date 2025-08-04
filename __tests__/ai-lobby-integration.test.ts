@@ -57,7 +57,7 @@ describe("AI Lobby Integration", () => {
       };
 
       (aiPlayerManager.createAIPlayer as jest.Mock).mockResolvedValue(
-        mockAIPlayer
+        mockAIPlayer,
       );
 
       const result = await aiPlayerManager.createAIPlayer({
@@ -91,7 +91,7 @@ describe("AI Lobby Integration", () => {
       expect(aiPlayerManager.balanceAIPlayers).toHaveBeenCalledWith(
         "TEST123",
         1,
-        mockAISettings
+        mockAISettings,
       );
     });
 
@@ -109,13 +109,13 @@ describe("AI Lobby Integration", () => {
       ];
 
       (aiPlayerManager.getAIPlayersAsLobbyPlayers as jest.Mock).mockReturnValue(
-        mockAILobbyPlayers
+        mockAILobbyPlayers,
       );
 
       const result = aiPlayerManager.getAIPlayersAsLobbyPlayers("TEST123");
 
       expect(aiPlayerManager.getAIPlayersAsLobbyPlayers).toHaveBeenCalledWith(
-        "TEST123"
+        "TEST123",
       );
       expect(result).toEqual(mockAILobbyPlayers);
     });
@@ -167,7 +167,7 @@ describe("AI Lobby Integration", () => {
       await aiPlayerManager.removeAllAIPlayersFromLobby("TEST123");
 
       expect(aiPlayerManager.removeAllAIPlayersFromLobby).toHaveBeenCalledWith(
-        "TEST123"
+        "TEST123",
       );
     });
 

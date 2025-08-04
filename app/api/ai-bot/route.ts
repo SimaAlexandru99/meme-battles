@@ -32,7 +32,7 @@ export async function POST() {
     console.error("Error generating situation:", error);
     return NextResponse.json(
       { error: "Failed to generate situation" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -13,7 +13,7 @@ export class AIDecisionEngine {
    * Select a meme card based on situation and personality
    */
   public async selectMemeCard(
-    options: AIDecisionEngineOptions
+    options: AIDecisionEngineOptions,
   ): Promise<AIDecisionResult> {
     return Sentry.startSpan(
       {
@@ -28,7 +28,7 @@ export class AIDecisionEngine {
 
           if (!context.situation || !context.availableMemes) {
             throw new Error(
-              "Missing required context: situation or availableMemes"
+              "Missing required context: situation or availableMemes",
             );
           }
 
@@ -41,7 +41,7 @@ export class AIDecisionEngine {
           // Parse AI response to select meme
           const selectedMeme = this.parseMemeSelection(
             aiResponse,
-            context.availableMemes
+            context.availableMemes,
           );
 
           // Calculate confidence based on personality and response quality
@@ -88,7 +88,7 @@ export class AIDecisionEngine {
             processingTime: Date.now() - startTime,
           };
         }
-      }
+      },
     );
   }
 
@@ -96,7 +96,7 @@ export class AIDecisionEngine {
    * Cast a vote for the best submission based on personality and context
    */
   public async castVote(
-    options: AIDecisionEngineOptions
+    options: AIDecisionEngineOptions,
   ): Promise<AIDecisionResult> {
     return Sentry.startSpan(
       {
@@ -111,13 +111,13 @@ export class AIDecisionEngine {
 
           if (!context.submissions || !context.situation) {
             throw new Error(
-              "Missing required context: submissions or situation"
+              "Missing required context: submissions or situation",
             );
           }
 
           // Filter out AI's own submission
           const otherSubmissions = context.submissions.filter(
-            (submission) => !submission.playerName.includes("AI")
+            (submission) => !submission.playerName.includes("AI"),
           );
 
           if (otherSubmissions.length === 0) {
@@ -133,7 +133,7 @@ export class AIDecisionEngine {
           // Parse AI response to select submission
           const votedSubmissionId = this.parseVoteSelection(
             aiResponse,
-            otherSubmissions
+            otherSubmissions,
           );
 
           // Calculate confidence based on personality and response quality
@@ -180,7 +180,7 @@ export class AIDecisionEngine {
             processingTime: Date.now() - startTime,
           };
         }
-      }
+      },
     );
   }
 
@@ -188,7 +188,7 @@ export class AIDecisionEngine {
    * Generate a chat message based on personality and game context
    */
   public async generateChatMessage(
-    options: AIDecisionEngineOptions
+    options: AIDecisionEngineOptions,
   ): Promise<AIDecisionResult> {
     return Sentry.startSpan(
       {
@@ -284,7 +284,7 @@ export class AIDecisionEngine {
             processingTime: Date.now() - startTime,
           };
         }
-      }
+      },
     );
   }
 
@@ -306,7 +306,7 @@ export class AIDecisionEngine {
    */
   private buildMemeSelectionPrompt(
     personality: AIPersonality,
-    context: AIDecisionEngineOptions["context"]
+    context: AIDecisionEngineOptions["context"],
   ): string {
     const { situation, availableMemes } = context;
 
@@ -331,7 +331,7 @@ Respond with ONLY the filename of the selected meme card (e.g., "funny_cat.jpg")
    */
   private buildVotingPrompt(
     personality: AIPersonality,
-    context: AIDecisionEngineOptions["context"]
+    context: AIDecisionEngineOptions["context"],
   ): string {
     const { situation, submissions } = context;
 
@@ -340,7 +340,7 @@ Respond with ONLY the filename of the selected meme card (e.g., "funny_cat.jpg")
       submissions
         ?.map(
           (sub, index) =>
-            `${index + 1}. ${sub.playerName}: ${sub.memeCard.filename}`
+            `${index + 1}. ${sub.playerName}: ${sub.memeCard.filename}`,
         )
         .join("\n") || "No submissions available";
 
@@ -364,7 +364,7 @@ Respond with ONLY the number of the submission you want to vote for (e.g., "1", 
    */
   private buildChatPrompt(
     personality: AIPersonality,
-    context: AIDecisionEngineOptions["context"]
+    context: AIDecisionEngineOptions["context"],
   ): string {
     const personalityContext = this.getPersonalityContext(personality);
     const gameContext = this.getGameContext(context);
@@ -415,7 +415,7 @@ Respond with ONLY the chat message (max 100 characters). If you don't have anyth
    */
   private async callAIWithTimeout(
     prompt: string,
-    timeout: number
+    timeout: number,
   ): Promise<string> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -444,7 +444,7 @@ Respond with ONLY the chat message (max 100 characters). If you don't have anyth
    */
   private parseMemeSelection(
     aiResponse: string,
-    availableMemes: string[]
+    availableMemes: string[],
   ): string {
     // Extract filename from response
     const lines = aiResponse.split("\n");
@@ -465,7 +465,7 @@ Respond with ONLY the chat message (max 100 characters). If you don't have anyth
    */
   private parseVoteSelection(
     aiResponse: string,
-    submissions: Submission[]
+    submissions: Submission[],
   ): string {
     // Extract number from response
     const match = aiResponse.match(/\d+/);
@@ -486,7 +486,7 @@ Respond with ONLY the chat message (max 100 characters). If you don't have anyth
    */
   private parseChatMessage(
     aiResponse: string,
-    personality: AIPersonality
+    personality: AIPersonality,
   ): string | null {
     if (aiResponse.toUpperCase().includes("SKIP")) {
       return null;
@@ -525,7 +525,7 @@ Respond with ONLY the chat message (max 100 characters). If you don't have anyth
    */
   private calculateConfidence(
     personality: AIPersonality,
-    aiResponse: string
+    aiResponse: string,
   ): number {
     let confidence = 0.5; // Base confidence
 
@@ -554,25 +554,42 @@ Respond with ONLY the chat message (max 100 characters). If you don't have anyth
   }
 
   /**
-   * Determine if AI should send a chat message based on personality
+   * Determine if AI should send a chat message based on personality and context
    */
   private shouldSendChatMessage(
     personality: AIPersonality,
-    context: AIDecisionEngineOptions["context"]
+    context: AIDecisionEngineOptions["context"],
   ): boolean {
     const chatFrequency = personality.traits.chatFrequency;
     const random = Math.random();
 
+    // Base probability based on personality
+    let probability = 0.3; // default
     switch (chatFrequency) {
       case "low":
-        return random < 0.2; // 20% chance
+        probability = 0.2; // 20% chance
+        break;
       case "medium":
-        return random < 0.5; // 50% chance
+        probability = 0.5; // 50% chance
+        break;
       case "high":
-        return random < 0.8; // 80% chance
-      default:
-        return random < 0.3; // 30% chance
+        probability = 0.8; // 80% chance
+        break;
     }
+
+    // Adjust based on game context
+    if (context.gamePhase === "voting") {
+      probability += 0.1; // More likely to chat during voting
+    } else if (context.gamePhase === "results") {
+      probability += 0.2; // Most likely to chat during results
+    }
+
+    // Adjust based on situation complexity
+    if (context.situation && context.situation.length > 50) {
+      probability += 0.1; // More likely to comment on complex situations
+    }
+
+    return random < probability;
   }
 }
 

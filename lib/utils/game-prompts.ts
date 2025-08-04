@@ -95,7 +95,7 @@ export function getRandomPrompt(): string {
 export function getRandomPrompts(count: number): string[] {
   if (count > GAME_PROMPTS.length) {
     throw new Error(
-      `Cannot get ${count} unique prompts. Only ${GAME_PROMPTS.length} available.`
+      `Cannot get ${count} unique prompts. Only ${GAME_PROMPTS.length} available.`,
     );
   }
 
@@ -107,7 +107,7 @@ export function getRandomPrompts(count: number): string[] {
  * Gets prompts by category (basic categorization)
  */
 export function getPromptsByCategory(
-  category: "gaming" | "social" | "work" | "food" | "tech" | "random"
+  category: "gaming" | "social" | "work" | "food" | "tech" | "random",
 ): string[] {
   const categories = {
     gaming: GAME_PROMPTS.slice(10, 18),

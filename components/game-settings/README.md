@@ -215,7 +215,7 @@ const handleChange = React.useCallback(
   (value: string) => {
     onChange(value);
   },
-  [onChange]
+  [onChange],
 );
 
 // Use React.useEffect for side effects

@@ -107,7 +107,7 @@ describe("Testing Utilities Integration", () => {
 
     // Verify successful submission
     expect(
-      screen.getByText("Form submitted successfully!")
+      screen.getByText("Form submitted successfully!"),
     ).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
@@ -120,10 +120,10 @@ describe("Testing Utilities Integration", () => {
 
     // Firebase mocks should be available
     expect(
-      jest.isMockFunction(require("firebase/auth").signInAnonymously)
+      jest.isMockFunction(require("firebase/auth").signInAnonymously),
     ).toBe(true);
     expect(jest.isMockFunction(require("firebase/firestore").getDoc)).toBe(
-      true
+      true,
     );
   });
 });

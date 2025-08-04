@@ -44,7 +44,7 @@ const AllTheProviders = ({
       enableSystem: theme === "system",
       disableTransitionOnChange: true,
     },
-    children
+    children,
   );
 };
 
@@ -54,7 +54,7 @@ const AllTheProviders = ({
  */
 export function customRender(
   ui: ReactElement,
-  options: CustomRenderOptions = {}
+  options: CustomRenderOptions = {},
 ): RenderResult {
   const { router, ...renderOptions } = options;
 

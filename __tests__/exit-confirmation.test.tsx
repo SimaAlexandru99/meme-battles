@@ -115,14 +115,14 @@ describe("GameLobby Exit Confirmation", () => {
     // Check if the confirmation dialog appears
     await waitFor(() => {
       expect(
-        screen.getByText("Are you sure you want to leave the lobby?")
+        screen.getByText("Are you sure you want to leave the lobby?"),
       ).toBeInTheDocument();
     });
 
     expect(
       screen.getByText(
-        "You are currently in a game lobby. Leaving now will abandon the game and remove you from the lobby."
-      )
+        "You are currently in a game lobby. Leaving now will abandon the game and remove you from the lobby.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -267,7 +267,7 @@ describe("GameLobby Exit Confirmation", () => {
     // Verify dialog is closed
     await waitFor(() => {
       expect(
-        screen.queryByText("Are you sure you want to leave the lobby?")
+        screen.queryByText("Are you sure you want to leave the lobby?"),
       ).not.toBeInTheDocument();
     });
   });

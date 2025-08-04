@@ -118,7 +118,7 @@ export function AddBotDialog({
         difficulty,
       }));
     },
-    []
+    [],
   );
 
   const handleAddBot = React.useCallback(async () => {
@@ -147,7 +147,7 @@ export function AddBotDialog({
   }, [onClose]);
 
   const selectedPersonality = AVAILABLE_AI_PERSONALITIES.find(
-    (p) => p.id === botConfig.personalityId
+    (p) => p.id === botConfig.personalityId,
   );
 
   const remainingSlots = maxBots - currentBotCount;
@@ -395,7 +395,7 @@ export function AddBotDialog({
                         "disabled:cursor-not-allowed disabled:opacity-50",
                         "text-white shadow-lg transition-all duration-200",
                         "focus:outline-none focus:ring-2 focus:ring-purple-500/50",
-                        "active:scale-95"
+                        "active:scale-95",
                       )}
                     >
                       {isLoading ? (
@@ -422,7 +422,7 @@ export function AddBotDialog({
                         "text-white border border-slate-600/50",
                         "transition-all duration-200",
                         "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-                        "active:scale-95"
+                        "active:scale-95",
                       )}
                     >
                       Cancel

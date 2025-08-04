@@ -16,7 +16,7 @@ describe("SituationDisplay", () => {
 
   it("renders loading state correctly", () => {
     render(
-      <SituationDisplay situation="" isLoading={true} onRetry={jest.fn()} />
+      <SituationDisplay situation="" isLoading={true} onRetry={jest.fn()} />,
     );
 
     expect(screen.getByText("Generating situation...")).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe("SituationDisplay", () => {
           element?.tagName.toLowerCase() === "svg" &&
           element?.classList.contains("animate-spin")
         );
-      })
+      }),
     ).toBeInTheDocument();
   });
 
@@ -40,12 +40,12 @@ describe("SituationDisplay", () => {
         situation={testSituation}
         isLoading={false}
         onRetry={jest.fn()}
-      />
+      />,
     );
 
     expect(screen.getByText(testSituation)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /new situation/i })
+      screen.getByRole("button", { name: /new situation/i }),
     ).toBeInTheDocument();
   });
 
@@ -59,12 +59,12 @@ describe("SituationDisplay", () => {
         isLoading={false}
         error={errorMessage}
         onRetry={mockRetry}
-      />
+      />,
     );
 
     // Check for the error message - there is one element with the hardcoded text
     expect(
-      screen.getByText("Failed to generate situation")
+      screen.getByText("Failed to generate situation"),
     ).toBeInTheDocument();
     expect(screen.getByText(errorMessage)).toBeInTheDocument();
 
@@ -82,11 +82,11 @@ describe("SituationDisplay", () => {
         isLoading={true}
         retryCount={2}
         onRetry={jest.fn()}
-      />
+      />,
     );
 
     expect(
-      screen.getByText("Generating situation... (Attempt 3)")
+      screen.getByText("Generating situation... (Attempt 3)"),
     ).toBeInTheDocument();
   });
 
@@ -99,7 +99,7 @@ describe("SituationDisplay", () => {
         situation={testSituation}
         isLoading={false}
         onRetry={mockRetry}
-      />
+      />,
     );
 
     const newSituationButton = screen.getByRole("button", {
@@ -148,11 +148,11 @@ describe("SituationService", () => {
     });
 
     mockSituationService.generateSituation.mockRejectedValue(
-      new Error("HTTP error! status: 500")
+      new Error("HTTP error! status: 500"),
     );
 
     await expect(mockSituationService.generateSituation()).rejects.toThrow(
-      "HTTP error! status: 500"
+      "HTTP error! status: 500",
     );
   });
 
@@ -163,11 +163,11 @@ describe("SituationService", () => {
     });
 
     mockSituationService.generateSituation.mockRejectedValue(
-      new Error("AI service unavailable")
+      new Error("AI service unavailable"),
     );
 
     await expect(mockSituationService.generateSituation()).rejects.toThrow(
-      "AI service unavailable"
+      "AI service unavailable",
     );
   });
 
@@ -180,15 +180,15 @@ describe("SituationService", () => {
 
     expect(
       mockSituationService.validateSituation(
-        "When you realize you've been doing it wrong"
-      )
+        "When you realize you've been doing it wrong",
+      ),
     ).toBe(true);
     expect(mockSituationService.validateSituation("")).toBe(false);
     expect(mockSituationService.validateSituation("Too short")).toBe(false);
     expect(
       mockSituationService.validateSituation(
-        "I'm sorry, I cannot generate that"
-      )
+        "I'm sorry, I cannot generate that",
+      ),
     ).toBe(false);
   });
 
@@ -210,7 +210,7 @@ describe("SituationService", () => {
       });
 
     mockSituationService.generateMultipleSituations.mockResolvedValue(
-      mockSituations
+      mockSituations,
     );
 
     const results = await mockSituationService.generateMultipleSituations(3);

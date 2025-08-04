@@ -73,7 +73,7 @@ export function ChatPanel({
           isMobile &&
             !isOpen &&
             "opacity-0 pointer-events-none transform translate-x-[-100%]",
-          !isMobile && "opacity-100"
+          !isMobile && "opacity-100",
         )}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">
@@ -110,7 +110,7 @@ export function ChatPanel({
                         msg.type === "action" &&
                           "bg-green-50 border border-green-200 text-green-700",
                         msg.type === "chat" &&
-                          "bg-muted/30 border border-border/50"
+                          "bg-muted/30 border border-border/50",
                       )}
                     >
                       <div className="font-semibold text-xs mb-1 flex items-center gap-2">
@@ -131,7 +131,7 @@ export function ChatPanel({
                           className={cn(
                             msg.type === "system" && "text-blue-600",
                             msg.type === "action" && "text-green-600",
-                            msg.type === "chat" && "text-card-foreground"
+                            msg.type === "chat" && "text-card-foreground",
                           )}
                         >
                           {msg.playerName}
@@ -141,7 +141,7 @@ export function ChatPanel({
                         className={cn(
                           msg.type === "system" && "text-blue-700",
                           msg.type === "action" && "text-green-700",
-                          msg.type === "chat" && "text-card-foreground/90"
+                          msg.type === "chat" && "text-card-foreground/90",
                         )}
                       >
                         {msg.message}

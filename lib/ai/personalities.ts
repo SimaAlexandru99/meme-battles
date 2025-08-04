@@ -428,8 +428,7 @@ export function selectMultiplePersonalities(
  */
 export function getRandomChatMessage(
   personality: AIPersonality,
-  trigger: AIChatMessageOptions["trigger"],
-  customContext?: Record<string, unknown>
+  trigger: AIChatMessageOptions["trigger"]
 ): string {
   return Sentry.startSpan(
     {
@@ -629,9 +628,7 @@ export function getPersonalitiesByHumorStyle(
 /**
  * Get personality by difficulty level (for future implementation)
  */
-export function getPersonalitiesByDifficulty(
-  difficulty: "easy" | "medium" | "hard"
-): AIPersonality[] {
+export function getPersonalitiesByDifficulty(): AIPersonality[] {
   // For now, return all personalities. This can be extended when difficulty is implemented
   return AI_PERSONALITIES;
 }

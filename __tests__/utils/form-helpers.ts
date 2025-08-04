@@ -17,7 +17,7 @@ export interface FormFieldData {
  */
 export async function fillInput(
   labelOrPlaceholder: string,
-  value: string | number
+  value: string | number,
 ): Promise<void> {
   const user = userEvent.setup();
 
@@ -47,7 +47,7 @@ export async function fillInput(
  */
 export async function selectOption(
   selectLabel: string,
-  optionValue: string
+  optionValue: string,
 ): Promise<void> {
   const user = userEvent.setup();
 
@@ -60,7 +60,7 @@ export async function selectOption(
  */
 export async function toggleCheckbox(
   checkboxLabel: string,
-  checked: boolean = true
+  checked: boolean = true,
 ): Promise<void> {
   const user = userEvent.setup();
 
@@ -78,7 +78,7 @@ export async function toggleCheckbox(
  */
 export async function selectRadioOption(
   radioGroupName: string,
-  optionValue: string
+  optionValue: string,
 ): Promise<void> {
   const user = userEvent.setup();
 
@@ -108,7 +108,7 @@ export async function fillForm(formData: FormFieldData): Promise<void> {
  * Submits a form by finding and clicking the submit button
  */
 export async function submitForm(
-  submitButtonText: string = "Submit"
+  submitButtonText: string = "Submit",
 ): Promise<void> {
   const user = userEvent.setup();
 
@@ -204,7 +204,7 @@ export async function clearForm(): Promise<void> {
  */
 export async function uploadFile(
   fileInputLabel: string,
-  file: File
+  file: File,
 ): Promise<void> {
   const user = userEvent.setup();
 
@@ -218,7 +218,7 @@ export async function uploadFile(
 export function createMockFile(
   name: string = "test-file.jpg",
   type: string = "image/jpeg",
-  size: number = 1024
+  size: number = 1024,
 ): File {
   const file = new File(["mock file content"], name, { type });
   Object.defineProperty(file, "size", { value: size });

@@ -49,7 +49,7 @@ export function MemeCardHand({
       if (randomValue < 0.35) return "rare"; // 20%
       return "common"; // 65%
     },
-    [showRarity]
+    [showRarity],
   );
 
   const handleCardSelect = useCallback(
@@ -57,7 +57,7 @@ export function MemeCardHand({
       if (disabled) return;
       onCardSelect(card);
     },
-    [disabled, onCardSelect]
+    [disabled, onCardSelect],
   );
 
   const handleCardHover = useCallback((cardId: string | null) => {
@@ -97,7 +97,7 @@ export function MemeCardHand({
                   className={cn(
                     "relative transition-all duration-300 ease-out",
                     isHovered && "scale-110 z-50",
-                    isSelected && "scale-110 z-40"
+                    isSelected && "scale-110 z-40",
                   )}
                   onMouseEnter={() => handleCardHover(card.id)}
                   onMouseLeave={() => handleCardHover(null)}
@@ -117,7 +117,7 @@ export function MemeCardHand({
                       isHovered && "shadow-2xl",
                       rarity === "legendary" && "shadow-orange-400/30",
                       rarity === "epic" && "shadow-purple-400/30",
-                      rarity === "rare" && "shadow-blue-400/30"
+                      rarity === "rare" && "shadow-blue-400/30",
                     )}
                   />
 
@@ -161,7 +161,7 @@ export function MemeCardHand({
                           "scale-110 ring-2 ring-blue-400 ring-opacity-75",
                         rarity === "legendary" && "shadow-orange-400/30",
                         rarity === "epic" && "shadow-purple-400/30",
-                        rarity === "rare" && "shadow-blue-400/30"
+                        rarity === "rare" && "shadow-blue-400/30",
                       )}
                     />
                   </div>
@@ -212,7 +212,7 @@ export function MemeCardHand({
                               "scale-110 ring-2 ring-blue-400 ring-opacity-75",
                             rarity === "legendary" && "shadow-orange-400/30",
                             rarity === "epic" && "shadow-purple-400/30",
-                            rarity === "rare" && "shadow-blue-400/30"
+                            rarity === "rare" && "shadow-blue-400/30",
                           )}
                         />
                       </div>
@@ -241,7 +241,7 @@ export function MemeCardHand({
                     "w-2 h-2 rounded-full transition-all duration-200",
                     selectedCard?.id === card.id
                       ? "bg-blue-400 scale-125"
-                      : "bg-muted-foreground/30"
+                      : "bg-muted-foreground/30",
                   )}
                 />
               ))}

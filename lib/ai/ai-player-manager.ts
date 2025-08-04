@@ -39,11 +39,17 @@ class AIPlayerManager {
       },
       async (span) => {
         try {
+          console.log("AI Player Manager: Starting initialization...");
           // Load personality pool
           const { getAllPersonalities } = await import("./personalities");
           this.state.personalityPool = getAllPersonalities();
+          console.log(
+            "AI Player Manager: Loaded personalities:",
+            this.state.personalityPool.length
+          );
 
           this.state.isInitialized = true;
+          console.log("AI Player Manager: Initialization complete");
 
           this.logger.info("AI Player Manager initialized successfully", {
             personalityCount: this.state.personalityPool.length,
@@ -54,6 +60,7 @@ class AIPlayerManager {
             this.state.personalityPool.length
           );
         } catch (error) {
+          console.error("AI Player Manager: Initialization failed:", error);
           this.logger.error("Failed to initialize AI Player Manager", {
             error,
           });
@@ -363,11 +370,10 @@ class AIPlayerManager {
       uid: aiPlayer.id,
       displayName: aiPlayer.personality.displayName,
       profileURL: `/icons/${aiPlayer.personality.avatarId}`,
-      joinedAt: aiPlayer.lastActivity,
+      joinedAt: aiPlayer.lastActivity.toISOString(),
       isHost: false,
       isAI: true,
       aiPersonalityId: aiPlayer.personality.id,
-      aiPlayer,
     };
   }
 
@@ -383,7 +389,7 @@ class AIPlayerManager {
    * Check if a player is an AI player
    */
   public isAIPlayer(playerId: string): boolean {
-    for (const [lobbyCode, players] of this.state.activeAIPlayers) {
+    for (const [, players] of this.state.activeAIPlayers) {
       if (players.has(playerId)) {
         return true;
       }
@@ -456,7 +462,7 @@ class AIPlayerManager {
     const personalityUsage: Record<string, number> = {};
     let totalAIPlayers = 0;
 
-    for (const [lobbyCode, players] of this.state.activeAIPlayers) {
+    for (const [, players] of this.state.activeAIPlayers) {
       totalAIPlayers += players.size;
 
       for (const player of players.values()) {

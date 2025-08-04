@@ -8,7 +8,7 @@ import {
 // Mock Sentry
 jest.mock("@sentry/nextjs", () => ({
   startSpan: jest.fn((options, callback) =>
-    callback({ setAttribute: jest.fn() })
+    callback({ setAttribute: jest.fn() }),
   ),
   logger: {
     info: jest.fn(),
@@ -88,17 +88,17 @@ describe("AIPlayerManager", () => {
 
     // Mock getPersonalityById
     (getPersonalityById as jest.Mock).mockImplementation((id: string) =>
-      mockPersonalities.find((p) => p.id === id)
+      mockPersonalities.find((p) => p.id === id),
     );
 
     // Mock selectRandomPersonality
     (selectRandomPersonality as jest.Mock).mockImplementation(
       (excludeIds: string[] = []) => {
         const availablePersonalities = mockPersonalities.filter(
-          (p) => !excludeIds.includes(p.id)
+          (p) => !excludeIds.includes(p.id),
         );
         return availablePersonalities[0] || mockPersonalities[0];
-      }
+      },
     );
   });
 
@@ -132,7 +132,7 @@ describe("AIPlayerManager", () => {
       });
 
       await expect(manager.initialize()).rejects.toThrow(
-        "Failed to load personalities"
+        "Failed to load personalities",
       );
     });
   });
@@ -176,7 +176,7 @@ describe("AIPlayerManager", () => {
           lobbyCode: "TEST123",
           personalityId: "non-existent",
           forcePersonality: true,
-        })
+        }),
       ).rejects.toThrow("Personality non-existent not found");
     });
 
@@ -193,7 +193,7 @@ describe("AIPlayerManager", () => {
         manager.createAIPlayer({
           lobbyCode: "TEST123",
           maxPlayers: 6,
-        })
+        }),
       ).rejects.toThrow("Lobby is at maximum capacity");
     });
 
@@ -242,7 +242,7 @@ describe("AIPlayerManager", () => {
           lobbyCode: "TEST123",
           playerId: "non-existent",
           reason: "manual",
-        })
+        }),
       ).resolves.not.toThrow();
     });
 
@@ -252,7 +252,7 @@ describe("AIPlayerManager", () => {
           lobbyCode: "NON_EXISTENT",
           playerId: "some-player",
           reason: "manual",
-        })
+        }),
       ).resolves.not.toThrow();
     });
 
@@ -461,7 +461,7 @@ describe("AIPlayerManager", () => {
       expect(lobbyPlayer.uid).toBe(aiPlayer.id);
       expect(lobbyPlayer.displayName).toBe(aiPlayer.personality.displayName);
       expect(lobbyPlayer.profileURL).toBe(
-        `/icons/${aiPlayer.personality.avatarId}`
+        `/icons/${aiPlayer.personality.avatarId}`,
       );
       expect(lobbyPlayer.joinedAt).toBe(aiPlayer.lastActivity);
       expect(lobbyPlayer.isHost).toBe(false);
@@ -507,7 +507,7 @@ describe("AIPlayerManager", () => {
 
     it("should handle removing all players from empty lobby", async () => {
       await expect(
-        manager.removeAllAIPlayersFromLobby("EMPTY_LOBBY")
+        manager.removeAllAIPlayersFromLobby("EMPTY_LOBBY"),
       ).resolves.not.toThrow();
     });
   });
@@ -588,7 +588,7 @@ describe("AIPlayerManager", () => {
       const result = manager.validateAISettings(invalidSettings);
       expect(result?.error).toBe("INVALID_SETTINGS");
       expect(result?.message).toContain(
-        "Max AI players must be between 1 and 6"
+        "Max AI players must be between 1 and 6",
       );
     });
 
@@ -635,7 +635,7 @@ describe("AIPlayerManager", () => {
       const result = manager.validateAISettings(invalidSettings);
       expect(result?.error).toBe("PERSONALITY_NOT_FOUND");
       expect(result?.message).toContain(
-        "Personality non-existent-personality not found"
+        "Personality non-existent-personality not found",
       );
     });
   });

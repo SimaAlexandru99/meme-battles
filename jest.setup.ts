@@ -87,7 +87,7 @@ beforeAll(() => {
       (args[0].includes("Warning: ReactDOM.render is deprecated") ||
         args[0].includes("Warning: An update to") ||
         args[0].includes(
-          "Not implemented: HTMLFormElement.prototype.requestSubmit"
+          "Not implemented: HTMLFormElement.prototype.requestSubmit",
         ) ||
         args[0].includes("Warning: React does not recognize the") ||
         args[0].includes("Warning: Invalid DOM property") ||

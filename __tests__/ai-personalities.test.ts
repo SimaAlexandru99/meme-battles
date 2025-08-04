@@ -42,7 +42,7 @@ describe("AI Personalities", () => {
         expect(traits.responseTime).toBeDefined();
         expect(traits.responseTime.min).toBeGreaterThanOrEqual(0);
         expect(traits.responseTime.max).toBeGreaterThanOrEqual(
-          traits.responseTime.min
+          traits.responseTime.min,
         );
         expect(traits.chatFrequency).toBeDefined();
         expect(traits.memePreference).toBeDefined();
@@ -165,7 +165,7 @@ describe("AI Personalities", () => {
       const personalities = selectMultiplePersonalities(
         count,
         [],
-        personalityPool
+        personalityPool,
       );
 
       expect(personalities).toHaveLength(count);
@@ -224,7 +224,7 @@ describe("AI Personalities", () => {
 
       const message = getRandomChatMessage(
         personalityWithEmptyTemplates,
-        "thinking"
+        "thinking",
       );
       expect(message).toBe("Hello! 👋");
     });
@@ -243,10 +243,10 @@ describe("AI Personalities", () => {
       const personality = AI_PERSONALITIES[0];
       const responseTime = calculateResponseTime(personality);
       expect(responseTime).toBeGreaterThanOrEqual(
-        personality.traits.responseTime.min
+        personality.traits.responseTime.min,
       );
       expect(responseTime).toBeLessThanOrEqual(
-        personality.traits.responseTime.max
+        personality.traits.responseTime.max,
       );
     });
 
@@ -270,10 +270,10 @@ describe("AI Personalities", () => {
 
     test("should respect chat frequency settings", () => {
       const lowFrequencyPersonality = AI_PERSONALITIES.find(
-        (p) => p.traits.chatFrequency === "low"
+        (p) => p.traits.chatFrequency === "low",
       );
       const highFrequencyPersonality = AI_PERSONALITIES.find(
-        (p) => p.traits.chatFrequency === "high"
+        (p) => p.traits.chatFrequency === "high",
       );
 
       if (lowFrequencyPersonality && highFrequencyPersonality) {
@@ -403,7 +403,7 @@ describe("AI Personalities", () => {
 
     test("should return empty array for non-existent humor style", () => {
       const personalities = getPersonalitiesByHumorStyle(
-        "non-existent" as AIPersonality["traits"]["humorStyle"]
+        "non-existent" as AIPersonality["traits"]["humorStyle"],
       );
       expect(personalities).toHaveLength(0);
     });
@@ -430,14 +430,14 @@ describe("AI Personalities", () => {
     test("should have different response time ranges", () => {
       const responseTimes = AI_PERSONALITIES.map((p) => p.traits.responseTime);
       const uniqueRanges = new Set(
-        responseTimes.map((rt) => `${rt.min}-${rt.max}`)
+        responseTimes.map((rt) => `${rt.min}-${rt.max}`),
       );
       expect(uniqueRanges.size).toBeGreaterThan(1);
     });
 
     test("should have different chat frequencies", () => {
       const chatFrequencies = AI_PERSONALITIES.map(
-        (p) => p.traits.chatFrequency
+        (p) => p.traits.chatFrequency,
       );
       const uniqueFrequencies = new Set(chatFrequencies);
       expect(uniqueFrequencies.size).toBeGreaterThan(1);
@@ -445,7 +445,7 @@ describe("AI Personalities", () => {
 
     test("should have different meme preferences", () => {
       const memePreferences = AI_PERSONALITIES.map(
-        (p) => p.traits.memePreference
+        (p) => p.traits.memePreference,
       );
       const uniquePreferences = new Set(memePreferences);
       expect(uniquePreferences.size).toBeGreaterThan(1);

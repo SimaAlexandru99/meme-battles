@@ -89,7 +89,7 @@ export async function setSessionCookie(idToken: string) {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -111,7 +111,7 @@ export async function signOut() {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -189,7 +189,7 @@ export async function signUp(params: SignUpParams) {
           message: "Failed to create account. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -241,7 +241,7 @@ export async function signIn(params: SignInParams) {
           message: "Failed to log into account. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -325,7 +325,7 @@ export async function signInWithGoogle(idToken: string) {
           message: "Failed to sign in with Google. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -405,7 +405,7 @@ export async function signInWithGitHub(idToken: string) {
           message: "Failed to sign in with GitHub. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -497,7 +497,7 @@ export async function signInAsGuest(params: {
           message: "Failed to sign in as guest. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -533,7 +533,7 @@ export async function getCurrentUser(): Promise<User | null> {
         // Verify session cookie with Firebase Admin
         const decodedClaims = await auth.verifySessionCookie(
           sessionCookie,
-          true
+          true,
         );
 
         span.setAttribute("user.uid", decodedClaims.uid);
@@ -565,7 +565,7 @@ export async function getCurrentUser(): Promise<User | null> {
         // Invalid or expired session - return null
         return null;
       }
-    }
+    },
   );
 }
 
@@ -584,7 +584,7 @@ export async function isAuthenticated() {
       const isAuth = !!user;
       span.setAttribute("user.authenticated", isAuth);
       return isAuth;
-    }
+    },
   );
 }
 
@@ -614,7 +614,7 @@ export async function isAnonymousUser() {
       }
 
       return isAnonymous;
-    }
+    },
   );
 }
 
@@ -658,7 +658,7 @@ export async function isFirstTimeUser() {
       span.setAttribute("user.has_custom_avatar", hasCustomAvatar);
       span.setAttribute("user.setup_completed", user.setupCompleted ?? false);
       return isFirstTime;
-    }
+    },
   );
 }
 
@@ -715,7 +715,7 @@ export async function updateUserDisplayName(displayName: string) {
           message: "Failed to update display name. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -770,7 +770,7 @@ export async function markUserSetupComplete() {
           message: "Failed to mark setup complete. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -850,7 +850,7 @@ export async function updateUserProfile(updates: {
           message: "Failed to update profile. Please try again.",
         };
       }
-    }
+    },
   );
 }
 
@@ -906,7 +906,7 @@ export async function getUserActiveLobby(uid: string) {
 
           // Check if user is in the players array
           const isPlayer = players.some(
-            (player: { uid: string }) => player.uid === uid
+            (player: { uid: string }) => player.uid === uid,
           );
 
           if (isPlayer) {
@@ -955,6 +955,6 @@ export async function getUserActiveLobby(uid: string) {
         console.error("Error checking user active lobby:", error);
         return null;
       }
-    }
+    },
   );
 }

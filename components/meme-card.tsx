@@ -142,7 +142,7 @@ export const MemeCard = memo(function MemeCard({
         handleClick();
       }
     },
-    [handleClick]
+    [handleClick],
   );
 
   const config = sizeConfig[size];
@@ -165,11 +165,11 @@ export const MemeCard = memo(function MemeCard({
         isSelected &&
           cn(
             currentTheme.selectedBorder,
-            "scale-105 ring-2 ring-current ring-opacity-50"
+            "scale-105 ring-2 ring-current ring-opacity-50",
           ),
         disabled &&
           "cursor-not-allowed opacity-50 hover:scale-100 focus-visible:scale-100",
-        className
+        className,
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -192,7 +192,7 @@ export const MemeCard = memo(function MemeCard({
                 "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ml-1 flex-shrink-0",
                 rarity === "rare" && "bg-blue-400",
                 rarity === "epic" && "bg-purple-400",
-                rarity === "legendary" && "bg-orange-400"
+                rarity === "legendary" && "bg-orange-400",
               )}
             />
           )}
@@ -220,7 +220,7 @@ export const MemeCard = memo(function MemeCard({
                 "object-contain rounded-md transition-all duration-300",
                 config.image,
                 isLoading && "opacity-0",
-                "group-hover:scale-105"
+                "group-hover:scale-105",
               )}
               onLoad={handleImageLoad}
               onError={handleImageError}

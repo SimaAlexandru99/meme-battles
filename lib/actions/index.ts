@@ -35,4 +35,5 @@ export {
   getLobbyData,
   startGame,
   getUserActiveLobbies,
+  kickPlayer,
 } from "./lobby.action";

@@ -85,19 +85,19 @@ class AIPlayerManager {
 
   async addAIPlayerToLobby(
     lobbyCode: string,
-    maxAIPlayers: number
+    maxAIPlayers: number,
   ): Promise<AIPlayer>;
 
   async removeAIPlayerFromLobby(
     lobbyCode: string,
-    playerId: string
+    playerId: string,
   ): Promise<void>;
 
   async balanceAIPlayers(
     lobbyCode: string,
     currentPlayerCount: number,
     maxPlayers: number,
-    aiSettings: AISettings
+    aiSettings: AISettings,
   ): Promise<void>;
 
   private generateUniqueAIPlayer(): AIPlayer;
@@ -113,7 +113,7 @@ class AIDecisionEngine {
 
   async selectMemeCard(
     situation: string,
-    availableCards: MemeCard[]
+    availableCards: MemeCard[],
   ): Promise<{
     selectedCard: MemeCard;
     reasoning: string;
@@ -122,7 +122,7 @@ class AIDecisionEngine {
 
   async castVote(
     submissions: Submission[],
-    situation: string
+    situation: string,
   ): Promise<{
     votedSubmissionId: string;
     reasoning: string;
@@ -131,7 +131,7 @@ class AIDecisionEngine {
 
   async generateChatMessage(
     context: "submission" | "voting" | "results" | "general",
-    gameState: GameState
+    gameState: GameState,
   ): Promise<string | null>;
 
   private async callAI(prompt: string): Promise<string>;
@@ -247,7 +247,7 @@ class AIErrorHandler {
   static async handleAIServiceError(
     error: Error,
     aiPlayer: AIPlayer,
-    fallbackAction: "random_selection" | "skip_turn" | "remove_player"
+    fallbackAction: "random_selection" | "skip_turn" | "remove_player",
   ): Promise<void> {
     // Log error with Sentry
     Sentry.captureException(error, {
@@ -266,7 +266,7 @@ class AIErrorHandler {
       case "remove_player":
         await AIPlayerManager.getInstance().removeAIPlayerFromLobby(
           aiPlayer.lobbyCode,
-          aiPlayer.id
+          aiPlayer.id,
         );
         break;
     }

@@ -40,7 +40,7 @@ const TimerDisplay = memo(function TimerDisplay({
           "bg-destructive/10 border border-destructive/20 text-destructive animate-pulse",
         isWarning && "bg-warning/10 border border-warning/20 text-warning",
         !isUrgent && !isWarning && "bg-card border text-card-foreground",
-        className
+        className,
       )}
       role="timer"
       aria-live={isUrgent ? "assertive" : "polite"}
@@ -105,7 +105,7 @@ export const TopBar = memo(function TopBar({
     <header
       className={cn(
         "absolute top-0 left-0 right-0 z-50 p-3 sm:p-4 md:p-6",
-        className
+        className,
       )}
       role="banner"
       aria-label="Game status and timer"

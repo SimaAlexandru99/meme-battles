@@ -114,7 +114,7 @@ export function PlayersList({
             !isOpen &&
             "opacity-0 pointer-events-none transform translate-x-[100%]",
           !isMobile && "opacity-100",
-          className
+          className,
         )}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">

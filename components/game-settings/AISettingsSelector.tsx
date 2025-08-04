@@ -48,7 +48,7 @@ export function AISettingsSelector({
         enabled,
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handleMaxAIPlayersChange = React.useCallback(
@@ -58,7 +58,7 @@ export function AISettingsSelector({
         maxAIPlayers: maxAIPlayers[0],
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handleMinHumanPlayersChange = React.useCallback(
@@ -68,7 +68,7 @@ export function AISettingsSelector({
         minHumanPlayers: minHumanPlayers[0],
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handlePersonalityToggle = React.useCallback(
@@ -82,7 +82,7 @@ export function AISettingsSelector({
         personalityPool: newPersonalityPool,
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handleAutoBalanceToggle = React.useCallback(
@@ -92,7 +92,7 @@ export function AISettingsSelector({
         autoBalance,
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handleDifficultyChange = React.useCallback(
@@ -102,7 +102,7 @@ export function AISettingsSelector({
         difficulty,
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   return (
@@ -231,12 +231,12 @@ export function AISettingsSelector({
                         <Checkbox
                           id={personality.id}
                           checked={value.personalityPool.includes(
-                            personality.id
+                            personality.id,
                           )}
                           onCheckedChange={(checked) =>
                             handlePersonalityToggle(
                               personality.id,
-                              checked as boolean
+                              checked as boolean,
                             )
                           }
                           disabled={disabled}

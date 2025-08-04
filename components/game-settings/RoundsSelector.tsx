@@ -46,7 +46,7 @@ export function RoundsSelector({
     (val: string) => {
       onChange(parseInt(val, 10));
     },
-    [onChange]
+    [onChange],
   );
 
   return (
@@ -69,7 +69,7 @@ export function RoundsSelector({
             "h-12 bg-slate-700/50 border-slate-600/50 text-white",
             "hover:bg-slate-700/70 focus:ring-2 focus:ring-purple-500/50",
             "focus:border-purple-500/50 font-bangers tracking-wide",
-            error && "border-red-500/50 focus:ring-red-500/50"
+            error && "border-red-500/50 focus:ring-red-500/50",
           )}
         >
           <SelectValue placeholder="Select number of rounds" />
@@ -81,7 +81,7 @@ export function RoundsSelector({
               value={option.value.toString()}
               className={cn(
                 "text-white hover:bg-slate-700/50 focus:bg-slate-700/50",
-                "font-bangers tracking-wide cursor-pointer"
+                "font-bangers tracking-wide cursor-pointer",
               )}
             >
               {option.label}

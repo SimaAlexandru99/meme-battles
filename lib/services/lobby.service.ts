@@ -8,6 +8,7 @@ import {
   updateLobbySettings,
   addAIPlayerToLobby,
   removeAIPlayerFromLobby,
+  kickPlayer,
 } from "@/lib/actions";
 
 /**
@@ -16,7 +17,7 @@ import {
  * @returns Promise with lobby data or error
  */
 export async function joinLobbyService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<JoinLobbyResponse> {
   return Sentry.startSpan(
     {
@@ -39,7 +40,7 @@ export async function joinLobbyService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -69,7 +70,7 @@ export async function createLobbyService(): Promise<CreateLobbyResponse> {
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -79,7 +80,7 @@ export async function createLobbyService(): Promise<CreateLobbyResponse> {
  * @returns Promise with lobby data or error
  */
 export async function getLobbyDataService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<{ success: boolean; lobby: Lobby }> {
   return Sentry.startSpan(
     {
@@ -102,7 +103,7 @@ export async function getLobbyDataService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -112,7 +113,7 @@ export async function getLobbyDataService(
  * @returns Promise with updated lobby data or error
  */
 export async function startGameService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<{ success: boolean; lobby: Lobby }> {
   return Sentry.startSpan(
     {
@@ -135,7 +136,7 @@ export async function startGameService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -145,7 +146,7 @@ export async function startGameService(
  * @returns Promise with success response or error
  */
 export async function leaveLobbyService(
-  invitationCode: string
+  invitationCode: string,
 ): Promise<{ success: boolean; message: string }> {
   return Sentry.startSpan(
     {
@@ -168,7 +169,7 @@ export async function leaveLobbyService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -216,7 +217,7 @@ export async function updateLobbySettingsService(
       autoBalance: boolean;
       difficulty: "easy" | "medium" | "hard";
     };
-  }
+  },
 ): Promise<{ success: boolean; lobby: Lobby; message: string }> {
   return Sentry.startSpan(
     {
@@ -240,7 +241,7 @@ export async function updateLobbySettingsService(
         Sentry.captureException(error);
         throw error;
       }
-    }
+    },
   );
 }
 
@@ -249,8 +250,12 @@ export async function addAIPlayerToLobbyService(
   botConfig: {
     personalityId: string;
     difficulty: "easy" | "medium" | "hard";
-  }
-): Promise<{ success: boolean; lobby: Lobby; message: string }> {
+  },
+): Promise<{
+  success: boolean;
+  lobby: Record<string, unknown>;
+  message: string;
+}> {
   try {
     const result = await addAIPlayerToLobby(invitationCode, botConfig);
     return result;
@@ -263,7 +268,7 @@ export async function addAIPlayerToLobbyService(
 
 export async function removeAIPlayerFromLobbyService(
   invitationCode: string,
-  aiPlayerId: string
+  aiPlayerId: string,
 ): Promise<{ success: boolean; lobby: Lobby; message: string }> {
   try {
     const result = await removeAIPlayerFromLobby(invitationCode, aiPlayerId);
@@ -271,6 +276,20 @@ export async function removeAIPlayerFromLobbyService(
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Failed to remove AI player";
+    throw new Error(errorMessage);
+  }
+}
+
+export async function kickPlayerService(
+  invitationCode: string,
+  playerId: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const result = await kickPlayer(invitationCode, playerId);
+    return result;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to kick player";
     throw new Error(errorMessage);
   }
 }
