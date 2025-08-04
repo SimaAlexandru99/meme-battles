@@ -346,7 +346,7 @@ export function getEnabledPersonalities(): AIPersonality[] {
  */
 export function selectRandomPersonality(
   excludeIds: string[] = [],
-  personalityPool?: string[]
+  personalityPool?: string[],
 ): AIPersonality {
   return Sentry.startSpan(
     {
@@ -359,14 +359,14 @@ export function selectRandomPersonality(
       // Filter by personality pool if provided
       if (personalityPool && personalityPool.length > 0) {
         availablePersonalities = AI_PERSONALITIES.filter((personality) =>
-          personalityPool.includes(personality.id)
+          personalityPool.includes(personality.id),
         );
       }
 
       // Exclude already used personalities
       if (excludeIds.length > 0) {
         availablePersonalities = availablePersonalities.filter(
-          (personality) => !excludeIds.includes(personality.id)
+          (personality) => !excludeIds.includes(personality.id),
         );
       }
 
@@ -376,7 +376,7 @@ export function selectRandomPersonality(
       }
 
       const randomIndex = Math.floor(
-        Math.random() * availablePersonalities.length
+        Math.random() * availablePersonalities.length,
       );
       const selectedPersonality = availablePersonalities[randomIndex];
 
@@ -386,7 +386,7 @@ export function selectRandomPersonality(
       span.setAttribute("selectedPersonalityId", selectedPersonality.id);
 
       return selectedPersonality;
-    }
+    },
   );
 }
 
@@ -396,7 +396,7 @@ export function selectRandomPersonality(
 export function selectMultiplePersonalities(
   count: number,
   excludeIds: string[] = [],
-  personalityPool?: string[]
+  personalityPool?: string[],
 ): AIPersonality[] {
   return Sentry.startSpan(
     {
@@ -419,7 +419,7 @@ export function selectMultiplePersonalities(
       span.setAttribute("selectedCount", selectedPersonalities.length);
 
       return selectedPersonalities;
-    }
+    },
   );
 }
 
@@ -428,7 +428,7 @@ export function selectMultiplePersonalities(
  */
 export function getRandomChatMessage(
   personality: AIPersonality,
-  trigger: AIChatMessageOptions["trigger"]
+  trigger: AIChatMessageOptions["trigger"],
 ): string {
   return Sentry.startSpan(
     {
@@ -443,7 +443,7 @@ export function getRandomChatMessage(
         const generalTemplates = personality.chatTemplates.general;
         if (generalTemplates && generalTemplates.length > 0) {
           const randomIndex = Math.floor(
-            Math.random() * generalTemplates.length
+            Math.random() * generalTemplates.length,
           );
           const message = generalTemplates[randomIndex];
 
@@ -467,7 +467,7 @@ export function getRandomChatMessage(
       span.setAttribute("selectedIndex", randomIndex);
 
       return message;
-    }
+    },
   );
 }
 
@@ -604,7 +604,7 @@ export function validatePersonality(personality: AIPersonality): boolean {
       !Array.isArray(
         personality.chatTemplates[
           template as keyof typeof personality.chatTemplates
-        ]
+        ],
       )
     ) {
       return false;
@@ -618,10 +618,10 @@ export function validatePersonality(personality: AIPersonality): boolean {
  * Get personality by humor style
  */
 export function getPersonalitiesByHumorStyle(
-  style: AIPersonality["traits"]["humorStyle"]
+  style: AIPersonality["traits"]["humorStyle"],
 ): AIPersonality[] {
   return AI_PERSONALITIES.filter(
-    (personality) => personality.traits.humorStyle === style
+    (personality) => personality.traits.humorStyle === style,
   );
 }
 

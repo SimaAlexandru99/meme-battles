@@ -36,7 +36,7 @@ export default function FirstTimeSetupDialog({
   const [profileURL, setProfileURL] = useState<string | undefined>();
   const [isLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { updateDisplayName, isUpdating } = useUpdateDisplayName(0); // No debounce for immediate save
+  const { updateDisplayName, isUpdating } = useUpdateDisplayName(0);
   const { updateAvatar, isUpdatingAvatar } = useUpdateProfile();
 
   // Initialize with current user data or generate random name

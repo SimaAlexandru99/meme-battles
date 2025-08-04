@@ -45,7 +45,7 @@ class AIPlayerManager {
           this.state.personalityPool = getAllPersonalities();
           console.log(
             "AI Player Manager: Loaded personalities:",
-            this.state.personalityPool.length
+            this.state.personalityPool.length,
           );
 
           this.state.isInitialized = true;
@@ -57,7 +57,7 @@ class AIPlayerManager {
 
           span.setAttribute(
             "personalityCount",
-            this.state.personalityPool.length
+            this.state.personalityPool.length,
           );
         } catch (error) {
           console.error("AI Player Manager: Initialization failed:", error);
@@ -66,7 +66,7 @@ class AIPlayerManager {
           });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -74,7 +74,7 @@ class AIPlayerManager {
    * Create an AI player for a specific lobby
    */
   public async createAIPlayer(
-    options: AIPlayerCreationOptions
+    options: AIPlayerCreationOptions,
   ): Promise<AIPlayer> {
     return Sentry.startSpan(
       {
@@ -106,7 +106,7 @@ class AIPlayerManager {
             personality = foundPersonality;
           } else {
             const existingPersonalities = this.getAIPlayersForLobby(
-              lobbyCode
+              lobbyCode,
             ).map((player) => player.personality.id);
             personality = selectRandomPersonality(existingPersonalities);
           }
@@ -145,7 +145,7 @@ class AIPlayerManager {
           this.logger.error("Failed to create AI player", { error, options });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -197,7 +197,7 @@ class AIPlayerManager {
           this.logger.error("Failed to remove AI player", { error, options });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -207,7 +207,7 @@ class AIPlayerManager {
   public async balanceAIPlayers(
     lobbyCode: string,
     humanPlayerCount: number,
-    aiSettings: AISettings
+    aiSettings: AISettings,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -241,7 +241,7 @@ class AIPlayerManager {
           ) {
             const neededAIPlayers = Math.min(
               aiSettings.maxAIPlayers,
-              aiSettings.minHumanPlayers - humanPlayerCount
+              aiSettings.minHumanPlayers - humanPlayerCount,
             );
 
             const currentCount = this.getAIPlayersForLobby(lobbyCode).length;
@@ -267,7 +267,7 @@ class AIPlayerManager {
           span.setAttribute("humanPlayerCount", humanPlayerCount);
           span.setAttribute(
             "aiPlayerCount",
-            this.getAIPlayersForLobby(lobbyCode).length
+            this.getAIPlayersForLobby(lobbyCode).length,
           );
           span.setAttribute("maxPlayers", maxPlayers);
         } catch (error) {
@@ -277,7 +277,7 @@ class AIPlayerManager {
           });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -297,7 +297,7 @@ class AIPlayerManager {
    */
   public getAIPlayer(
     lobbyCode: string,
-    playerId: string
+    playerId: string,
   ): AIPlayer | undefined {
     const lobbyPlayers = this.state.activeAIPlayers.get(lobbyCode);
     if (!lobbyPlayers) {
@@ -312,7 +312,7 @@ class AIPlayerManager {
   public updateAIPlayer(
     lobbyCode: string,
     playerId: string,
-    updates: Partial<AIPlayer>
+    updates: Partial<AIPlayer>,
   ): void {
     return Sentry.startSpan(
       {
@@ -329,7 +329,7 @@ class AIPlayerManager {
           const aiPlayer = lobbyPlayers.get(playerId);
           if (!aiPlayer) {
             throw new Error(
-              `AI player ${playerId} not found in lobby ${lobbyCode}`
+              `AI player ${playerId} not found in lobby ${lobbyCode}`,
             );
           }
 
@@ -358,7 +358,7 @@ class AIPlayerManager {
           });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -401,7 +401,7 @@ class AIPlayerManager {
    * Get AI player by player ID across all lobbies
    */
   public getAIPlayerById(
-    playerId: string
+    playerId: string,
   ): { player: AIPlayer; lobbyCode: string } | null {
     for (const [lobbyCode, players] of this.state.activeAIPlayers) {
       const player = players.get(playerId);
@@ -447,7 +447,7 @@ class AIPlayerManager {
           });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -546,7 +546,7 @@ class AIPlayerManager {
    * Clean up inactive AI players (for maintenance)
    */
   public async cleanupInactiveAIPlayers(
-    maxInactiveMinutes: number = 30
+    maxInactiveMinutes: number = 30,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -556,7 +556,7 @@ class AIPlayerManager {
       async (span) => {
         try {
           const cutoffTime = new Date(
-            Date.now() - maxInactiveMinutes * 60 * 1000
+            Date.now() - maxInactiveMinutes * 60 * 1000,
           );
           let removedCount = 0;
 
@@ -586,7 +586,7 @@ class AIPlayerManager {
           this.logger.error("Failed to cleanup inactive AI players", { error });
           throw error;
         }
-      }
+      },
     );
   }
 

@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,12 +36,12 @@ import { cn, formatJoinTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
-import { useReconnection } from "@/hooks/useReconnection";
+import { useLobbyData } from "@/hooks/useLobbyData";
+import { useEventListener, useClipboard, useNetwork } from "react-haiku";
 
 import { GameRedirect } from "@/components/game-redirect";
 import { AuthError } from "@/components/auth-error";
 import { startGame, leaveLobby } from "@/lib/actions";
-import { useLobbyData } from "@/hooks/useLobbyData";
 import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
 import { AddBotButton } from "@/components/game-settings/AddBotButton";
 import { KickPlayerButton } from "@/components/kick-player-button";
@@ -50,7 +50,6 @@ import { addAIPlayerToLobbyService } from "@/lib/services/lobby.service";
 import { GameSettingsFormData } from "@/components/game-settings/types";
 import {
   buttonVariants,
-  errorVariants,
   badgeVariants,
   microInteractionVariants,
   successVariants,
@@ -70,101 +69,72 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const [isAddingBot, setIsAddingBot] = React.useState(false);
   const [botError, setBotError] = React.useState<string | null>(null);
 
+  // Network status monitoring
+  const isOnline = useNetwork();
+  const prevOnlineRef = React.useRef(isOnline);
+
   // SWR hook for lobby data with real-time updates
   const { lobbyData, error, isLoading, isValidating, refresh, isHost } =
     useLobbyData(lobbyCode, {
       refreshInterval: 5000, // 5 seconds auto-refresh
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      enabled: true, // Will be controlled by reconnection logic below
+      enabled: true,
     });
 
-  // Reconnection hook
-  const {
-    isConnected,
-    isReconnecting,
-    reconnectAttempts,
-    connectionError,
-    handleConnectionLoss,
-    triggerReconnection,
-    resetConnectionState,
-    canReconnect,
-    reconnectProgress,
-  } = useReconnection({
-    lobbyCode,
-    maxReconnectAttempts: 5,
-    reconnectInterval: 3000,
-    onReconnectSuccess: () => {
-      // Refresh lobby data after successful reconnection
-      refresh();
-      resetConnectionState();
-    },
-    onReconnectFailure: () => {
-      // Redirect to main menu if reconnection fails
-      toast.error("Failed to reconnect. Redirecting to main menu...");
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
-    },
+  // Network status effect
+  React.useEffect(() => {
+    if (prevOnlineRef.current !== isOnline) {
+      if (!isOnline) {
+        toast.error("You are offline. Some features may not work.");
+      } else {
+        toast.success("You are back online!");
+      }
+      prevOnlineRef.current = isOnline;
+    }
+  }, [isOnline]);
+
+  // Use Haiku's useClipboard for copy operations
+  const { copy: copyToClipboard } = useClipboard();
+
+  // Use Haiku's useEventListener for beforeunload event
+  useEventListener("beforeunload", (event: BeforeUnloadEvent) => {
+    if (lobbyData && lobbyData.status === "waiting") {
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    }
   });
 
-  // Handle beforeunload event to show confirmation dialog
-  React.useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (lobbyData && lobbyData.status === "waiting") {
-        event.preventDefault();
-        event.returnValue = "";
-        return "";
-      }
-    };
+  // Use Haiku's useEventListener for visibility change
+  useEventListener("visibilitychange", () => {
+    if (
+      document.visibilityState === "hidden" &&
+      lobbyData &&
+      lobbyData.status === "waiting"
+    ) {
+      // Log that user left the tab while in lobby
+      Sentry.addBreadcrumb({
+        category: "navigation",
+        message: "User left tab while in game lobby",
+        level: "info",
+        data: {
+          lobbyCode,
+          lobbyStatus: lobbyData.status,
+          playerCount: lobbyData.players.length,
+        },
+      });
+    }
+  });
 
-    // Handle visibility change (tab switching, minimizing)
-    const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === "hidden" &&
-        lobbyData &&
-        lobbyData.status === "waiting"
-      ) {
-        // Log that user left the tab while in lobby
-        Sentry.addBreadcrumb({
-          category: "navigation",
-          message: "User left tab while in game lobby",
-          level: "info",
-          data: {
-            lobbyCode,
-            lobbyStatus: lobbyData.status,
-            playerCount: lobbyData.players.length,
-          },
-        });
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [lobbyData, lobbyCode]);
-
-  // Handle errors and connection issues
+  // Handle errors
   React.useEffect(() => {
     if (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to load lobby";
-
-      // Handle connection loss for specific errors
-      if (
-        errorMessage.includes("Failed to load lobby") ||
-        errorMessage.includes("You are not a member of this lobby") ||
-        errorMessage.includes("authentication") ||
-        errorMessage.includes("unauthorized")
-      ) {
-        handleConnectionLoss();
-      }
+      console.error("Lobby error:", errorMessage);
     }
-  }, [error, handleConnectionLoss]);
+  }, [error]);
 
   // Check if current user is the host (now using the helper from hook)
   const isCurrentUserHost = isHost(currentUser.id);
@@ -178,7 +148,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       },
       async () => {
         try {
-          await navigator.clipboard.writeText(lobbyCode);
+          copyToClipboard(lobbyCode);
           toast.success("Invitation code copied to clipboard!");
         } catch (err) {
           console.error("Failed to copy invitation code", err);
@@ -187,7 +157,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         }
       },
     );
-  }, [lobbyCode]);
+  }, [lobbyCode, copyToClipboard]);
 
   // Share invitation link
   const handleShareLink = React.useCallback(async () => {
@@ -214,7 +184,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         } else {
           // Fallback to copying link
           try {
-            await navigator.clipboard.writeText(shareUrl);
+            copyToClipboard(shareUrl);
             toast.success("Lobby link copied to clipboard!");
           } catch (err) {
             console.error("Failed to copy lobby link", err);
@@ -224,7 +194,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         }
       },
     );
-  }, [lobbyCode]);
+  }, [lobbyCode, copyToClipboard]);
 
   // Start the game using server action
   const handleStartGame = React.useCallback(async () => {
@@ -294,22 +264,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     setShowExitDialog(false);
   }, []);
 
-  // Handle keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && showExitDialog) {
-        handleCancelExit();
-      }
-    };
-
-    if (showExitDialog) {
-      document.addEventListener("keydown", handleKeyDown);
+  // Use Haiku's useEventListener for keyboard shortcuts in exit dialog
+  useEventListener("keydown", (event: Event) => {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key === "Escape" && showExitDialog) {
+      handleCancelExit();
     }
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showExitDialog, handleCancelExit]);
+  });
 
   // Handle opening settings modal
   const handleOpenSettings = React.useCallback(() => {
@@ -436,8 +397,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     );
   }
 
-  // Show reconnection UI when disconnected
-  if (!isConnected || isReconnecting) {
+  // Show offline UI when not connected
+  if (!isOnline) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <motion.div
@@ -454,105 +415,22 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   variants={microInteractionVariants}
                 >
                   <motion.div
-                    className={cn(
-                      "w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center",
-                      isReconnecting
-                        ? "bg-yellow-500/20 shadow-yellow-500/30"
-                        : "bg-red-500/20 shadow-red-500/30",
-                    )}
-                    variants={
-                      isReconnecting
-                        ? loadingVariants
-                        : microInteractionVariants
-                    }
-                    animate={isReconnecting ? "animate" : "initial"}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center bg-red-500/20 shadow-red-500/30"
+                    variants={microInteractionVariants}
+                    animate="initial"
                   >
-                    <RiWifiOffLine
-                      className={cn(
-                        "w-8 h-8 sm:w-10 sm:h-10",
-                        isReconnecting ? "text-yellow-400" : "text-red-400",
-                      )}
-                    />
+                    <RiWifiOffLine className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
                   </motion.div>
                 </motion.div>
 
                 <motion.div variants={microInteractionVariants}>
                   <h2 className="text-xl sm:text-2xl font-bangers text-white mb-2">
-                    {isReconnecting ? "Reconnecting..." : "Connection Lost"}
+                    You&apos;re Offline
                   </h2>
                   <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
-                    {isReconnecting
-                      ? `Attempt ${reconnectAttempts} of 5...`
-                      : "Your connection to the lobby was lost."}
+                    Please check your internet connection and try again.
                   </p>
                 </motion.div>
-
-                {isReconnecting && (
-                  <motion.div
-                    className="space-y-3"
-                    variants={microInteractionVariants}
-                  >
-                    <Progress value={reconnectProgress} className="w-full" />
-                    <p className="text-xs text-purple-200/50 font-bangers tracking-wide">
-                      Attempting to reconnect...
-                    </p>
-                  </motion.div>
-                )}
-
-                {!isReconnecting && canReconnect && (
-                  <motion.div variants={buttonVariants}>
-                    <Button
-                      onClick={triggerReconnection}
-                      className={cn(
-                        "w-full h-12 sm:h-14",
-                        "bg-gradient-to-r from-yellow-600 to-yellow-700",
-                        "hover:from-yellow-500 hover:to-yellow-600",
-                        "text-white font-bangers text-lg sm:text-xl tracking-wide",
-                        "shadow-lg shadow-yellow-500/30",
-                        "focus-visible:ring-2 focus-visible:ring-yellow-500/50",
-                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                      )}
-                    >
-                      <RiRefreshLine className="w-5 h-5 mr-2" />
-                      Try Again
-                    </Button>
-                  </motion.div>
-                )}
-
-                {!canReconnect && (
-                  <motion.div
-                    className="space-y-4"
-                    variants={microInteractionVariants}
-                  >
-                    <p className="text-red-400 text-sm font-bangers tracking-wide">
-                      Failed to reconnect after 5 attempts.
-                    </p>
-                    <Button
-                      onClick={() => router.push("/")}
-                      className={cn(
-                        "w-full h-12 sm:h-14",
-                        "bg-gradient-to-r from-slate-600 to-slate-700",
-                        "hover:from-slate-500 hover:to-slate-600",
-                        "text-white font-bangers text-lg sm:text-xl tracking-wide",
-                        "shadow-lg shadow-slate-500/30",
-                        "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                        "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                      )}
-                    >
-                      <RiArrowLeftLine className="w-5 h-5 mr-2" />
-                      Back to Main Menu
-                    </Button>
-                  </motion.div>
-                )}
-
-                {connectionError && (
-                  <motion.p
-                    className="text-red-400 text-xs font-bangers tracking-wide"
-                    variants={errorVariants}
-                  >
-                    {connectionError}
-                  </motion.p>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -705,13 +583,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 </Badge>
               </motion.div>
 
-              {/* Connection Status */}
+              {/* Network Status */}
               <motion.div variants={badgeVariants}>
                 <Badge
                   variant="secondary"
                   className={cn(
                     "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
-                    isConnected
+                    isOnline
                       ? "bg-green-500/20 text-green-400 border-green-500/30"
                       : "bg-red-500/20 text-red-400 border-red-500/30",
                   )}
@@ -719,13 +597,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   <motion.div
                     className={cn(
                       "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-                      isConnected ? "bg-green-400" : "bg-red-400",
+                      isOnline ? "bg-green-400" : "bg-red-400",
                     )}
-                    animate={isConnected ? { scale: [1, 1.2, 1] } : {}}
+                    animate={isOnline ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
                   <span className="hidden sm:inline">
-                    {isConnected ? "Connected" : "Disconnected"}
+                    {isOnline ? "Online" : "Offline"}
                   </span>
                 </Badge>
               </motion.div>

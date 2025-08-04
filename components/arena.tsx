@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { RiSwordLine, RiLightbulbLine, RiArrowLeftLine } from "react-icons/ri";
+import {
+  RiSwordLine,
+  RiLightbulbLine,
+  RiArrowLeftLine,
+  RiFullscreenLine,
+  RiFullscreenExitLine,
+  RiChat1Line,
+  RiFireLine,
+} from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
@@ -12,10 +21,11 @@ import { getRandomPrompt } from "@/lib/utils/game-prompts";
 import { MemeCardHand } from "@/components/meme-card-hand";
 import { TopBar } from "@/components/top-bar";
 import { ChatPanel } from "@/components/chat-panel";
-import { PlayersList } from "@/components/players-list";
+import { PlayersList } from "@/components/players-panel";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useInterval, useFullscreen, useNetwork } from "react-haiku";
 
 interface ArenaProps {
   lobbyCode: string;
@@ -24,6 +34,7 @@ interface ArenaProps {
 
 export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const router = useRouter();
+  const arenaRef = useRef<HTMLDivElement>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameState, setGameState] = useState<GameState>({
     currentRound: 1,
@@ -39,6 +50,11 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isPlayersOpen, setIsPlayersOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  // Fullscreen functionality
+  const { isFullscreen, toggleFullscreen } = useFullscreen(arenaRef);
+  const online = useNetwork();
+  const prevOnlineRef = useRef(online);
 
   // Initialize game data
   useEffect(() => {
@@ -97,6 +113,17 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     initializeGame();
   }, [currentUser]);
 
+  useEffect(() => {
+    if (prevOnlineRef.current !== online) {
+      if (!online) {
+        toast.error("You are offline. Some features may not work.");
+      } else {
+        toast.success("You are back online!");
+      }
+      prevOnlineRef.current = online;
+    }
+  }, [online]);
+
   // Auto-close panels when switching to mobile
   useEffect(() => {
     if (isMobile) {
@@ -105,64 +132,64 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     }
   }, [isMobile]);
 
-  // Timer countdown and phase management
-  useEffect(() => {
-    if (gameState.phase === "playing" && gameState.timeLeft > 0) {
-      const timer = setInterval(() => {
-        setGameState((prev) => {
-          const newTimeLeft = Math.max(0, prev.timeLeft - 1);
+  // Use Haiku's useInterval for timer countdown and phase management
+  const shouldRunTimer =
+    gameState.phase === "playing" && gameState.timeLeft > 0;
 
-          // Auto-transition to voting phase when time runs out
-          if (newTimeLeft === 0 && prev.phase === "playing") {
-            toast.info("Time's up! Moving to voting phase...");
-            return {
-              ...prev,
-              timeLeft: 30, // 30 seconds for voting
-              phase: "voting",
-            };
-          }
+  useInterval(
+    () => {
+      setGameState((prev) => {
+        const newTimeLeft = Math.max(0, prev.timeLeft - 1);
 
-          // Auto-transition to results when voting time runs out
-          if (newTimeLeft === 0 && prev.phase === "voting") {
-            toast.info("Voting complete! Showing results...");
-            return {
-              ...prev,
-              timeLeft: 10, // 10 seconds to show results
-              phase: "results",
-            };
-          }
-
-          // Auto-transition to next round or game over
-          if (newTimeLeft === 0 && prev.phase === "results") {
-            if (prev.currentRound < prev.totalRounds) {
-              toast.success("Starting next round!");
-              return {
-                ...prev,
-                currentRound: prev.currentRound + 1,
-                timeLeft: 60,
-                phase: "playing",
-                currentPrompt: getRandomPrompt(),
-              };
-            } else {
-              toast.success("Game Over! Thanks for playing!");
-              return {
-                ...prev,
-                phase: "game_over",
-                timeLeft: 0,
-              };
-            }
-          }
-
+        // Auto-transition to voting phase when time runs out
+        if (newTimeLeft === 0 && prev.phase === "playing") {
+          toast.info("Time's up! Moving to voting phase...");
           return {
             ...prev,
-            timeLeft: newTimeLeft,
+            timeLeft: 30, // 30 seconds for voting
+            phase: "voting",
           };
-        });
-      }, 1000);
+        }
 
-      return () => clearInterval(timer);
-    }
-  }, [gameState.phase, gameState.timeLeft]);
+        // Auto-transition to results when voting time runs out
+        if (newTimeLeft === 0 && prev.phase === "voting") {
+          toast.info("Voting complete! Showing results...");
+          return {
+            ...prev,
+            timeLeft: 10, // 10 seconds to show results
+            phase: "results",
+          };
+        }
+
+        // Auto-transition to next round or game over
+        if (newTimeLeft === 0 && prev.phase === "results") {
+          if (prev.currentRound < prev.totalRounds) {
+            toast.success("Starting next round!");
+            return {
+              ...prev,
+              currentRound: prev.currentRound + 1,
+              timeLeft: 60,
+              phase: "playing",
+              currentPrompt: getRandomPrompt(),
+            };
+          } else {
+            toast.success("Game Over! Thanks for playing!");
+            return {
+              ...prev,
+              phase: "game_over",
+              timeLeft: 0,
+            };
+          }
+        }
+
+        return {
+          ...prev,
+          timeLeft: newTimeLeft,
+        };
+      });
+    },
+    shouldRunTimer ? 1000 : 0,
+  );
 
   const currentPlayer = players.find((p) => p.isCurrentPlayer);
   const { selectedCard, selectCard, clearSelection } = useMemeCardSelection({
@@ -248,6 +275,33 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     toast.success("New situation generated!");
   }, []);
 
+  const handleToggleFullscreen = useCallback(() => {
+    toggleFullscreen();
+    toast.info(isFullscreen ? "Exiting fullscreen" : "Entering fullscreen");
+  }, [toggleFullscreen, isFullscreen]);
+
+  const networkStatusBadge = (
+    <Badge
+      variant="secondary"
+      className={cn(
+        "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
+        online
+          ? "bg-green-500/20 text-green-400 border-green-500/30"
+          : "bg-red-500/20 text-red-400 border-red-500/30",
+      )}
+    >
+      <motion.div
+        className={cn(
+          "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
+          online ? "bg-green-400" : "bg-red-400",
+        )}
+        animate={online ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 2, repeat: Infinity }}
+      />
+      <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
+    </Badge>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -278,14 +332,17 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   }
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <div
+      ref={arenaRef}
+      className="min-h-screen relative bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden pt-20 sm:pt-24 md:pt-28"
+    >
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50"
+        className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-sm border-b rounded-md border-slate-700/50"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <Button
               onClick={handleLeaveGame}
@@ -303,7 +360,38 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                 Lobby: {lobbyCode}
               </p>
             </div>
-            <div className="w-20" /> {/* Spacer for centering */}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                size="sm"
+                variant="secondary"
+                className={cn(
+                  "min-h-[36px] min-w-[36px] rounded-full shadow-lg text-white border-0 transition-all duration-200",
+                  isChatOpen
+                    ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/50"
+                    : "bg-blue-500 hover:bg-blue-600",
+                )}
+                aria-label={isChatOpen ? "Close chat" : "Open chat"}
+              >
+                <RiChat1Line className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => setIsPlayersOpen(!isPlayersOpen)}
+                size="sm"
+                variant="secondary"
+                className={cn(
+                  "min-h-[36px] min-w-[36px] rounded-full shadow-lg text-white border-0 transition-all duration-200",
+                  isPlayersOpen
+                    ? "bg-orange-600 hover:bg-orange-700 shadow-orange-500/50"
+                    : "bg-orange-500 hover:bg-orange-600",
+                )}
+                aria-label={
+                  isPlayersOpen ? "Close players list" : "Open players list"
+                }
+              >
+                <RiFireLine className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -313,6 +401,27 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         currentRound={gameState.currentRound}
         totalRounds={gameState.totalRounds}
         timeLeft={gameState.timeLeft}
+        networkStatus={networkStatusBadge}
+        fullscreenButton={
+          <Button
+            onClick={handleToggleFullscreen}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "border-slate-600/50 text-white hover:bg-slate-700/50",
+              "font-bangers tracking-wide text-xs",
+              "focus-visible:ring-2 focus-visible:ring-slate-500/50",
+              "transition-all duration-200",
+            )}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          >
+            {isFullscreen ? (
+              <RiFullscreenExitLine className="w-3 h-3" />
+            ) : (
+              <RiFullscreenLine className="w-3 h-3" />
+            )}
+          </Button>
+        }
       />
 
       {/* Chat Panel */}
@@ -334,7 +443,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       />
 
       {/* Center Arena - Prompt */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -400,7 +509,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
       {/* Player's Hand */}
       {currentPlayer && (
-        <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16">
           <div className="md:absolute md:bottom-2 md:left-1/2 md:transform md:-translate-x-1/2 md:w-auto">
             <motion.div
               initial={{ opacity: 0, y: 50 }}

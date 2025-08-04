@@ -25,7 +25,6 @@ export function PlayersList({
   isOpen = true,
   onToggle,
   className,
-  showMobileToggle = true,
 }: PlayersListProps) {
   const isMobile = useIsMobile();
 
@@ -83,37 +82,16 @@ export function PlayersList({
 
   return (
     <>
-      {/* Mobile Toggle Button */}
-      {isMobile && showMobileToggle && (
-        <div className="fixed top-20 right-4 z-50">
-          <Button
-            onClick={handleToggle}
-            size="sm"
-            variant="secondary"
-            className="min-h-[44px] min-w-[44px] rounded-full shadow-lg bg-orange-500 hover:bg-orange-600 text-white border-0"
-            aria-label={isOpen ? "Close players list" : "Open players list"}
-          >
-            <RiFireLine className="w-5 h-5" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white font-bold">
-                {players.length}
-              </span>
-            </div>
-          </Button>
-        </div>
-      )}
-
       {/* Players List Panel */}
       <div
         className={cn(
-          "absolute z-40 transition-all duration-300 ease-in-out",
+          "fixed z-40 transition-all duration-300 ease-in-out",
           isMobile
-            ? "top-16 left-0 right-0 bottom-20 mx-4"
-            : "top-20 right-4 bottom-4 w-64",
-          isMobile &&
-            !isOpen &&
+            ? "top-30 left-0 right-0 bottom-4 mx-4"
+            : "top-30 right-4 bottom-4 w-80",
+          !isOpen &&
             "opacity-0 pointer-events-none transform translate-x-[100%]",
-          !isMobile && "opacity-100",
+          isOpen && "opacity-100",
           className,
         )}
       >
@@ -124,17 +102,15 @@ export function PlayersList({
                 <RiFireLine className="w-5 h-5 text-orange-500" />
                 Players
               </div>
-              {isMobile && showMobileToggle && (
-                <Button
-                  onClick={handleToggle}
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  aria-label="Close players list"
-                >
-                  <RiCloseLine className="w-4 h-4" />
-                </Button>
-              )}
+              <Button
+                onClick={handleToggle}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                aria-label="Close players list"
+              >
+                <RiCloseLine className="w-4 h-4" />
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0 min-h-0">

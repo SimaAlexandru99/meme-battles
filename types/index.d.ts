@@ -169,7 +169,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string
+      div: string,
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;
@@ -227,7 +227,12 @@ type AvatarAction =
   | { type: "SET_NICKNAME"; payload: string }
   | { type: "SET_CURRENT_AVATAR"; payload: string }
   | { type: "SET_PROFILE_URL"; payload: string | undefined }
-  | { type: "SET_IS_LOADING"; payload: boolean };
+  | { type: "SET_IS_LOADING"; payload: boolean }
+  | {
+      type: "UPDATE_USER_DATA";
+      payload: { name?: string; avatarId?: string; profileURL?: string };
+    }
+  | { type: "RESET_STATE" };
 
 // Lobby operations interfaces
 interface LobbyState {
@@ -404,7 +409,7 @@ interface UseLobbyDataReturn {
     difficulty: "easy" | "medium" | "hard";
   }) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
   removeAIPlayer: (
-    aiPlayerId: string
+    aiPlayerId: string,
   ) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
   aiPlayers: LobbyPlayer[];
   humanPlayers: LobbyPlayer[];
@@ -604,7 +609,7 @@ interface GameState {
   currentRound: number;
   totalRounds: number;
   timeLeft: number;
-  phase: "waiting" | "prompt" | "playing" | "voting" | "results";
+  phase: "waiting" | "prompt" | "playing" | "voting" | "results" | "game_over";
   currentPrompt: string;
   winner?: Player;
 }

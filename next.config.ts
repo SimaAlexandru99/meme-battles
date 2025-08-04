@@ -5,7 +5,7 @@ const nextConfig = {
     browserDebugInfoInTerminal: true,
   },
   assetPrefix: "/exp4-static",
-  transpilePackages: ["@workspace/ui"],
+  transpilePackages: ["@workspace/ui", "react-haiku"],
   images: {
     remotePatterns: [
       {

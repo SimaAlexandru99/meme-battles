@@ -41,6 +41,10 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
   const longPressTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const touchStartTimeRef = useRef<number>(0);
 
+  // Store callbacks in ref to avoid dependency issues
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
+
   const getDistance = useCallback((touches: React.TouchList) => {
     if (touches.length < 2) return 0;
     const dx = touches[1].clientX - touches[0].clientX;
@@ -69,13 +73,13 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
       touchStartTimeRef.current = Date.now();
 
       // Start long press timer
-      if (callbacks.onLongPress) {
+      if (callbacksRef.current.onLongPress) {
         longPressTimeoutRef.current = setTimeout(() => {
-          callbacks.onLongPress?.();
+          callbacksRef.current.onLongPress?.();
         }, LONG_PRESS_DURATION);
       }
     },
-    [callbacks, getDistance],
+    [getDistance],
   );
 
   const handleTouchMove = useCallback(
@@ -108,14 +112,6 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
       e.preventDefault();
-      const {
-        startX,
-        startY,
-        currentX,
-        currentY,
-        startDistance,
-        currentDistance,
-      } = gestureState;
 
       // Clear long press timer
       if (longPressTimeoutRef.current) {
@@ -126,55 +122,69 @@ export function useGestureDetection(callbacks: GestureCallbacks = {}) {
       const touchDuration = Date.now() - touchStartTimeRef.current;
       const isQuickTap = touchDuration < 300;
 
-      // Handle swipe gestures
-      if (gestureState.isSwiping) {
-        const deltaX = currentX - startX;
-        const deltaY = currentY - startY;
-        const absDeltaX = Math.abs(deltaX);
-        const absDeltaY = Math.abs(deltaY);
+      // Use functional update to get the latest state
+      setGestureState((currentState) => {
+        const {
+          startX,
+          startY,
+          currentX,
+          currentY,
+          startDistance,
+          currentDistance,
+          isSwiping,
+          isPinching,
+        } = currentState;
 
-        if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
-          if (absDeltaX > absDeltaY) {
-            // Horizontal swipe
-            if (deltaX > 0) {
-              callbacks.onSwipeRight?.();
+        // Handle swipe gestures
+        if (isSwiping) {
+          const deltaX = currentX - startX;
+          const deltaY = currentY - startY;
+          const absDeltaX = Math.abs(deltaX);
+          const absDeltaY = Math.abs(deltaY);
+
+          if (absDeltaX > SWIPE_THRESHOLD || absDeltaY > SWIPE_THRESHOLD) {
+            if (absDeltaX > absDeltaY) {
+              // Horizontal swipe
+              if (deltaX > 0) {
+                callbacksRef.current.onSwipeRight?.();
+              } else {
+                callbacksRef.current.onSwipeLeft?.();
+              }
             } else {
-              callbacks.onSwipeLeft?.();
+              // Vertical swipe
+              if (deltaY > 0) {
+                callbacksRef.current.onSwipeDown?.();
+              } else {
+                callbacksRef.current.onSwipeUp?.();
+              }
             }
-          } else {
-            // Vertical swipe
-            if (deltaY > 0) {
-              callbacks.onSwipeDown?.();
+          } else if (isQuickTap) {
+            // Quick tap
+            callbacksRef.current.onTap?.();
+          }
+        }
+
+        // Handle pinch gestures
+        if (isPinching && startDistance > 0) {
+          const deltaDistance = currentDistance - startDistance;
+          if (Math.abs(deltaDistance) > PINCH_THRESHOLD) {
+            if (deltaDistance > 0) {
+              callbacksRef.current.onPinchOut?.();
             } else {
-              callbacks.onSwipeUp?.();
+              callbacksRef.current.onPinchIn?.();
             }
           }
-        } else if (isQuickTap) {
-          // Quick tap
-          callbacks.onTap?.();
         }
-      }
 
-      // Handle pinch gestures
-      if (gestureState.isPinching && startDistance > 0) {
-        const deltaDistance = currentDistance - startDistance;
-        if (Math.abs(deltaDistance) > PINCH_THRESHOLD) {
-          if (deltaDistance > 0) {
-            callbacks.onPinchOut?.();
-          } else {
-            callbacks.onPinchIn?.();
-          }
-        }
-      }
-
-      // Reset gesture state
-      setGestureState((prev) => ({
-        ...prev,
-        isSwiping: false,
-        isPinching: false,
-      }));
+        // Reset gesture state
+        return {
+          ...currentState,
+          isSwiping: false,
+          isPinching: false,
+        };
+      });
     },
-    [gestureState, callbacks],
+    [], // No dependencies needed since we use refs and functional updates
   );
 
   return {

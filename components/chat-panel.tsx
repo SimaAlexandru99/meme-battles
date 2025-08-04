@@ -37,43 +37,18 @@ export function ChatPanel({
     setNewMessage("");
   }, [newMessage, currentPlayer, onSendMessage]);
 
-  const chatMessages = messages.filter((msg) => msg.type === "chat");
-
   return (
     <>
-      {/* Mobile Chat Toggle Button */}
-      {isMobile && (
-        <div className="fixed top-20 left-4 z-50">
-          <Button
-            onClick={onToggle}
-            size="sm"
-            variant="secondary"
-            className="min-h-[44px] min-w-[44px] rounded-full shadow-lg bg-blue-500 hover:bg-blue-600 text-white border-0"
-            aria-label={isOpen ? "Close chat" : "Open chat"}
-          >
-            <RiChat1Line className="w-5 h-5" />
-            {chatMessages.length > 0 && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-bold">
-                  {Math.min(chatMessages.length, 9)}
-                </span>
-              </div>
-            )}
-          </Button>
-        </div>
-      )}
-
       {/* Chat Panel */}
       <div
         className={cn(
-          "absolute z-40 transition-all duration-300 ease-in-out",
+          "fixed z-40 transition-all duration-300 ease-in-out",
           isMobile
-            ? "top-16 left-0 right-0 bottom-20 mx-4"
-            : "top-20 left-4 bottom-4 w-64",
-          isMobile &&
-            !isOpen &&
+            ? "top-30 left-0 right-0 bottom-4 mx-4"
+            : "top-30 left-4 bottom-4 w-80",
+          !isOpen &&
             "opacity-0 pointer-events-none transform translate-x-[-100%]",
-          !isMobile && "opacity-100",
+          isOpen && "opacity-100",
         )}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">
@@ -83,20 +58,18 @@ export function ChatPanel({
                 <RiChat1Line className="w-5 h-5 text-blue-500" />
                 Chat
               </div>
-              {isMobile && (
-                <Button
-                  onClick={onToggle}
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0"
-                  aria-label="Close chat"
-                >
-                  <RiCloseLine className="w-4 h-4" />
-                </Button>
-              )}
+              <Button
+                onClick={onToggle}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                aria-label="Close chat"
+              >
+                <RiCloseLine className="w-4 h-4" />
+              </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+          <CardContent className="flex-1 flex flex-col p-0 min-h-0 ">
             <div className="flex-1 overflow-hidden min-h-0">
               <ScrollArea className="h-full px-3">
                 <div className="space-y-2 py-3 pb-4">

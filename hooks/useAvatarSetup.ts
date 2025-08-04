@@ -3,6 +3,8 @@ import { generateGuestDisplayName } from "@/firebase/client";
 import { useUpdateDisplayName } from "@/hooks/useUpdateDisplayName";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useEventListener, useInterval } from "react-haiku";
+import * as Sentry from "@sentry/nextjs";
 
 const initialState: AvatarState = {
   nickname: "MemeLord",
@@ -21,6 +23,16 @@ function avatarReducer(state: AvatarState, action: AvatarAction): AvatarState {
       return { ...state, profileURL: action.payload };
     case "SET_IS_LOADING":
       return { ...state, isLoading: action.payload };
+    case "UPDATE_USER_DATA":
+      return {
+        ...state,
+        nickname: action.payload.name || state.nickname,
+        currentAvatar: action.payload.avatarId || state.currentAvatar,
+        profileURL: action.payload.profileURL,
+        isLoading: false,
+      };
+    case "RESET_STATE":
+      return { ...initialState, isLoading: false };
     default:
       return state;
   }
@@ -50,64 +62,88 @@ export function useAvatarSetup(initialUserData?: User | null) {
   // Store refreshUser in ref to avoid dependency issues
   refreshUserRef.current = refreshUser;
 
+  // Consolidated effect for user data updates and error handling
   useEffect(() => {
-    if (isError) {
-      console.error("Error loading user data:", error);
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Avatar Setup User Data Update",
+      },
+      () => {
+        // Handle errors
+        if (isError) {
+          console.error("Error loading user data:", error);
+          Sentry.captureException(error);
+        }
+
+        // Handle user data updates
+        if (user) {
+          const prevUser = prevUserRef.current;
+          const hasChanges =
+            user.name !== prevUser?.name ||
+            user.avatarId !== prevUser?.avatarId ||
+            user.profileURL !== prevUser?.profileURL;
+
+          if (hasChanges) {
+            dispatch({
+              type: "UPDATE_USER_DATA",
+              payload: {
+                name: user.name,
+                avatarId: user.avatarId,
+                profileURL: user.profileURL,
+              },
+            });
+
+            // Update the ref with current user data
+            prevUserRef.current = {
+              name: user.name,
+              avatarId: user.avatarId,
+              profileURL: user.profileURL,
+            };
+          }
+        } else {
+          // Reset state when no user
+          dispatch({ type: "RESET_STATE" });
+        }
+      },
+    );
+  }, [user, isError, error]);
+
+  // Use Haiku's useEventListener for user setup complete event
+  useEventListener("userSetupComplete", () => {
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "User Setup Complete Handler",
+      },
+      () => {
+        console.log("User setup completed, refreshing avatar setup data...");
+        if (refreshUserRef.current) {
+          refreshUserRef.current();
+        }
+      },
+    );
+  });
+
+  // Use Haiku's useInterval for refresh interval
+  useInterval(() => {
+    if (refreshUserRef.current) {
+      refreshUserRef.current();
     }
-  }, [isError, error]);
-
-  // Handle user data updates
-  useEffect(() => {
-    if (user) {
-      const prevUser = prevUserRef.current;
-
-      if (user.name && user.name !== prevUser?.name) {
-        dispatch({ type: "SET_NICKNAME", payload: user.name });
-      }
-      if (user.avatarId && user.avatarId !== prevUser?.avatarId) {
-        dispatch({ type: "SET_CURRENT_AVATAR", payload: user.avatarId });
-      }
-      if (user.profileURL !== prevUser?.profileURL) {
-        dispatch({ type: "SET_PROFILE_URL", payload: user.profileURL });
-      }
-
-      // Update the ref with current user data
-      prevUserRef.current = {
-        name: user.name,
-        avatarId: user.avatarId,
-        profileURL: user.profileURL,
-      };
-    }
-    dispatch({ type: "SET_IS_LOADING", payload: false });
-  }, [user]);
-
-  // Handle event listeners and intervals separately
-  useEffect(() => {
-    const handleUserSetupComplete = () => {
-      console.log("User setup completed, refreshing avatar setup data...");
-      if (refreshUserRef.current) {
-        refreshUserRef.current();
-      }
-    };
-
-    window.addEventListener("userSetupComplete", handleUserSetupComplete);
-
-    const refreshInterval = setInterval(() => {
-      if (refreshUserRef.current) {
-        refreshUserRef.current();
-      }
-    }, 300000);
-
-    return () => {
-      clearInterval(refreshInterval);
-      window.removeEventListener("userSetupComplete", handleUserSetupComplete);
-    };
-  }, []); // Empty dependency array since we use refs
+  }, 300000); // 5 minutes
 
   const generateRandomName = useCallback(() => {
-    const newName = generateGuestDisplayName();
-    dispatch({ type: "SET_NICKNAME", payload: newName });
-    updateDisplayName(newName);
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Generate Random Name",
+      },
+      () => {
+        const newName = generateGuestDisplayName();
+        dispatch({ type: "SET_NICKNAME", payload: newName });
+        updateDisplayName(newName);
+      },
+    );
   }, [updateDisplayName]);
 
   const handleNicknameChange = useCallback(
@@ -123,19 +159,33 @@ export function useAvatarSetup(initialUserData?: User | null) {
 
   const handleAvatarChange = useCallback(
     async (avatarId: string, avatarSrc: string) => {
-      try {
-        const result = await updateAvatar(avatarId, avatarSrc);
-        if (result.success) {
-          dispatch({ type: "SET_CURRENT_AVATAR", payload: avatarId });
-          dispatch({ type: "SET_PROFILE_URL", payload: avatarSrc });
-          refreshUser();
-        } else {
-          throw new Error(result.error || "Failed to update avatar");
-        }
-      } catch (error) {
-        console.error("Error updating avatar:", error);
-        throw error;
-      }
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Handle Avatar Change",
+        },
+        async (span) => {
+          span.setAttribute("avatar.id", avatarId);
+          span.setAttribute("avatar.src", avatarSrc);
+
+          try {
+            const result = await updateAvatar(avatarId, avatarSrc);
+            if (result.success) {
+              dispatch({ type: "SET_CURRENT_AVATAR", payload: avatarId });
+              dispatch({ type: "SET_PROFILE_URL", payload: avatarSrc });
+              refreshUser();
+              span.setAttribute("avatar.update.success", true);
+            } else {
+              throw new Error(result.error || "Failed to update avatar");
+            }
+          } catch (error) {
+            span.setAttribute("avatar.update.success", false);
+            Sentry.captureException(error);
+            console.error("Error updating avatar:", error);
+            throw error;
+          }
+        },
+      );
     },
     [refreshUser, updateAvatar],
   );

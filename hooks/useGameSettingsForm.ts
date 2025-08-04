@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useDebounce } from "react-haiku";
 import {
   GameSettingsFormData,
   GameSettingsValidationErrors,
+  DEFAULT_GAME_SETTINGS,
   validateGameSettings,
   hasValidationErrors,
-  DEFAULT_GAME_SETTINGS,
 } from "@/components/game-settings/types";
 
 interface UseGameSettingsFormProps {
@@ -45,27 +46,17 @@ export function useGameSettingsForm({
   initialSettings = {},
   onSubmit,
 }: UseGameSettingsFormProps = {}): UseGameSettingsFormReturn {
-  // Initialize form data with defaults merged with initial settings
-  const [originalSettings, setOriginalSettings] =
-    useState<GameSettingsFormData>(() => ({
-      ...DEFAULT_GAME_SETTINGS,
-      ...initialSettings,
-    }));
+  const [settings, setSettings] = useState<GameSettingsFormData>({
+    ...DEFAULT_GAME_SETTINGS,
+    ...initialSettings,
+  });
 
-  const [settings, setSettings] =
-    useState<GameSettingsFormData>(originalSettings);
-
-  // Update original settings when initialSettings change
-  useEffect(() => {
-    const newOriginalSettings = {
-      ...DEFAULT_GAME_SETTINGS,
-      ...initialSettings,
-    };
-    setOriginalSettings(newOriginalSettings);
-    setSettings(newOriginalSettings);
-  }, [initialSettings]);
+  const [originalSettings] = useState<GameSettingsFormData>(settings);
   const [errors, setErrors] = useState<GameSettingsValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use Haiku's useDebounce for form validation
+  const debouncedSettings = useDebounce(settings, 300);
 
   // Calculate derived state
   const isDirty = JSON.stringify(settings) !== JSON.stringify(originalSettings);
@@ -165,14 +156,10 @@ export function useGameSettingsForm({
 
   // Auto-validate on settings change (debounced)
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isDirty) {
-        validateForm();
-      }
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [settings, isDirty, validateForm]);
+    if (isDirty) {
+      validateForm();
+    }
+  }, [debouncedSettings, isDirty, validateForm]);
 
   return {
     // Form data

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { MemeCard } from "@/types";
 
 interface UseMemeCardSelectionOptions {
   cards: MemeCard[];
@@ -37,7 +36,7 @@ export function useMemeCardSelection({
       if (!cardExists) {
         console.warn(
           "Attempted to select a card that is not in the current hand:",
-          card.id,
+          card.id
         );
         return;
       }
@@ -47,7 +46,7 @@ export function useMemeCardSelection({
       setSelectedCard(newSelection);
       onSelectionChange?.(newSelection);
     },
-    [cards, disabled, selectedCard, onSelectionChange],
+    [cards, disabled, selectedCard, onSelectionChange]
   );
 
   const clearSelection = useCallback(() => {
@@ -59,7 +58,7 @@ export function useMemeCardSelection({
     (card: MemeCard) => {
       return selectedCard?.id === card.id;
     },
-    [selectedCard],
+    [selectedCard]
   );
 
   // Clear selection if the selected card is no longer in the hand

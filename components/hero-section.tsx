@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,7 @@ import {
   lobbyEnterVariants,
 } from "@/lib/animations/private-lobby-variants";
 import { useLobbyOperations } from "@/hooks/useLobbyOperations";
+import { useEventListener } from "react-haiku";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;
@@ -130,32 +131,21 @@ const Header = memo(function Header() {
   } = useCurrentUser();
   const { isAnonymous } = useIsAnonymous();
 
-  useEffect(() => {
-    const handleUserSetupComplete = () => {
-      console.log("User setup completed, refreshing header data...");
-      refreshUser();
-    };
+  // Use Haiku's useEventListener for user events
+  useEventListener("userSetupComplete", () => {
+    console.log("User setup completed, refreshing header data...");
+    refreshUser();
+  });
 
-    const handleUserAuthenticated = () => {
-      console.log("User authenticated, refreshing header data...");
-      refreshUser();
-    };
+  useEventListener("userAuthenticated", () => {
+    console.log("User authenticated, refreshing header data...");
+    refreshUser();
+  });
 
-    const handleUserSignedOut = () => {
-      console.log("User signed out, refreshing header data...");
-      refreshUser();
-    };
-
-    window.addEventListener("userSetupComplete", handleUserSetupComplete);
-    window.addEventListener("userAuthenticated", handleUserAuthenticated);
-    window.addEventListener("userSignedOut", handleUserSignedOut);
-
-    return () => {
-      window.removeEventListener("userSetupComplete", handleUserSetupComplete);
-      window.removeEventListener("userAuthenticated", handleUserAuthenticated);
-      window.removeEventListener("userSignedOut", handleUserSignedOut);
-    };
-  }, [refreshUser]);
+  useEventListener("userSignedOut", () => {
+    console.log("User signed out, refreshing header data...");
+    refreshUser();
+  });
 
   const handleSignOut = async () => {
     try {

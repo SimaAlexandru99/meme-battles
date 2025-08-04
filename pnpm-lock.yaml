@@ -139,6 +139,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      next-transpile-modules:
+        specifier: ^10.0.1
+        version: 10.0.1
       ogl:
         specifier: ^1.0.11
         version: 1.0.11
@@ -154,6 +157,9 @@ importers:
       react-dom:
         specifier: 19.1.1
         version: 19.1.1(react@19.1.1)
+      react-haiku:
+        specifier: ^2.3.0
+        version: 2.3.0(react@19.1.1)
       react-hook-form:
         specifier: ^7.62.0
         version: 7.62.0(react@19.1.1)
@@ -7375,6 +7381,12 @@ packages:
       react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
       react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
 
+  next-transpile-modules@10.0.1:
+    resolution:
+      {
+        integrity: sha512-4VX/LCMofxIYAVV58UmD+kr8jQflpLWvas/BQ4Co0qWLWzVh06FoZkECkrX5eEZT6oJFqie6+kfbTA3EZCVtdQ==,
+      }
+
   next@15.4.5:
     resolution:
       {
@@ -7847,6 +7859,14 @@ packages:
       }
     peerDependencies:
       react: ^19.1.1
+
+  react-haiku@2.3.0:
+    resolution:
+      {
+        integrity: sha512-4bDW2uEQdHwjUbxWzTtUsO02Oic9fo+B9RlYDsz1zkYa7S/BvwRcIrzVPmNJfQLlGAj5xnCJi2qTEWlGsRHWBw==,
+      }
+    peerDependencies:
+      react: ">=16.8.0"
 
   react-hook-form@7.62.0:
     resolution:
@@ -14455,6 +14475,10 @@ snapshots:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
 
+  next-transpile-modules@10.0.1:
+    dependencies:
+      enhanced-resolve: 5.18.2
+
   next@15.4.5(@babel/core@7.28.0)(@opentelemetry/api@1.9.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       "@next/env": 15.4.5
@@ -14730,6 +14754,10 @@ snapshots:
     dependencies:
       react: 19.1.1
       scheduler: 0.26.0
+
+  react-haiku@2.3.0(react@19.1.1):
+    dependencies:
+      react: 19.1.1
 
   react-hook-form@7.62.0(react@19.1.1):
     dependencies:

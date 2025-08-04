@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useEventListener } from "react-haiku";
 
 interface UseUnsavedChangesProps {
   hasUnsavedChanges: boolean;
@@ -12,23 +13,13 @@ export function useUnsavedChanges({
   message = "You have unsaved changes. Are you sure you want to leave?",
 }: UseUnsavedChangesProps) {
   // Warn user about unsaved changes when they try to leave the page
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = message;
-        return message;
-      }
-    };
-
+  useEventListener("beforeunload", (e: BeforeUnloadEvent) => {
     if (hasUnsavedChanges) {
-      window.addEventListener("beforeunload", handleBeforeUnload);
+      e.preventDefault();
+      e.returnValue = message;
+      return message;
     }
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [hasUnsavedChanges, message]);
+  });
 
   // Function to show confirmation dialog for programmatic navigation
   const confirmNavigation = useCallback(

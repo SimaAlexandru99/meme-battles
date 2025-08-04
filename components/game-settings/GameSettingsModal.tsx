@@ -16,6 +16,7 @@ import { RiSettings3Line, RiCloseLine } from "react-icons/ri";
 
 import { GameSettingsFormData } from "./types";
 import { GameSettingsForm } from "./GameSettingsForm";
+import { useEventListener } from "react-haiku";
 
 interface GameSettingsModalProps {
   isOpen: boolean;
@@ -60,31 +61,41 @@ export function GameSettingsModal({
   onClose,
   currentSettings,
   onSave,
-  isLoading = false,
-  error = null,
 }: GameSettingsModalProps) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
+
   // Clear errors when modal opens/closes
   React.useEffect(() => {
     // Reset any form state when modal opens
   }, [isOpen]);
 
-  // Handle modal close with unsaved changes warning
   const handleClose = React.useCallback(() => {
-    onClose();
-  }, [onClose]);
+    if (!isSubmitting) {
+      onClose();
+    }
+  }, [isSubmitting, onClose]);
 
-  // Handle form submission
-  const handleFormSubmit = React.useCallback(
+  const handleSave = React.useCallback(
     async (settings: GameSettingsFormData) => {
+      setIsSubmitting(true);
+      setFormError(null);
+
       try {
         await onSave(settings);
-        onClose();
+        handleClose();
       } catch (error) {
-        // Error handling is done in the form component
-        console.error("Failed to save settings:", error);
+        console.error("Error saving game settings:", error);
+        setFormError(
+          error instanceof Error
+            ? error.message
+            : "Failed to save game settings. Please try again.",
+        );
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [onSave, onClose]
+    [onSave, handleClose],
   );
 
   // Handle form cancel
@@ -92,22 +103,13 @@ export function GameSettingsModal({
     onClose();
   }, [onClose]);
 
-  // Handle keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
-        handleClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
+  // Use Haiku's useEventListener for keyboard shortcuts
+  useEventListener("keydown", (event: Event) => {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key === "Escape" && isOpen) {
+      handleClose();
     }
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, handleClose]);
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -158,7 +160,7 @@ export function GameSettingsModal({
               {/* Content */}
               <div className="flex-1 overflow-y-auto px-6 py-6">
                 {/* Error Display */}
-                {error && (
+                {formError && (
                   <div
                     className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 animate-in slide-in-from-top-2 duration-300 mb-6"
                     role="alert"
@@ -168,7 +170,7 @@ export function GameSettingsModal({
                       <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-red-200 font-bangers tracking-wide mb-2">
-                          {error}
+                          {formError}
                         </p>
                         <div className="text-xs text-red-200/70 font-bangers tracking-wide space-y-1">
                           <p>• Check your internet connection</p>
@@ -192,9 +194,9 @@ export function GameSettingsModal({
                 {/* Settings Form */}
                 <GameSettingsForm
                   initialSettings={currentSettings}
-                  onSubmit={handleFormSubmit}
+                  onSubmit={handleSave}
                   onCancel={handleFormCancel}
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 />
               </div>
             </motion.div>

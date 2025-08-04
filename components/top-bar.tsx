@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { RiFireLine, RiMedalLine, RiTimerLine } from "react-icons/ri";
@@ -10,7 +11,58 @@ interface TopBarProps {
   totalRounds: number;
   timeLeft: number;
   className?: string;
+  fullscreenButton?: React.ReactNode;
+  networkStatus?: React.ReactNode;
 }
+
+// Animation variants for consistent motion
+const topBarVariants = {
+  initial: { opacity: 0, y: -20 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -20,
+    transition: { duration: 0.2 },
+  },
+};
+
+const timerVariants = {
+  normal: { scale: 1 },
+  warning: {
+    scale: 1.05,
+    transition: { duration: 0.2 },
+  },
+  urgent: {
+    scale: 1.1,
+    transition: {
+      duration: 0.1,
+      repeat: Infinity,
+      repeatType: "reverse" as const,
+    },
+  },
+};
+
+const badgeVariants = {
+  initial: { opacity: 0, scale: 0.8 },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.2 },
+  },
+  hover: {
+    scale: 1.05,
+    transition: { duration: 0.1 },
+  },
+};
 
 // Utility function for time formatting
 const formatTime = (seconds: number): string => {
@@ -20,7 +72,7 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-// Memoized timer display component
+// Memoized timer display component with enhanced animations
 const TimerDisplay = memo(function TimerDisplay({
   timeLeft,
   className,
@@ -33,11 +85,12 @@ const TimerDisplay = memo(function TimerDisplay({
   const isWarning = timeLeft <= 30 && timeLeft > 10;
 
   return (
-    <div
+    <motion.div
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-base sm:text-lg shadow-sm transition-all duration-200",
+        "min-w-[80px] justify-center", // Ensure consistent width
         isUrgent &&
-          "bg-destructive/10 border border-destructive/20 text-destructive animate-pulse",
+          "bg-destructive/10 border border-destructive/20 text-destructive",
         isWarning && "bg-warning/10 border border-warning/20 text-warning",
         !isUrgent && !isWarning && "bg-card border text-card-foreground",
         className,
@@ -45,14 +98,18 @@ const TimerDisplay = memo(function TimerDisplay({
       role="timer"
       aria-live={isUrgent ? "assertive" : "polite"}
       aria-label={`Time remaining: ${formattedTime}`}
+      variants={timerVariants}
+      animate={isUrgent ? "urgent" : isWarning ? "warning" : "normal"}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
     >
       <RiTimerLine className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-      <span className="font-mono tabular-nums">{formattedTime}</span>
-    </div>
+      <span className="font-mono tabular-nums font-bold">{formattedTime}</span>
+    </motion.div>
   );
 });
 
-// Memoized round display component
+// Memoized round display component with enhanced styling
 const RoundDisplay = memo(function RoundDisplay({
   currentRound,
   totalRounds,
@@ -61,32 +118,46 @@ const RoundDisplay = memo(function RoundDisplay({
   totalRounds: number;
 }) {
   return (
-    <Badge
-      variant="secondary"
-      className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1.5"
-      aria-label={`Round ${currentRound} of ${totalRounds}`}
+    <motion.div
+      variants={badgeVariants}
+      initial="initial"
+      animate="animate"
+      whileHover="hover"
     >
-      <RiMedalLine className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-      <span className="hidden sm:inline">Round</span>
-      <span className="font-mono tabular-nums">
-        {currentRound} / {totalRounds}
-      </span>
-    </Badge>
+      <Badge
+        variant="secondary"
+        className="text-xs sm:text-sm px-3 py-2 flex items-center gap-2 bg-primary/20 border-primary/30 text-primary-foreground font-semibold"
+        aria-label={`Round ${currentRound} of ${totalRounds}`}
+      >
+        <RiMedalLine className="w-4 h-4 flex-shrink-0" />
+        <span className="hidden sm:inline font-medium">Round</span>
+        <span className="font-mono tabular-nums font-bold">
+          {currentRound} / {totalRounds}
+        </span>
+      </Badge>
+    </motion.div>
   );
 });
 
-// Memoized arena title component
+// Memoized arena title component with improved contrast
 const ArenaTitle = memo(function ArenaTitle() {
   return (
-    <Badge
-      variant="outline"
-      className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 bg-orange-50 text-orange-600 border-orange-200 flex items-center gap-1.5"
-      aria-label="The Arena - Meme Battle Game"
+    <motion.div
+      variants={badgeVariants}
+      initial="initial"
+      animate="animate"
+      whileHover="hover"
     >
-      <RiFireLine className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-      <span className="hidden sm:inline">THE ARENA</span>
-      <span className="sm:hidden">ARENA</span>
-    </Badge>
+      <Badge
+        variant="outline"
+        className="text-xs sm:text-sm px-3 py-2 bg-orange-100/20 text-orange-300 border-orange-300/30 flex items-center gap-2 font-semibold"
+        aria-label="The Arena - Meme Battle Game"
+      >
+        <RiFireLine className="w-4 h-4 flex-shrink-0" />
+        <span className="hidden sm:inline font-medium">THE ARENA</span>
+        <span className="sm:hidden font-medium">ARENA</span>
+      </Badge>
+    </motion.div>
   );
 });
 
@@ -95,6 +166,8 @@ export const TopBar = memo(function TopBar({
   totalRounds,
   timeLeft,
   className,
+  fullscreenButton,
+  networkStatus,
 }: TopBarProps) {
   // Validate props
   const validCurrentRound = Math.max(1, Math.min(currentRound, totalRounds));
@@ -102,29 +175,73 @@ export const TopBar = memo(function TopBar({
   const validTimeLeft = Math.max(0, timeLeft);
 
   return (
-    <header
+    <motion.header
       className={cn(
-        "absolute top-0 left-0 right-0 z-50 p-3 sm:p-4 md:p-6",
+        "fixed top-0 left-0 right-0 z-50 p-3 sm:p-4 md:p-6 w-full bg-slate-900/95 backdrop-blur-sm border-b border-slate-700/50",
         className,
       )}
       role="banner"
       aria-label="Game status and timer"
+      variants={topBarVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
     >
-      <div className="flex justify-between items-center max-w-7xl mx-auto gap-2 sm:gap-4">
+      <div className="flex justify-between items-center w-full gap-3 sm:gap-4 ">
         {/* Left side - Round and Arena info */}
-        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <motion.div
+          className="flex items-center gap-3 sm:gap-4 flex-shrink-0"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           <RoundDisplay
             currentRound={validCurrentRound}
             totalRounds={validTotalRounds}
           />
           <ArenaTitle />
-        </div>
+        </motion.div>
 
-        {/* Right side - Timer */}
-        <div className="flex-shrink-0">
+        {/* Right side - Timer, Network, and Fullscreen */}
+        <motion.div
+          className="flex items-center gap-3 flex-shrink-0"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <TimerDisplay timeLeft={validTimeLeft} />
-        </div>
+          <AnimatePresence mode="wait">
+            {networkStatus && (
+              <motion.div
+                key="network-status"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {networkStatus}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <AnimatePresence mode="wait">
+            {fullscreenButton && (
+              <motion.div
+                key="fullscreen-button"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {fullscreenButton}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
-    </header>
+    </motion.header>
   );
 });
