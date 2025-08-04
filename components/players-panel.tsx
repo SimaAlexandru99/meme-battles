@@ -34,6 +34,13 @@ export function PlayersList({
     }
   }, [onToggle]);
 
+  // Sort players by score (highest first), with current player always first
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (a.isCurrentPlayer) return -1;
+    if (b.isCurrentPlayer) return 1;
+    return b.score - a.score;
+  });
+
   const getStatusBadge = useCallback((status: Player["status"]) => {
     switch (status) {
       case "submitted":
@@ -80,6 +87,27 @@ export function PlayersList({
     }
   }, []);
 
+  const getScoreBadge = useCallback((score: number, index: number) => {
+    const getScoreColor = (score: number, index: number) => {
+      if (index === 0) return "bg-yellow-600 text-white";
+      if (index === 1) return "bg-gray-600 text-white";
+      if (index === 2) return "bg-orange-600 text-white";
+      return "bg-slate-600 text-white";
+    };
+
+    return (
+      <Badge
+        variant="default"
+        className={cn(
+          "text-xs font-bold px-2 py-1 flex items-center gap-1",
+          getScoreColor(score, index)
+        )}
+      >
+        {score} pts
+      </Badge>
+    );
+  }, []);
+
   return (
     <>
       {/* Players List Panel */}
@@ -92,7 +120,7 @@ export function PlayersList({
           !isOpen &&
             "opacity-0 pointer-events-none transform translate-x-[100%]",
           isOpen && "opacity-100",
-          className,
+          className
         )}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">
@@ -134,12 +162,18 @@ export function PlayersList({
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-card-foreground truncate text-sm">
                           {currentPlayer.name}
+                          {currentPlayer.isAI && (
+                            <span className="ml-2 text-xs text-orange-300">
+                              (AI)
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground font-medium">
-                          {currentPlayer.score} points
+                          Your Score
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
+                        {getScoreBadge(currentPlayer.score, 0)}
                         {getStatusBadge(currentPlayer.status)}
                       </div>
                     </div>
@@ -147,7 +181,7 @@ export function PlayersList({
                 )}
 
                 {/* Other Players */}
-                {players
+                {sortedPlayers
                   .filter((player) => !player.isCurrentPlayer)
                   .map((player, index) => (
                     <div key={player.id} className="relative">
@@ -166,12 +200,18 @@ export function PlayersList({
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-card-foreground truncate text-sm">
                             {player.name}
+                            {player.isAI && (
+                              <span className="ml-2 text-xs text-orange-300">
+                                (AI)
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground font-medium">
-                            {player.score} points
+                            Player
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
+                          {getScoreBadge(player.score, index + 1)}
                           {getStatusBadge(player.status)}
                         </div>
                       </div>

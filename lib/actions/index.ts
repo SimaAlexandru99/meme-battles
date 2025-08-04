@@ -36,4 +36,7 @@ export {
   startGame,
   getUserActiveLobbies,
   kickPlayer,
+  updatePlayerScore,
+  getLobbyScores,
+  awardRoundWinner,
 } from "./lobby.action";

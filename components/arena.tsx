@@ -10,13 +10,16 @@ import {
   RiFullscreenExitLine,
   RiChat1Line,
   RiFireLine,
+  RiTrophyLine,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
+import { useSituationGeneration } from "@/hooks/useSituationGeneration";
+import { useLobbyData } from "@/hooks/useLobbyData";
+import { useScoreTracking } from "@/hooks/useScoreTracking";
 import { getRandomPrompt } from "@/lib/utils/game-prompts";
 import { MemeCardHand } from "@/components/meme-card-hand";
 import { TopBar } from "@/components/top-bar";
@@ -35,11 +38,39 @@ interface ArenaProps {
 export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const router = useRouter();
   const arenaRef = useRef<HTMLDivElement>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const { generateSituation, isGenerating, lastSituation } =
+    useSituationGeneration();
+
+  // Use real Firebase data instead of mock data
+  const {
+    players,
+    currentPlayer,
+    isLoading: lobbyLoading,
+    error: lobbyError,
+    lobbyData,
+  } = useLobbyData({
+    lobbyCode,
+    currentUser,
+    refreshInterval: 2000, // Poll every 2 seconds for real-time updates
+    enabled: true,
+  });
+
+  // Score tracking functionality
+  const {
+    updateScore,
+    awardWinner,
+    getScores,
+    isLoading: scoreLoading,
+    error: scoreError,
+  } = useScoreTracking({
+    lobbyCode,
+    currentUser,
+  });
+
   const [gameState, setGameState] = useState<GameState>({
     currentRound: 1,
-    totalRounds: 5,
-    timeLeft: 60,
+    totalRounds: lobbyData?.settings?.rounds || 5,
+    timeLeft: lobbyData?.settings?.timeLimit || 60,
     phase: "playing",
     currentPrompt: getRandomPrompt(),
   });
@@ -56,45 +87,42 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const online = useNetwork();
   const prevOnlineRef = useRef(online);
 
+  // Update game state when lobby data changes
+  useEffect(() => {
+    if (lobbyData) {
+      setGameState((prev) => ({
+        ...prev,
+        totalRounds: lobbyData.settings?.rounds || 5,
+        timeLeft: lobbyData.settings?.timeLimit || 60,
+      }));
+    }
+  }, [lobbyData]);
+
   // Initialize game data
   useEffect(() => {
     const initializeGame = async () => {
       setIsLoading(true);
 
-      // Initialize current player with cards
-      const currentPlayer: Player = {
-        id: currentUser.id,
-        name: currentUser.name,
-        avatar: currentUser.profileURL || "/icons/cool-pepe.png",
-        score: 0,
-        status: "playing",
-        cards: getRandomMemeCards(7),
-        isCurrentPlayer: true,
-      };
+      // Wait for lobby data to load
+      if (lobbyLoading) {
+        return;
+      }
 
-      // TODO: Replace with real Firebase data
-      // For now, initialize with mock data including current player
-      const mockPlayers: Player[] = [
-        currentPlayer,
-        {
-          id: "2",
-          name: "GigaChad",
-          avatar: "/icons/baby-yoda.png",
-          score: 0,
-          status: "playing",
-          cards: getRandomMemeCards(7),
-        },
-        {
-          id: "3",
-          name: "SusAmogus",
-          avatar: "/icons/harold.png",
-          score: 0,
-          status: "playing",
-          cards: getRandomMemeCards(7),
-        },
-      ];
+      // Check for lobby errors
+      if (lobbyError) {
+        toast.error(lobbyError);
+        setIsLoading(false);
+        return;
+      }
 
-      setPlayers(mockPlayers);
+      // Generate initial AI situation
+      const initialSituation = await generateSituation();
+      if (initialSituation) {
+        setGameState((prev) => ({
+          ...prev,
+          currentPrompt: initialSituation,
+        }));
+      }
 
       // Add welcome message
       const welcomeMessage: ChatMessage = {
@@ -111,7 +139,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     };
 
     initializeGame();
-  }, [currentUser]);
+  }, [currentUser, generateSituation, lobbyLoading, lobbyError]);
 
   useEffect(() => {
     if (prevOnlineRef.current !== online) {
@@ -163,6 +191,13 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
         // Auto-transition to next round or game over
         if (newTimeLeft === 0 && prev.phase === "results") {
+          // Award points for the round (mock winner for now)
+          if (currentPlayer && players.length > 0) {
+            // TODO: Replace with actual voting logic
+            const mockWinner = players[0]; // For now, award to first player
+            awardWinner(mockWinner.id, prev.currentRound).catch(console.error);
+          }
+
           if (prev.currentRound < prev.totalRounds) {
             toast.success("Starting next round!");
             return {
@@ -170,7 +205,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               currentRound: prev.currentRound + 1,
               timeLeft: 60,
               phase: "playing",
-              currentPrompt: getRandomPrompt(),
+              currentPrompt: getRandomPrompt(), // Fallback to static prompt for auto-transition
             };
           } else {
             toast.success("Game Over! Thanks for playing!");
@@ -188,10 +223,9 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         };
       });
     },
-    shouldRunTimer ? 1000 : 0,
+    shouldRunTimer ? 1000 : 0
   );
 
-  const currentPlayer = players.find((p) => p.isCurrentPlayer);
   const { selectedCard, selectCard, clearSelection } = useMemeCardSelection({
     cards: currentPlayer?.cards ?? [],
   });
@@ -211,21 +245,13 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
       setChatMessages((prev) => [...prev, chatMessage]);
     },
-    [currentPlayer],
+    [currentPlayer]
   );
 
   const handleSubmitCard = useCallback(() => {
     if (!selectedCard || !currentPlayer) return;
 
-    // TODO: Submit to Firebase
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === currentPlayer.id
-          ? { ...p, selectedCard, status: "submitted" }
-          : p,
-      ),
-    );
-
+    // TODO: Submit to Firebase - for now just show the action
     const actionMessage: ChatMessage = {
       id: Date.now().toString(),
       playerId: currentPlayer.id,
@@ -245,7 +271,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     // For now, go back to main menu since game should be in progress
     if (
       confirm(
-        "Are you sure you want to leave the game? You won't be able to rejoin this round.",
+        "Are you sure you want to leave the game? You won't be able to rejoin this round."
       )
     ) {
       router.push("/");
@@ -253,27 +279,30 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     }
   }, [router]);
 
-  const handleNewPrompt = useCallback(() => {
-    const newPrompt = getRandomPrompt();
-    setGameState((prev) => ({
-      ...prev,
-      currentPrompt: newPrompt,
-      timeLeft: 60,
-      phase: "playing",
-    }));
+  const handleNewPrompt = useCallback(async () => {
+    const newPrompt = await generateSituation();
 
-    const systemMessage: ChatMessage = {
-      id: Date.now().toString(),
-      playerId: "system",
-      playerName: "System",
-      message: `New situation: "${newPrompt}"`,
-      timestamp: new Date(),
-      type: "system",
-    };
+    if (newPrompt) {
+      setGameState((prev) => ({
+        ...prev,
+        currentPrompt: newPrompt,
+        timeLeft: 60,
+        phase: "playing",
+      }));
 
-    setChatMessages((prev) => [...prev, systemMessage]);
-    toast.success("New situation generated!");
-  }, []);
+      const systemMessage: ChatMessage = {
+        id: Date.now().toString(),
+        playerId: "system",
+        playerName: "System",
+        message: `New situation: "${newPrompt}"`,
+        timestamp: new Date(),
+        type: "system",
+      };
+
+      setChatMessages((prev) => [...prev, systemMessage]);
+      toast.success("New AI-generated situation!");
+    }
+  }, [generateSituation]);
 
   const handleToggleFullscreen = useCallback(() => {
     toggleFullscreen();
@@ -287,13 +316,13 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
         online
           ? "bg-green-500/20 text-green-400 border-green-500/30"
-          : "bg-red-500/20 text-red-400 border-red-500/30",
+          : "bg-red-500/20 text-red-400 border-red-500/30"
       )}
     >
       <motion.div
         className={cn(
           "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-          online ? "bg-green-400" : "bg-red-400",
+          online ? "bg-green-400" : "bg-red-400"
         )}
         animate={online ? { scale: [1, 1.2, 1] } : {}}
         transition={{ duration: 2, repeat: Infinity }}
@@ -302,7 +331,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     </Badge>
   );
 
-  if (isLoading) {
+  // Show loading state while lobby data is loading
+  if (lobbyLoading || isLoading || scoreLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <motion.div
@@ -323,8 +353,41 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               Entering The Arena...
             </h2>
             <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
-              Preparing your meme cards
+              {lobbyLoading
+                ? "Loading game data..."
+                : scoreLoading
+                  ? "Setting up score tracking..."
+                  : "Preparing your meme cards"}
             </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Show error state if lobby data failed to load
+  if (lobbyError || scoreError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <motion.div
+          className="flex flex-col items-center gap-6 p-8"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="text-center">
+            <h2 className="text-xl sm:text-2xl font-bangers text-white tracking-wide mb-2">
+              Failed to Load Game
+            </h2>
+            <p className="text-red-200/70 text-sm sm:text-base font-bangers tracking-wide mb-4">
+              {lobbyError || scoreError}
+            </p>
+            <Button
+              onClick={() => router.push("/")}
+              className="font-bangers tracking-wide"
+            >
+              Return to Main Menu
+            </Button>
           </div>
         </motion.div>
       </div>
@@ -369,7 +432,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                   "min-h-[36px] min-w-[36px] rounded-full shadow-lg text-white border-0 transition-all duration-200",
                   isChatOpen
                     ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/50"
-                    : "bg-blue-500 hover:bg-blue-600",
+                    : "bg-blue-500 hover:bg-blue-600"
                 )}
                 aria-label={isChatOpen ? "Close chat" : "Open chat"}
               >
@@ -383,7 +446,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                   "min-h-[36px] min-w-[36px] rounded-full shadow-lg text-white border-0 transition-all duration-200",
                   isPlayersOpen
                     ? "bg-orange-600 hover:bg-orange-700 shadow-orange-500/50"
-                    : "bg-orange-500 hover:bg-orange-600",
+                    : "bg-orange-500 hover:bg-orange-600"
                 )}
                 aria-label={
                   isPlayersOpen ? "Close players list" : "Open players list"
@@ -411,7 +474,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               "border-slate-600/50 text-white hover:bg-slate-700/50",
               "font-bangers tracking-wide text-xs",
               "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-              "transition-all duration-200",
+              "transition-all duration-200"
             )}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
@@ -429,7 +492,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         messages={chatMessages}
         onSendMessage={handleSendMessage}
         players={players}
-        currentPlayer={currentPlayer}
+        currentPlayer={currentPlayer || undefined}
         isOpen={isChatOpen}
         onToggle={() => setIsChatOpen(!isChatOpen)}
       />
@@ -437,7 +500,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       {/* Players List */}
       <PlayersList
         players={players}
-        currentPlayer={currentPlayer}
+        currentPlayer={currentPlayer || undefined}
         isOpen={isPlayersOpen}
         onToggle={() => setIsPlayersOpen(!isPlayersOpen)}
       />
@@ -460,9 +523,34 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-white text-base md:text-lg font-medium mb-4 md:mb-6 leading-relaxed px-4 font-bangers tracking-wide">
-                &ldquo;{gameState.currentPrompt}&rdquo;
-              </p>
+              <div className="relative">
+                <p className="text-white text-base md:text-lg font-medium mb-4 md:mb-6 leading-relaxed px-4 font-bangers tracking-wide">
+                  &ldquo;{gameState.currentPrompt}&rdquo;
+                </p>
+                {isGenerating && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 bg-slate-800/90 backdrop-blur-sm rounded-lg flex items-center justify-center"
+                  >
+                    <div className="flex items-center gap-2 text-purple-300">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                      >
+                        <RiLightbulbLine className="w-5 h-5" />
+                      </motion.div>
+                      <span className="font-bangers tracking-wide">
+                        Generating AI situation...
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
 
               {/* Action Buttons */}
               <div className="flex items-center justify-center gap-3 flex-wrap">
@@ -477,7 +565,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                       "hover:from-green-500 hover:to-green-600",
                       "disabled:from-slate-600 disabled:to-slate-700",
                       "shadow-lg shadow-green-500/30",
-                      "focus-visible:ring-2 focus-visible:ring-green-500/50",
+                      "focus-visible:ring-2 focus-visible:ring-green-500/50"
                     )}
                     aria-label="Submit selected meme card"
                   >
@@ -488,6 +576,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
                 <Button
                   onClick={handleNewPrompt}
+                  disabled={isGenerating}
                   variant="outline"
                   size="default"
                   className={cn(
@@ -495,12 +584,43 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                     "border-purple-500/50 text-purple-300 hover:bg-purple-500/20",
                     "hover:border-purple-400/70 hover:text-purple-200",
                     "shadow-lg shadow-purple-500/20",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
-                  aria-label="Generate new situation"
+                  aria-label="Generate new AI situation"
                 >
-                  <RiLightbulbLine className="w-4 h-4 mr-2" />
-                  New Situation
+                  <RiLightbulbLine
+                    className={cn(
+                      "w-4 h-4 mr-2",
+                      isGenerating && "animate-spin"
+                    )}
+                  />
+                  {isGenerating ? "Generating..." : "New AI Situation"}
                 </Button>
+
+                {/* Test Score Update Button */}
+                {currentPlayer && (
+                  <Button
+                    onClick={() =>
+                      updateScore(currentPlayer.id, 5, "bonus").catch(
+                        console.error
+                      )
+                    }
+                    disabled={scoreLoading}
+                    variant="outline"
+                    size="default"
+                    className={cn(
+                      "font-bangers text-sm tracking-wide min-h-[48px] px-4 py-3",
+                      "border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/20",
+                      "hover:border-yellow-400/70 hover:text-yellow-200",
+                      "shadow-lg shadow-yellow-500/20",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                    aria-label="Test score update"
+                  >
+                    <RiTrophyLine className="w-4 h-4 mr-2" />
+                    {scoreLoading ? "Updating..." : "Test +5 Points"}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

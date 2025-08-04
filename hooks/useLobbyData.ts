@@ -1,168 +1,142 @@
-import useSWR from "swr";
-import {
-  getLobbyData,
-  addAIPlayerToLobby,
-  removeAIPlayerFromLobby,
-} from "@/lib/actions";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
-import { ensureDate } from "@/lib/utils";
+import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
+import { getLobbyData } from "@/lib/actions/lobby.action";
+
+interface UseLobbyDataOptions {
+  lobbyCode: string;
+  currentUser: User;
+  refreshInterval?: number;
+  enabled?: boolean;
+}
+
+interface UseLobbyDataReturn {
+  players: Player[];
+  currentPlayer: Player | null;
+  isLoading: boolean;
+  error: string | null;
+  lobbyData: LobbyData | null;
+  refresh: () => Promise<void>;
+}
 
 /**
- * SWR hook for lobby data with real-time updates
- * Replaces manual setInterval pattern with SWR's built-in refresh mechanism
+ * Hook for fetching and managing real-time lobby data from Firebase
+ * Converts Firebase lobby data to Player interface used in Arena component
  */
-export function useLobbyData(
-  lobbyCode: string | null,
-  options: UseLobbyDataOptions = {},
-) {
-  const {
-    refreshInterval = 5000, // 5 seconds
-    enabled = true,
-    revalidateOnFocus = true,
-    revalidateOnReconnect = true,
-    ...swrOptions
-  } = options;
+export function useLobbyData({
+  lobbyCode,
+  currentUser,
+  refreshInterval = 2000,
+  enabled = true,
+}: UseLobbyDataOptions): UseLobbyDataReturn {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lobbyData, setLobbyData] = useState<LobbyData | null>(null);
 
-  // SWR fetcher function with Sentry tracing
-  const fetcher = async (code: string) => {
+  const fetchLobbyData = useCallback(async () => {
+    if (!enabled || !lobbyCode) return;
+
     return Sentry.startSpan(
       {
         op: "ui.action",
-        name: "Fetch Lobby Data (SWR)",
+        name: "Fetch Lobby Data",
       },
       async (span) => {
-        span.setAttribute("lobby.code", code);
-
         try {
-          const response = await getLobbyData(code);
+          span.setAttribute("lobby.code", lobbyCode);
+
+          const response = await getLobbyData(lobbyCode);
 
           if (response.success && response.lobby) {
-            const serializedLobby = response.lobby as LobbyData;
+            const lobby: LobbyData = response.lobby;
+            setLobbyData(lobby);
 
-            // Ensure dates are in proper format for UI consistency
-            const lobbyData: LobbyData = {
-              ...serializedLobby,
-              createdAt: ensureDate(serializedLobby.createdAt),
-              updatedAt: ensureDate(serializedLobby.updatedAt),
-            };
+            // Convert Firebase lobby players to Arena Player interface
+            const convertedPlayers: Player[] = lobby.players.map(
+              (lobbyPlayer: LobbyPlayer) => {
+                const isCurrentPlayer = lobbyPlayer.uid === currentUser.id;
 
-            span.setAttribute("lobby.player_count", lobbyData.players.length);
-            span.setAttribute("lobby.status", lobbyData.status);
+                return {
+                  id: lobbyPlayer.uid,
+                  name: lobbyPlayer.displayName,
+                  avatar: lobbyPlayer.profileURL || "/icons/cool-pepe.png",
+                  score: lobbyPlayer.score || 0, // Use real score from Firebase
+                  status: "playing" as const,
+                  cards: isCurrentPlayer ? getRandomMemeCards(7) : [], // Only current player needs cards
+                  isCurrentPlayer,
+                  // AI-specific properties
+                  isAI: lobbyPlayer.isAI || false,
+                  aiPersonalityId: lobbyPlayer.aiPersonalityId,
+                };
+              }
+            );
 
-            return lobbyData;
+            setPlayers(convertedPlayers);
+
+            // Set current player
+            const currentPlayerData = convertedPlayers.find(
+              (p) => p.isCurrentPlayer
+            );
+            setCurrentPlayer(currentPlayerData || null);
+
+            setError(null);
+            span.setAttribute("player_count", convertedPlayers.length);
+            span.setAttribute(
+              "ai_player_count",
+              convertedPlayers.filter((p) => p.isAI).length
+            );
+            span.setAttribute("success", true);
           } else {
             throw new Error("Failed to fetch lobby data");
           }
         } catch (error) {
+          console.error("Error fetching lobby data:", error);
           Sentry.captureException(error);
-          throw error;
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch lobby data"
+          );
+          toast.error("Failed to load game data");
+          span.setAttribute("success", false);
+        } finally {
+          setIsLoading(false);
         }
-      },
+      }
     );
-  };
+  }, [lobbyCode, currentUser, enabled]);
 
-  // SWR key - null disables the request
-  const swrKey = enabled && lobbyCode ? `lobby-${lobbyCode}` : null;
+  // Initial fetch
+  useEffect(() => {
+    fetchLobbyData();
+  }, [fetchLobbyData]);
 
-  const swrResult = useSWR(swrKey, () => fetcher(lobbyCode!), {
-    refreshInterval: enabled ? refreshInterval : 0,
-    revalidateOnFocus,
-    revalidateOnReconnect,
-    // Keep previous data while revalidating to prevent loading flickers
-    keepPreviousData: true,
-    // Retry on error, but not for authentication/authorization errors
-    shouldRetryOnError: (error: Error) => {
-      const errorMessage = error?.message || "";
-      return (
-        !errorMessage.includes("authentication") &&
-        !errorMessage.includes("unauthorized") &&
-        !errorMessage.includes("not a member")
-      );
-    },
-    errorRetryCount: 3,
-    errorRetryInterval: 2000,
-    ...swrOptions,
-  });
+  // Set up polling for real-time updates
+  useEffect(() => {
+    if (!enabled || !lobbyCode) return;
 
-  // AI Player management functions
-  const addAIPlayer = async (botConfig: {
-    personalityId: string;
-    difficulty: "easy" | "medium" | "hard";
-  }) => {
-    if (!lobbyCode) throw new Error("No lobby code provided");
+    const interval = setInterval(() => {
+      fetchLobbyData();
+    }, refreshInterval);
 
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Add AI Player",
-      },
-      async () => {
-        try {
-          const result = await addAIPlayerToLobby(lobbyCode, botConfig);
-          // Refresh lobby data after adding AI player
-          await swrResult.mutate();
-          return result;
-        } catch (error) {
-          Sentry.captureException(error);
-          throw error;
-        }
-      },
-    );
-  };
+    return () => clearInterval(interval);
+  }, [fetchLobbyData, refreshInterval, enabled, lobbyCode]);
 
-  const removeAIPlayer = async (aiPlayerId: string) => {
-    if (!lobbyCode) throw new Error("No lobby code provided");
-
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Remove AI Player",
-      },
-      async () => {
-        try {
-          const result = await removeAIPlayerFromLobby(lobbyCode, aiPlayerId);
-          // Refresh lobby data after removing AI player
-          await swrResult.mutate();
-          return result;
-        } catch (error) {
-          Sentry.captureException(error);
-          throw error;
-        }
-      },
-    );
-  };
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    await fetchLobbyData();
+  }, [fetchLobbyData]);
 
   return {
-    lobbyData: swrResult.data,
-    error: swrResult.error,
-    isLoading: swrResult.isLoading,
-    isValidating: swrResult.isValidating,
-
-    // Mutation helpers
-    mutate: swrResult.mutate,
-
-    // Manual refresh
-    refresh: () => swrResult.mutate(),
-
-    // Helper to check if we have data
-    hasData: !!swrResult.data,
-
-    // Helper to check if user is host
-    isHost: (userId: string) => swrResult.data?.hostUid === userId,
-
-    // Helper to get player count
-    playerCount: swrResult.data?.players.length ?? 0,
-
-    // AI Player management
-    addAIPlayer,
-    removeAIPlayer,
-
-    // Helper to get AI players
-    aiPlayers: swrResult.data?.players.filter((player) => player.isAI) ?? [],
-
-    // Helper to get human players
-    humanPlayers:
-      swrResult.data?.players.filter((player) => !player.isAI) ?? [],
+    players,
+    currentPlayer,
+    isLoading,
+    error,
+    lobbyData,
+    refresh,
   };
 }
 
@@ -199,7 +173,7 @@ export function useActiveLobbies(options: UseActiveLobbiesOptions = {}) {
           Sentry.captureException(error);
           throw error;
         }
-      },
+      }
     );
   };
 
@@ -239,7 +213,7 @@ export function useActiveLobbies(options: UseActiveLobbiesOptions = {}) {
  */
 export function useLobbyAndActiveData(
   lobbyCode: string | null,
-  options: UseLobbyAndActiveDataOptions = {},
+  options: UseLobbyAndActiveDataOptions = {}
 ) {
   const { lobbyOptions = {}, activeLobbiesOptions = {} } = options;
 

@@ -169,7 +169,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string,
+      div: string
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;
@@ -310,6 +310,30 @@ interface LobbyPlayer {
   profileURL?: string | null;
   joinedAt: Date | string | { toDate: () => Date }; // Can be Date, ISO string, or Firestore Timestamp
   isHost: boolean;
+  // AI-specific properties
+  isAI?: boolean;
+  aiPersonalityId?: string;
+  aiPlayer?: AIPlayer;
+  // Score tracking
+  score?: number;
+  totalWins?: number;
+  totalGames?: number;
+}
+
+interface GameScore {
+  playerId: string;
+  playerName: string;
+  score: number;
+  roundScores: {
+    [roundNumber: number]: {
+      points: number;
+      reason: "win" | "participation" | "bonus";
+      timestamp: Date | string;
+    };
+  };
+  totalWins: number;
+  totalGames: number;
+  lastUpdated: Date | string;
 }
 
 type LobbyError =
@@ -409,7 +433,7 @@ interface UseLobbyDataReturn {
     difficulty: "easy" | "medium" | "hard";
   }) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
   removeAIPlayer: (
-    aiPlayerId: string,
+    aiPlayerId: string
   ) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
   aiPlayers: LobbyPlayer[];
   humanPlayers: LobbyPlayer[];
@@ -735,6 +759,10 @@ interface LobbyPlayer {
   isAI?: boolean;
   aiPersonalityId?: string;
   aiPlayer?: AIPlayer;
+  // Score tracking
+  score?: number;
+  totalWins?: number;
+  totalGames?: number;
 }
 
 // AI Settings for lobby configuration

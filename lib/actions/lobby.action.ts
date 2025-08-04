@@ -215,7 +215,7 @@ export async function createLobby(settings?: {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -278,7 +278,7 @@ export async function joinLobby(invitationCode: string) {
 
         // Check if user is already in the lobby
         const isUserInLobby = lobbyData.players.some(
-          (player: { uid: string }) => player.uid === uid,
+          (player: { uid: string }) => player.uid === uid
         );
 
         if (isUserInLobby) {
@@ -317,13 +317,13 @@ export async function joinLobby(invitationCode: string) {
         // Balance AI players after human joins
         if (updatedLobbyData?.settings?.aiSettings?.enabled) {
           const humanPlayerCount = updatedLobbyData.players.filter(
-            (player: LobbyPlayer) => !player.isAI,
+            (player: LobbyPlayer) => !player.isAI
           ).length;
 
           await aiPlayerManager.balanceAIPlayers(
             normalizedCode,
             humanPlayerCount,
-            updatedLobbyData.settings.aiSettings,
+            updatedLobbyData.settings.aiSettings
           );
 
           span.setAttribute("lobby.ai_balanced", true);
@@ -332,7 +332,7 @@ export async function joinLobby(invitationCode: string) {
 
         span.setAttribute(
           "lobby.player_count",
-          updatedLobbyData?.players.length,
+          updatedLobbyData?.players.length
         );
 
         return {
@@ -343,7 +343,7 @@ export async function joinLobby(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -401,7 +401,7 @@ export async function getLobbyData(invitationCode: string) {
 
         // Check if user is in the lobby
         const isUserInLobby = lobbyData.players.some(
-          (player: { uid: string }) => player.uid === uid,
+          (player: { uid: string }) => player.uid === uid
         );
 
         if (!isUserInLobby) {
@@ -428,7 +428,7 @@ export async function getLobbyData(invitationCode: string) {
         const currentCategories =
           lobbyData.settings?.categories || DEFAULT_CATEGORIES;
         const validCategories = currentCategories.filter((category: string) =>
-          allowedCategories.includes(category),
+          allowedCategories.includes(category)
         );
 
         // If categories need migration, update the lobby
@@ -439,11 +439,11 @@ export async function getLobbyData(invitationCode: string) {
               : ["funny", "wholesome"];
 
           const removedCategories = currentCategories.filter(
-            (category: string) => !allowedCategories.includes(category),
+            (category: string) => !allowedCategories.includes(category)
           );
 
           console.warn(
-            `Migrating lobby ${normalizedCode} categories: removed ${removedCategories.join(", ")} and replaced with ${finalCategories.join(", ")}`,
+            `Migrating lobby ${normalizedCode} categories: removed ${removedCategories.join(", ")} and replaced with ${finalCategories.join(", ")}`
           );
 
           // Update the lobby with migrated categories
@@ -476,7 +476,7 @@ export async function getLobbyData(invitationCode: string) {
         span.setAttribute("lobby.status", serializedLobby.status);
         span.setAttribute(
           "lobby.ai_player_count",
-          allPlayers.filter((p: LobbyPlayer) => p.isAI).length,
+          allPlayers.filter((p: LobbyPlayer) => p.isAI).length
         );
 
         return {
@@ -487,7 +487,7 @@ export async function getLobbyData(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -567,7 +567,7 @@ export async function startGame(invitationCode: string) {
         span.setAttribute("lobby.status", "started");
         span.setAttribute(
           "lobby.player_count",
-          updatedLobbyData?.players.length,
+          updatedLobbyData?.players.length
         );
 
         return {
@@ -578,7 +578,7 @@ export async function startGame(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -632,7 +632,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Find the player to remove
         const playerIndex = lobbyData.players.findIndex(
-          (player: { uid: string }) => player.uid === uid,
+          (player: { uid: string }) => player.uid === uid
         );
 
         if (playerIndex === -1) {
@@ -643,7 +643,7 @@ export async function leaveLobby(invitationCode: string) {
 
         // Remove player from lobby
         const updatedPlayers = lobbyData.players.filter(
-          (player: { uid: string }) => player.uid !== uid,
+          (player: { uid: string }) => player.uid !== uid
         );
 
         // If host is leaving, assign new host or delete lobby
@@ -683,13 +683,13 @@ export async function leaveLobby(invitationCode: string) {
         // Balance AI players after human leaves
         if (lobbyData?.settings?.aiSettings?.enabled) {
           const humanPlayerCount = updatedPlayers.filter(
-            (player: LobbyPlayer) => !player.isAI,
+            (player: LobbyPlayer) => !player.isAI
           ).length;
 
           await aiPlayerManager.balanceAIPlayers(
             normalizedCode,
             humanPlayerCount,
-            lobbyData.settings.aiSettings,
+            lobbyData.settings.aiSettings
           );
 
           span.setAttribute("lobby.ai_balanced", true);
@@ -706,7 +706,7 @@ export async function leaveLobby(invitationCode: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -734,7 +734,7 @@ export async function updateLobbySettings(
       autoBalance: boolean;
       difficulty: "easy" | "medium" | "hard";
     };
-  },
+  }
 ) {
   return Sentry.startSpan(
     {
@@ -792,7 +792,7 @@ export async function updateLobbySettings(
 
         // Filter out invalid categories and replace with valid defaults
         const validCategories = settings.categories.filter((category) =>
-          allowedCategories.includes(category),
+          allowedCategories.includes(category)
         );
 
         // If no valid categories remain, use default categories
@@ -802,10 +802,10 @@ export async function updateLobbySettings(
         // Log migration if categories were changed
         if (validCategories.length !== settings.categories.length) {
           const removedCategories = settings.categories.filter(
-            (category) => !allowedCategories.includes(category),
+            (category) => !allowedCategories.includes(category)
           );
           console.warn(
-            `Migrated lobby categories: removed ${removedCategories.join(", ")} and replaced with ${finalCategories.join(", ")}`,
+            `Migrated lobby categories: removed ${removedCategories.join(", ")} and replaced with ${finalCategories.join(", ")}`
           );
         }
 
@@ -840,7 +840,7 @@ export async function updateLobbySettings(
         // Validate AI settings if provided
         if (settings.aiSettings) {
           const aiValidationError = aiPlayerManager.validateAISettings(
-            settings.aiSettings,
+            settings.aiSettings
           );
           if (aiValidationError) {
             throw new Error(aiValidationError.message);
@@ -863,13 +863,13 @@ export async function updateLobbySettings(
         // Balance AI players if AI settings changed
         if (settings.aiSettings) {
           const humanPlayerCount = lobbyData.players.filter(
-            (player: LobbyPlayer) => !player.isAI,
+            (player: LobbyPlayer) => !player.isAI
           ).length;
 
           await aiPlayerManager.balanceAIPlayers(
             normalizedCode,
             humanPlayerCount,
-            settings.aiSettings,
+            settings.aiSettings
           );
 
           span.setAttribute("lobby.ai_balanced", true);
@@ -908,7 +908,7 @@ export async function updateLobbySettings(
         span.setAttribute("lobby.categories", finalCategories.join(","));
         span.setAttribute(
           "lobby.ai_player_count",
-          aiPlayersAsLobbyPlayers.length,
+          aiPlayersAsLobbyPlayers.length
         );
 
         return {
@@ -920,7 +920,7 @@ export async function updateLobbySettings(
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -966,7 +966,7 @@ export async function getUserActiveLobbies() {
 
           // Check if user is in this lobby
           const isUserInLobby = lobbyData.players.some(
-            (player: LobbyPlayer) => player.uid === uid,
+            (player: LobbyPlayer) => player.uid === uid
           );
 
           if (!isUserInLobby) {
@@ -978,7 +978,7 @@ export async function getUserActiveLobbies() {
             (player: LobbyPlayer) => ({
               ...player,
               joinedAt: serializeTimestamp(player.joinedAt as Date),
-            }),
+            })
           ) as LobbyPlayer[];
 
           const serializedLobby = {
@@ -1001,7 +1001,7 @@ export async function getUserActiveLobbies() {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -1010,7 +1010,7 @@ export async function addAIPlayerToLobby(
   botConfig: {
     personalityId: string;
     difficulty: "easy" | "medium" | "hard";
-  },
+  }
 ) {
   return Sentry.startSpan(
     {
@@ -1097,7 +1097,7 @@ export async function addAIPlayerToLobby(
         span.setAttribute("lobby.ai_difficulty", botConfig.difficulty);
         span.setAttribute(
           "lobby.ai_count",
-          serializedPlayers.filter((p: LobbyPlayer) => p.isAI).length,
+          serializedPlayers.filter((p: LobbyPlayer) => p.isAI).length
         );
         span.setAttribute("lobby.ai_player_id", aiPlayer.id);
 
@@ -1113,13 +1113,13 @@ export async function addAIPlayerToLobby(
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
 export async function removeAIPlayerFromLobby(
   invitationCode: string,
-  aiPlayerId: string,
+  aiPlayerId: string
 ) {
   return Sentry.startSpan(
     {
@@ -1163,7 +1163,7 @@ export async function removeAIPlayerFromLobby(
         // Find the AI player in the Firebase document
         const aiPlayerInFirebase = lobbyData.players.find(
           (player: { uid: string; isAI?: boolean }) =>
-            player.uid === aiPlayerId && player.isAI,
+            player.uid === aiPlayerId && player.isAI
         );
 
         if (!aiPlayerInFirebase) {
@@ -1174,7 +1174,7 @@ export async function removeAIPlayerFromLobby(
 
         // Remove AI player from Firebase document
         const updatedPlayers = lobbyData.players.filter(
-          (player: { uid: string }) => player.uid !== aiPlayerId,
+          (player: { uid: string }) => player.uid !== aiPlayerId
         );
 
         console.log("Updated players count:", updatedPlayers.length);
@@ -1224,7 +1224,7 @@ export async function removeAIPlayerFromLobby(
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -1284,7 +1284,7 @@ export async function kickPlayer(invitationCode: string, playerId: string) {
 
         // Find the player to kick
         const playerToKick = lobbyData.players.find(
-          (player: { uid: string }) => player.uid === playerId,
+          (player: { uid: string }) => player.uid === playerId
         );
 
         if (!playerToKick) {
@@ -1298,7 +1298,7 @@ export async function kickPlayer(invitationCode: string, playerId: string) {
 
         // Remove player from lobby
         const updatedPlayers = lobbyData.players.filter(
-          (player: { uid: string }) => player.uid !== playerId,
+          (player: { uid: string }) => player.uid !== playerId
         );
 
         await lobbyRef.update({
@@ -1314,13 +1314,13 @@ export async function kickPlayer(invitationCode: string, playerId: string) {
         // Balance AI players after human is kicked
         if (lobbyData?.settings?.aiSettings?.enabled) {
           const humanPlayerCount = updatedPlayers.filter(
-            (player: LobbyPlayer) => !player.isAI,
+            (player: LobbyPlayer) => !player.isAI
           ).length;
 
           await aiPlayerManager.balanceAIPlayers(
             normalizedCode,
             humanPlayerCount,
-            lobbyData.settings.aiSettings,
+            lobbyData.settings.aiSettings
           );
 
           span.setAttribute("lobby.ai_balanced", true);
@@ -1338,6 +1338,275 @@ export async function kickPlayer(invitationCode: string, playerId: string) {
         Sentry.captureException(error);
         throw error;
       }
+    }
+  );
+}
+
+// ============================================================================
+// SCORE TRACKING FUNCTIONS
+// ============================================================================
+
+/**
+ * Updates a player's score in the lobby
+ * @param invitationCode - The 5-character invitation code
+ * @param playerId - The player's UID
+ * @param scoreUpdate - The score update object
+ * @returns Success response or error
+ */
+export async function updatePlayerScore(
+  invitationCode: string,
+  playerId: string,
+  scoreUpdate: {
+    points: number;
+    reason: "win" | "participation" | "bonus";
+    roundNumber?: number;
+  }
+) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.update_score",
+      name: "Update Player Score",
     },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+        span.setAttribute("player.id", playerId);
+        span.setAttribute("score.points", scoreUpdate.points);
+        span.setAttribute("score.reason", scoreUpdate.reason);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Find the player to update
+        const playerIndex = lobbyData.players.findIndex(
+          (player: { uid: string }) => player.uid === playerId
+        );
+
+        if (playerIndex === -1) {
+          throw new Error("Player not found in lobby");
+        }
+
+        // Update player score
+        const updatedPlayers = [...lobbyData.players];
+        const currentPlayer = updatedPlayers[playerIndex];
+
+        // Initialize score if it doesn't exist
+        if (typeof currentPlayer.score !== "number") {
+          currentPlayer.score = 0;
+        }
+
+        // Add points
+        currentPlayer.score += scoreUpdate.points;
+
+        // Update total wins if this was a win
+        if (scoreUpdate.reason === "win") {
+          currentPlayer.totalWins = (currentPlayer.totalWins || 0) + 1;
+        }
+
+        // Update total games
+        currentPlayer.totalGames = (currentPlayer.totalGames || 0) + 1;
+
+        // Update the lobby
+        await lobbyRef.update({
+          players: updatedPlayers,
+          updatedAt: new Date().toISOString(),
+        });
+
+        span.setAttribute("score.new_total", currentPlayer.score);
+        span.setAttribute("score.total_wins", currentPlayer.totalWins);
+
+        return {
+          success: true,
+          message: `Updated ${currentPlayer.displayName}'s score`,
+          newScore: currentPlayer.score,
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Gets the current scores for all players in a lobby
+ * @param invitationCode - The 5-character invitation code
+ * @returns Array of player scores
+ */
+export async function getLobbyScores(invitationCode: string) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.get_scores",
+      name: "Get Lobby Scores",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Extract scores from players
+        const scores = lobbyData.players.map((player: LobbyPlayer) => ({
+          playerId: player.uid,
+          playerName: player.displayName,
+          score: player.score || 0,
+          totalWins: player.totalWins || 0,
+          totalGames: player.totalGames || 0,
+          isAI: player.isAI || false,
+          avatar: player.profileURL || "/icons/cool-pepe.png",
+        }));
+
+        // Sort by score (highest first)
+        scores.sort((a: typeof scores[number], b: typeof scores[number]) => b.score - a.score);
+
+        span.setAttribute("scores.count", scores.length);
+
+        return {
+          success: true,
+          scores,
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Awards points to the winner of a round
+ * @param invitationCode - The 5-character invitation code
+ * @param winnerId - The winner's player ID
+ * @param roundNumber - The round number
+ * @returns Success response or error
+ */
+export async function awardRoundWinner(
+  invitationCode: string,
+  winnerId: string,
+  roundNumber: number
+) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.award_winner",
+      name: "Award Round Winner",
+    },
+    async (span) => {
+      try {
+        span.setAttribute("lobby.code", invitationCode);
+        span.setAttribute("winner.id", winnerId);
+        span.setAttribute("round.number", roundNumber);
+
+        // Award points to winner
+        const winnerResult = await updatePlayerScore(invitationCode, winnerId, {
+          points: 10, // 10 points for winning a round
+          reason: "win",
+          roundNumber,
+        });
+
+        // Award participation points to all other players
+        const scoresResult = await getLobbyScores(invitationCode);
+        if (scoresResult.success) {
+          for (const player of scoresResult.scores) {
+            if (player.playerId !== winnerId) {
+              await updatePlayerScore(invitationCode, player.playerId, {
+                points: 2, // 2 points for participation
+                reason: "participation",
+                roundNumber,
+              });
+            }
+          }
+        }
+
+        span.setAttribute("winner.new_score", winnerResult.newScore);
+
+        return {
+          success: true,
+          message: `Awarded points for round ${roundNumber}`,
+          winnerScore: winnerResult.newScore,
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
   );
 }
