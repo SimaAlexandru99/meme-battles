@@ -5,6 +5,9 @@ import * as Sentry from "@sentry/nextjs";
 import { Timestamp } from "firebase/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 
+import { cookies } from "next/headers";
+import { aiPlayerManager } from "@/lib/ai/ai-player-manager";
+
 // ============================================================================
 // CONSTANTS & CONFIGURATION
 // ============================================================================
@@ -135,9 +138,7 @@ export async function createLobby(settings?: {
     async (span) => {
       try {
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -244,9 +245,7 @@ export async function joinLobby(invitationCode: string) {
         span.setAttribute("lobby.code", normalizedCode);
 
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -310,6 +309,27 @@ export async function joinLobby(invitationCode: string) {
         const updatedLobbyDoc = await lobbyRef.get();
         const updatedLobbyData = updatedLobbyDoc.data();
 
+        // Initialize AI Player Manager if not already done
+        if (!aiPlayerManager.getState().isInitialized) {
+          await aiPlayerManager.initialize();
+        }
+
+        // Balance AI players after human joins
+        if (updatedLobbyData?.settings?.aiSettings?.enabled) {
+          const humanPlayerCount = updatedLobbyData.players.filter(
+            (player: LobbyPlayer) => !player.isAI
+          ).length;
+
+          await aiPlayerManager.balanceAIPlayers(
+            normalizedCode,
+            humanPlayerCount,
+            updatedLobbyData.settings.aiSettings
+          );
+
+          span.setAttribute("lobby.ai_balanced", true);
+          span.setAttribute("lobby.human_count", humanPlayerCount);
+        }
+
         span.setAttribute(
           "lobby.player_count",
           updatedLobbyData?.players.length
@@ -353,9 +373,7 @@ export async function getLobbyData(invitationCode: string) {
         span.setAttribute("lobby.code", normalizedCode);
 
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -389,6 +407,18 @@ export async function getLobbyData(invitationCode: string) {
         if (!isUserInLobby) {
           throw new Error("You are not a member of this lobby");
         }
+
+        // Initialize AI Player Manager if not already done
+        if (!aiPlayerManager.getState().isInitialized) {
+          await aiPlayerManager.initialize();
+        }
+
+        // Get AI players for this lobby
+        const aiPlayersAsLobbyPlayers =
+          aiPlayerManager.getAIPlayersAsLobbyPlayers(normalizedCode);
+
+        // Merge AI players with human players
+        const allPlayers = [...lobbyData.players, ...aiPlayersAsLobbyPlayers];
 
         // Migrate categories if needed
         const allowedCategories = [
@@ -434,12 +464,10 @@ export async function getLobbyData(invitationCode: string) {
         }
 
         // Serialize Firestore Timestamps
-        const serializedPlayers = lobbyData.players.map(
-          (player: LobbyPlayer) => ({
-            ...player,
-            joinedAt: serializeTimestamp(player.joinedAt as Date),
-          })
-        ) as LobbyPlayer[];
+        const serializedPlayers = allPlayers.map((player: LobbyPlayer) => ({
+          ...player,
+          joinedAt: serializeTimestamp(player.joinedAt as Date),
+        })) as LobbyPlayer[];
 
         const serializedLobby = {
           ...lobbyData,
@@ -450,6 +478,10 @@ export async function getLobbyData(invitationCode: string) {
 
         span.setAttribute("lobby.player_count", serializedLobby.players.length);
         span.setAttribute("lobby.status", serializedLobby.status);
+        span.setAttribute(
+          "lobby.ai_player_count",
+          aiPlayersAsLobbyPlayers.length
+        );
 
         return {
           success: true,
@@ -485,9 +517,7 @@ export async function startGame(invitationCode: string) {
         span.setAttribute("lobby.code", normalizedCode);
 
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -578,9 +608,7 @@ export async function leaveLobby(invitationCode: string) {
         span.setAttribute("lobby.code", normalizedCode);
 
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -627,6 +655,10 @@ export async function leaveLobby(invitationCode: string) {
           if (updatedPlayers.length === 0) {
             // Delete lobby if no players left
             await lobbyRef.delete();
+
+            // Clean up AI players for this lobby
+            await aiPlayerManager.removeAllAIPlayersFromLobby(normalizedCode);
+
             span.setAttribute("lobby.deleted", true);
           } else {
             // Assign new host (first remaining player)
@@ -645,6 +677,27 @@ export async function leaveLobby(invitationCode: string) {
             players: updatedPlayers,
             updatedAt: new Date().toISOString(),
           });
+        }
+
+        // Initialize AI Player Manager if not already done
+        if (!aiPlayerManager.getState().isInitialized) {
+          await aiPlayerManager.initialize();
+        }
+
+        // Balance AI players after human leaves
+        if (lobbyData?.settings?.aiSettings?.enabled) {
+          const humanPlayerCount = updatedPlayers.filter(
+            (player: LobbyPlayer) => !player.isAI
+          ).length;
+
+          await aiPlayerManager.balanceAIPlayers(
+            normalizedCode,
+            humanPlayerCount,
+            lobbyData.settings.aiSettings
+          );
+
+          span.setAttribute("lobby.ai_balanced", true);
+          span.setAttribute("lobby.human_count", humanPlayerCount);
         }
 
         span.setAttribute("lobby.player_count", updatedPlayers.length);
@@ -677,6 +730,14 @@ export async function updateLobbySettings(
     rounds: number;
     timeLimit: number;
     categories: string[];
+    aiSettings?: {
+      enabled: boolean;
+      maxAIPlayers: number;
+      minHumanPlayers: number;
+      personalityPool: string[];
+      autoBalance: boolean;
+      difficulty: "easy" | "medium" | "hard";
+    };
   }
 ) {
   return Sentry.startSpan(
@@ -695,9 +756,7 @@ export async function updateLobbySettings(
         span.setAttribute("lobby.code", normalizedCode);
 
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -777,27 +836,69 @@ export async function updateLobbySettings(
           throw new Error("Cannot modify settings after game has started");
         }
 
+        // Initialize AI Player Manager if not already done
+        if (!aiPlayerManager.getState().isInitialized) {
+          await aiPlayerManager.initialize();
+        }
+
+        // Validate AI settings if provided
+        if (settings.aiSettings) {
+          const aiValidationError = aiPlayerManager.validateAISettings(
+            settings.aiSettings
+          );
+          if (aiValidationError) {
+            throw new Error(aiValidationError.message);
+          }
+        }
+
         // Update lobby settings
+        const updatedSettings = {
+          rounds: settings.rounds,
+          timeLimit: settings.timeLimit,
+          categories: finalCategories,
+          ...(settings.aiSettings && { aiSettings: settings.aiSettings }),
+        };
+
         await lobbyRef.update({
-          settings: {
-            rounds: settings.rounds,
-            timeLimit: settings.timeLimit,
-            categories: finalCategories,
-          },
+          settings: updatedSettings,
           updatedAt: new Date().toISOString(),
         });
+
+        // Balance AI players if AI settings changed
+        if (settings.aiSettings) {
+          const humanPlayerCount = lobbyData.players.filter(
+            (player: LobbyPlayer) => !player.isAI
+          ).length;
+
+          await aiPlayerManager.balanceAIPlayers(
+            normalizedCode,
+            humanPlayerCount,
+            settings.aiSettings
+          );
+
+          span.setAttribute("lobby.ai_balanced", true);
+          span.setAttribute("lobby.human_count", humanPlayerCount);
+        }
 
         // Get updated lobby data
         const updatedLobbyDoc = await lobbyRef.get();
         const updatedLobbyData = updatedLobbyDoc.data();
 
+        // Get AI players for this lobby
+        const aiPlayersAsLobbyPlayers =
+          aiPlayerManager.getAIPlayersAsLobbyPlayers(normalizedCode);
+
+        // Merge AI players with human players
+        const allPlayers = [
+          ...(updatedLobbyData?.players || []),
+          ...aiPlayersAsLobbyPlayers,
+        ];
+
         // Serialize Firestore Timestamps
-        const serializedPlayers = updatedLobbyData?.players.map(
-          (player: LobbyPlayer) => ({
-            ...player,
-            joinedAt: serializeTimestamp(player.joinedAt as Date),
-          })
-        );
+        const serializedPlayers = allPlayers.map((player: LobbyPlayer) => ({
+          ...player,
+          joinedAt: serializeTimestamp(player.joinedAt as Date),
+        }));
 
         const serializedLobby = {
           ...updatedLobbyData,
@@ -809,6 +910,10 @@ export async function updateLobbySettings(
         span.setAttribute("lobby.rounds", settings.rounds);
         span.setAttribute("lobby.time_limit", settings.timeLimit);
         span.setAttribute("lobby.categories", finalCategories.join(","));
+        span.setAttribute(
+          "lobby.ai_player_count",
+          aiPlayersAsLobbyPlayers.length
+        );
 
         return {
           success: true,
@@ -840,9 +945,7 @@ export async function getUserActiveLobbies() {
     async (span) => {
       try {
         // Get session cookie
-        const cookieStore = await import("next/headers").then(({ cookies }) =>
-          cookies()
-        );
+        const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("session")?.value;
 
         if (!sessionCookie) {
@@ -897,6 +1000,160 @@ export async function getUserActiveLobbies() {
         return {
           success: true,
           lobbies: activeLobbies,
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+export async function addAIPlayerToLobby(
+  invitationCode: string,
+  botConfig: {
+    personalityId: string;
+    difficulty: "easy" | "medium" | "hard";
+  }
+) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.ai.add",
+      name: "Add AI Player to Lobby",
+    },
+    async (span) => {
+      try {
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        // Get lobby reference
+        const lobbyRef = db.collection("lobbies").doc(invitationCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data() as Lobby;
+
+        // Check if user is host
+        if (lobbyData.hostUid !== uid) {
+          throw new Error("Only the host can add AI players");
+        }
+
+        // Check if lobby is full
+        if (lobbyData.players.length >= lobbyData.maxPlayers) {
+          throw new Error("Lobby is full");
+        }
+
+        // Initialize AI Player Manager if not already done
+        if (!aiPlayerManager.getState().isInitialized) {
+          await aiPlayerManager.initialize();
+        }
+
+        // Get updated lobby data with AI players merged
+        const aiPlayersAsLobbyPlayers =
+          aiPlayerManager.getAIPlayersAsLobbyPlayers(invitationCode);
+        const allPlayers = [...lobbyData.players, ...aiPlayersAsLobbyPlayers];
+
+        // Set Sentry attributes
+        span.setAttribute("lobby.code", invitationCode);
+        span.setAttribute("lobby.ai_personality", botConfig.personalityId);
+        span.setAttribute("lobby.ai_difficulty", botConfig.difficulty);
+        span.setAttribute("lobby.ai_count", aiPlayersAsLobbyPlayers.length);
+
+        return {
+          success: true,
+          lobby: {
+            ...lobbyData,
+            players: allPlayers,
+          },
+          message: "AI player added successfully",
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+export async function removeAIPlayerFromLobby(
+  invitationCode: string,
+  aiPlayerId: string
+) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.ai.remove",
+      name: "Remove AI Player from Lobby",
+    },
+    async (span) => {
+      try {
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        // Get lobby reference
+        const lobbyRef = db.collection("lobbies").doc(invitationCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data() as Lobby;
+
+        // Check if user is host
+        if (lobbyData.hostUid !== uid) {
+          throw new Error("Only the host can remove AI players");
+        }
+
+        // Initialize AI Player Manager if not already done
+        if (!aiPlayerManager.getState().isInitialized) {
+          await aiPlayerManager.initialize();
+        }
+
+        // Remove AI player using the AI Player Manager
+        await aiPlayerManager.removeAIPlayer({
+          lobbyCode: invitationCode,
+          playerId: aiPlayerId,
+          reason: "manual",
+        });
+
+        // Get updated lobby data with AI players merged
+        const aiPlayersAsLobbyPlayers =
+          aiPlayerManager.getAIPlayersAsLobbyPlayers(invitationCode);
+        const allPlayers = [...lobbyData.players, ...aiPlayersAsLobbyPlayers];
+
+        // Set Sentry attributes
+        span.setAttribute("lobby.code", invitationCode);
+        span.setAttribute("lobby.ai_player_id", aiPlayerId);
+        span.setAttribute("lobby.ai_count", aiPlayersAsLobbyPlayers.length);
+
+        return {
+          success: true,
+          lobby: {
+            ...lobbyData,
+            players: allPlayers,
+          },
+          message: "AI player removed successfully",
         };
       } catch (error) {
         Sentry.captureException(error);

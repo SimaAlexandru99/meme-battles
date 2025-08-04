@@ -1,5 +1,9 @@
 import useSWR from "swr";
-import { getLobbyData } from "@/lib/actions";
+import {
+  getLobbyData,
+  addAIPlayerToLobby,
+  removeAIPlayerFromLobby,
+} from "@/lib/actions";
 import * as Sentry from "@sentry/nextjs";
 import { ensureDate } from "@/lib/utils";
 
@@ -9,7 +13,7 @@ import { ensureDate } from "@/lib/utils";
  */
 export function useLobbyData(
   lobbyCode: string | null,
-  options: UseLobbyDataOptions = {},
+  options: UseLobbyDataOptions = {}
 ) {
   const {
     refreshInterval = 5000, // 5 seconds
@@ -53,7 +57,7 @@ export function useLobbyData(
           Sentry.captureException(error);
           throw error;
         }
-      },
+      }
     );
   };
 
@@ -80,6 +84,54 @@ export function useLobbyData(
     ...swrOptions,
   });
 
+  // AI Player management functions
+  const addAIPlayer = async (botConfig: {
+    personalityId: string;
+    difficulty: "easy" | "medium" | "hard";
+  }) => {
+    if (!lobbyCode) throw new Error("No lobby code provided");
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Add AI Player",
+      },
+      async () => {
+        try {
+          const result = await addAIPlayerToLobby(lobbyCode, botConfig);
+          // Refresh lobby data after adding AI player
+          await swrResult.mutate();
+          return result;
+        } catch (error) {
+          Sentry.captureException(error);
+          throw error;
+        }
+      }
+    );
+  };
+
+  const removeAIPlayer = async (aiPlayerId: string) => {
+    if (!lobbyCode) throw new Error("No lobby code provided");
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Remove AI Player",
+      },
+      async () => {
+        try {
+          const result = await removeAIPlayerFromLobby(lobbyCode, aiPlayerId);
+          // Refresh lobby data after removing AI player
+          await swrResult.mutate();
+          return result;
+        } catch (error) {
+          Sentry.captureException(error);
+          throw error;
+        }
+      }
+    );
+  };
+
   return {
     lobbyData: swrResult.data,
     error: swrResult.error,
@@ -100,6 +152,17 @@ export function useLobbyData(
 
     // Helper to get player count
     playerCount: swrResult.data?.players.length ?? 0,
+
+    // AI Player management
+    addAIPlayer,
+    removeAIPlayer,
+
+    // Helper to get AI players
+    aiPlayers: swrResult.data?.players.filter((player) => player.isAI) ?? [],
+
+    // Helper to get human players
+    humanPlayers:
+      swrResult.data?.players.filter((player) => !player.isAI) ?? [],
   };
 }
 
@@ -136,7 +199,7 @@ export function useActiveLobbies(options: UseActiveLobbiesOptions = {}) {
           Sentry.captureException(error);
           throw error;
         }
-      },
+      }
     );
   };
 
@@ -176,7 +239,7 @@ export function useActiveLobbies(options: UseActiveLobbiesOptions = {}) {
  */
 export function useLobbyAndActiveData(
   lobbyCode: string | null,
-  options: UseLobbyAndActiveDataOptions = {},
+  options: UseLobbyAndActiveDataOptions = {}
 ) {
   const { lobbyOptions = {}, activeLobbiesOptions = {} } = options;
 

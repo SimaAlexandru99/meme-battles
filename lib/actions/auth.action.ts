@@ -3,8 +3,8 @@
 import { auth, db } from "@/firebase/admin";
 
 // Import types from global definitions
-import { cookies } from "next/headers";
 import * as Sentry from "@sentry/nextjs";
+import { cookies } from "next/headers";
 import { getRandomAvatar } from "@/lib/utils";
 
 // ============================================================================

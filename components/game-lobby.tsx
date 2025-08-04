@@ -14,6 +14,7 @@ import {
   RiTimeLine,
   RiGamepadLine,
   RiAlertLine,
+  RiRobotLine,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,9 @@ import { AuthError } from "@/components/auth-error";
 import { startGame, leaveLobby } from "@/lib/actions";
 import { useLobbyData } from "@/hooks/useLobbyData";
 import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
+import { AddBotButton } from "@/components/game-settings/AddBotButton";
 import { updateLobbySettingsService } from "@/lib/services/lobby.service";
+import { addAIPlayerToLobbyService } from "@/lib/services/lobby.service";
 import { GameSettingsFormData } from "@/components/game-settings/types";
 import {
   buttonVariants,
@@ -63,6 +66,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const [isSavingSettings, setIsSavingSettings] = React.useState(false);
   const [showExitDialog, setShowExitDialog] = React.useState(false);
   const [isLeaving, setIsLeaving] = React.useState(false);
+  const [isAddingBot, setIsAddingBot] = React.useState(false);
+  const [botError, setBotError] = React.useState<string | null>(null);
 
   // SWR hook for lobby data with real-time updates
   const { lobbyData, error, isLoading, isValidating, refresh, isHost } =
@@ -352,6 +357,47 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             throw err; // Re-throw to let the form handle it
           } finally {
             setIsSavingSettings(false);
+          }
+        }
+      );
+    },
+    [lobbyCode, isCurrentUserHost, refresh]
+  );
+
+  // Handle adding AI player
+  const handleAddBot = React.useCallback(
+    async (botConfig: {
+      personalityId: string;
+      difficulty: "easy" | "medium" | "hard";
+    }) => {
+      if (!isCurrentUserHost) return;
+
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Add AI Player",
+        },
+        async () => {
+          setIsAddingBot(true);
+          setBotError(null);
+
+          try {
+            await addAIPlayerToLobbyService(lobbyCode, botConfig);
+
+            // Refresh lobby data to show new AI player
+            await refresh();
+
+            // Show success notification
+            toast.success("AI player added successfully!");
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : "Failed to add AI player";
+            setBotError(errorMessage);
+            toast.error(errorMessage);
+            Sentry.captureException(err);
+            throw err; // Re-throw to let the dialog handle it
+          } finally {
+            setIsAddingBot(false);
           }
         }
       );
@@ -859,6 +905,18 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           Game Settings
                         </Button>
                       </motion.div>
+                      <motion.div variants={buttonVariants}>
+                        <AddBotButton
+                          onAddBot={handleAddBot}
+                          isLoading={isAddingBot}
+                          error={botError}
+                          maxBots={6}
+                          currentBotCount={
+                            lobbyData.players.filter((p) => p.isAI).length
+                          }
+                          disabled={!isCurrentUserHost}
+                        />
+                      </motion.div>
                     </div>
                   </motion.div>
                 )}
@@ -900,10 +958,21 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         <motion.div variants={microInteractionVariants}>
                           <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                             <AvatarImage src={player.profileURL || undefined} />
-                            <AvatarFallback className="bg-purple-600 text-white font-bangers text-sm sm:text-base">
-                              {(player.displayName || "A")
-                                .charAt(0)
-                                .toUpperCase()}
+                            <AvatarFallback
+                              className={cn(
+                                "font-bangers text-sm sm:text-base",
+                                player.isAI
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-purple-600 text-white"
+                              )}
+                            >
+                              {player.isAI ? (
+                                <RiRobotLine className="w-5 h-5 sm:w-6 sm:h-6" />
+                              ) : (
+                                (player.displayName || "A")
+                                  .charAt(0)
+                                  .toUpperCase()
+                              )}
                             </AvatarFallback>
                           </Avatar>
                         </motion.div>
@@ -911,7 +980,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                             <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
-                              {player.displayName || "Anonymous Player"}
+                              {player.isAI && player.aiPersonalityId
+                                ? `${player.displayName} (${player.aiPersonalityId.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())})`
+                                : player.displayName || "Anonymous Player"}
                             </span>
                             <div className="flex flex-wrap gap-1 sm:gap-2">
                               {player.isHost && (
@@ -921,6 +992,16 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                                     className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bangers tracking-wide text-xs"
                                   >
                                     Host
+                                  </Badge>
+                                </motion.div>
+                              )}
+                              {player.isAI && (
+                                <motion.div variants={badgeVariants}>
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide text-xs"
+                                  >
+                                    AI
                                   </Badge>
                                 </motion.div>
                               )}

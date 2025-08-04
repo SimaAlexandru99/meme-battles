@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "./FormErrorDisplay";
+import { formFieldVariants } from "./animations";
 
 interface RoundsSelectorProps {
   value: number;
@@ -40,14 +42,26 @@ export function RoundsSelector({
   error,
   className,
 }: RoundsSelectorProps) {
+  const handleValueChange = React.useCallback(
+    (val: string) => {
+      onChange(parseInt(val, 10));
+    },
+    [onChange]
+  );
+
   return (
-    <div className={cn("space-y-2", className)}>
+    <motion.div
+      className={cn("space-y-2", className)}
+      variants={formFieldVariants}
+      initial="initial"
+      animate="animate"
+    >
       <Label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
         Number of Rounds
       </Label>
       <Select
         value={value.toString()}
-        onValueChange={(val) => onChange(parseInt(val, 10))}
+        onValueChange={handleValueChange}
         disabled={disabled}
       >
         <SelectTrigger
@@ -55,7 +69,7 @@ export function RoundsSelector({
             "h-12 bg-slate-700/50 border-slate-600/50 text-white",
             "hover:bg-slate-700/70 focus:ring-2 focus:ring-purple-500/50",
             "focus:border-purple-500/50 font-bangers tracking-wide",
-            error && "border-red-500/50 focus:ring-red-500/50",
+            error && "border-red-500/50 focus:ring-red-500/50"
           )}
         >
           <SelectValue placeholder="Select number of rounds" />
@@ -67,7 +81,7 @@ export function RoundsSelector({
               value={option.value.toString()}
               className={cn(
                 "text-white hover:bg-slate-700/50 focus:bg-slate-700/50",
-                "font-bangers tracking-wide cursor-pointer",
+                "font-bangers tracking-wide cursor-pointer"
               )}
             >
               {option.label}
@@ -76,6 +90,6 @@ export function RoundsSelector({
         </SelectContent>
       </Select>
       <FieldError error={error} />
-    </div>
+    </motion.div>
   );
 }

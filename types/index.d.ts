@@ -389,6 +389,27 @@ interface UseLobbyDataOptions {
   [key: string]: unknown; // Allow other SWR options
 }
 
+interface UseLobbyDataReturn {
+  lobbyData: LobbyData | undefined;
+  error: Error | null;
+  isLoading: boolean;
+  isValidating: boolean;
+  mutate: () => Promise<LobbyData | undefined>;
+  refresh: () => Promise<LobbyData | undefined>;
+  hasData: boolean;
+  isHost: (userId: string) => boolean;
+  playerCount: number;
+  addAIPlayer: (botConfig: {
+    personalityId: string;
+    difficulty: "easy" | "medium" | "hard";
+  }) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
+  removeAIPlayer: (
+    aiPlayerId: string
+  ) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
+  aiPlayers: LobbyPlayer[];
+  humanPlayers: LobbyPlayer[];
+}
+
 interface UseActiveLobbiesOptions {
   enabled?: boolean;
   refreshInterval?: number;
@@ -635,4 +656,235 @@ interface GameDocument {
 
   // Chat
   chat: ChatMessage[];
+}
+
+// AI Player Types
+interface AIPersonality {
+  id: string;
+  name: string;
+  displayName: string;
+  avatarId: string;
+  description: string;
+  traits: {
+    humorStyle: "sarcastic" | "wholesome" | "edgy" | "clever" | "random";
+    responseTime: {
+      min: number; // seconds
+      max: number; // seconds
+    };
+    chatFrequency: "low" | "medium" | "high";
+    memePreference: "funny" | "relevant" | "shocking" | "clever" | "random";
+    votingStyle: "strategic" | "humor-focused" | "random" | "popular";
+  };
+  chatTemplates: {
+    thinking: string[];
+    submission: string[];
+    voting: string[];
+    winning: string[];
+    losing: string[];
+    general: string[];
+  };
+}
+
+interface AIDecision {
+  type: "meme-selection" | "voting" | "chat-message";
+  context: {
+    situation?: string;
+    availableMemes?: string[];
+    submissions?: Submission[];
+    gamePhase?: GamePhase;
+    currentRound?: number;
+  };
+  personalityId: string;
+  decision: {
+    selectedMeme?: string;
+    votedSubmissionId?: string;
+    chatMessage?: string;
+    confidence: number; // 0-1
+    reasoning?: string;
+  };
+  timestamp: Date;
+  processingTime: number; // milliseconds
+}
+
+interface AIPlayer {
+  id: string;
+  personality: AIPersonality;
+  isConnected: boolean;
+  score: number;
+  hand: string[]; // meme filenames
+  selectedCard?: MemeCard;
+  status: "waiting" | "playing" | "submitted" | "winner";
+  lastActivity: Date;
+  decisionHistory: AIDecision[];
+  chatHistory: ChatMessage[];
+}
+
+// Extend existing LobbyPlayer interface with AI-specific properties
+interface LobbyPlayer {
+  uid: string;
+  displayName: string;
+  profileURL?: string | null;
+  joinedAt: Date | string | { toDate: () => Date }; // Can be Date, ISO string, or Firestore Timestamp
+  isHost: boolean;
+  // AI-specific properties
+  isAI?: boolean;
+  aiPersonalityId?: string;
+  aiPlayer?: AIPlayer;
+}
+
+// AI Settings for lobby configuration
+interface AISettings {
+  enabled: boolean;
+  maxAIPlayers: number; // 1-6
+  minHumanPlayers: number; // minimum human players before adding AI
+  personalityPool: string[]; // array of personality IDs to choose from
+  autoBalance: boolean; // automatically remove AI when humans join
+  difficulty: "easy" | "medium" | "hard"; // affects decision quality and timing
+}
+
+// Extend LobbySettings to include AI configuration
+interface LobbySettings {
+  rounds: number;
+  timeLimit: number;
+  categories: string[];
+  aiSettings: AISettings;
+}
+
+// AI Player Management Types
+interface AIPlayerManagerState {
+  activeAIPlayers: Map<string, Map<string, AIPlayer>>; // lobbyCode -> playerId -> AIPlayer
+  personalityPool: AIPersonality[];
+  isInitialized: boolean;
+}
+
+interface AIPlayerCreationOptions {
+  lobbyCode: string;
+  personalityId?: string;
+  forcePersonality?: boolean; // if true, use specified personality even if already in use
+  maxPlayers?: number;
+  personalityPool?: string[]; // array of personality IDs to choose from
+}
+
+interface AIPlayerRemovalOptions {
+  lobbyCode: string;
+  playerId: string;
+  reason:
+    | "human-joined"
+    | "lobby-full"
+    | "settings-changed"
+    | "error"
+    | "manual"
+    | "lobby-cleanup"
+    | "inactive";
+}
+
+// AI Decision Engine Types
+interface AIDecisionEngineOptions {
+  personality: AIPersonality;
+  context: {
+    situation?: string;
+    availableMemes?: string[];
+    submissions?: Submission[];
+    gamePhase?: GamePhase;
+    currentRound?: number;
+  };
+  timeout?: number; // milliseconds
+}
+
+interface AIDecisionResult {
+  success: boolean;
+  decision?: AIDecision;
+  error?: string;
+  processingTime: number;
+}
+
+// AI Chat System Types
+interface AIChatMessageOptions {
+  personality: AIPersonality;
+  gameContext: {
+    phase: GamePhase;
+    currentRound: number;
+    totalRounds: number;
+    playerCount: number;
+    aiPlayerCount: number;
+  };
+  trigger:
+    | "thinking"
+    | "submission"
+    | "voting"
+    | "winning"
+    | "losing"
+    | "general";
+  customContext?: Record<string, unknown>;
+}
+
+// AI Player Error Types
+type AIPlayerError =
+  | "PERSONALITY_NOT_FOUND"
+  | "DECISION_TIMEOUT"
+  | "API_UNAVAILABLE"
+  | "INVALID_CONTEXT"
+  | "PERSONALITY_CONFLICT"
+  | "LOBBY_FULL"
+  | "INVALID_SETTINGS";
+
+interface AIPlayerErrorInfo {
+  error: AIPlayerError;
+  message: string;
+  context?: Record<string, unknown>;
+  timestamp: Date;
+  playerId?: string;
+  lobbyCode?: string;
+}
+
+// AI Performance Monitoring Types
+interface AIPlayerMetrics {
+  playerId: string;
+  lobbyCode: string;
+  personalityId: string;
+  decisionsMade: number;
+  averageDecisionTime: number;
+  winRate: number;
+  chatMessagesSent: number;
+  errorsEncountered: number;
+  lastActive: Date;
+}
+
+// AI Configuration Types
+interface AIPersonalityConfig {
+  id: string;
+  name: string;
+  displayName: string;
+  avatarId: string;
+  description: string;
+  traits: {
+    humorStyle: "sarcastic" | "wholesome" | "edgy" | "clever" | "random";
+    responseTime: {
+      min: number;
+      max: number;
+    };
+    chatFrequency: "low" | "medium" | "high";
+    memePreference: "funny" | "relevant" | "shocking" | "clever" | "random";
+    votingStyle: "strategic" | "humor-focused" | "random" | "popular";
+  };
+  chatTemplates: {
+    thinking: string[];
+    submission: string[];
+    voting: string[];
+    winning: string[];
+    losing: string[];
+    general: string[];
+  };
+  enabled: boolean;
+  difficulty: "easy" | "medium" | "hard";
+}
+
+interface AISystemConfig {
+  maxConcurrentAIPlayers: number;
+  defaultPersonalities: string[];
+  decisionTimeout: number; // milliseconds
+  chatCooldown: number; // milliseconds
+  enableLogging: boolean;
+  enableMetrics: boolean;
+  fallbackPersonalityId: string;
 }

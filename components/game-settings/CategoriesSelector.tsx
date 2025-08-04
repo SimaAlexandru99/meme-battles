@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "./FormErrorDisplay";
+import {
+  cardVariants,
+  microInteractionVariants,
+  badgeVariants,
+} from "./animations";
 
 interface CategoryOption {
   id: string;
@@ -61,35 +67,49 @@ export function CategoriesSelector({
   error,
   className,
 }: CategoriesSelectorProps) {
-  const handleCategoryToggle = (categoryId: string, checked: boolean) => {
-    if (checked) {
-      // Add category if not already present
-      if (!value.includes(categoryId)) {
-        onChange([...value, categoryId]);
+  const handleCategoryToggle = React.useCallback(
+    (categoryId: string, checked: boolean) => {
+      if (checked) {
+        // Add category if not already present
+        if (!value.includes(categoryId)) {
+          onChange([...value, categoryId]);
+        }
+      } else {
+        // Remove category, but ensure at least one remains
+        const newCategories = value.filter((id) => id !== categoryId);
+        if (newCategories.length > 0) {
+          onChange(newCategories);
+        }
       }
-    } else {
-      // Remove category, but ensure at least one remains
-      const newCategories = value.filter((id) => id !== categoryId);
-      if (newCategories.length > 0) {
-        onChange(newCategories);
-      }
-    }
-  };
+    },
+    [value, onChange]
+  );
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <motion.div
+      className={cn("space-y-4", className)}
+      variants={microInteractionVariants}
+      initial="initial"
+      animate="animate"
+    >
       <Label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
         Meme Categories
       </Label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {CATEGORY_OPTIONS.map((category) => {
+        {CATEGORY_OPTIONS.map((category, index) => {
           const isSelected = value.includes(category.id);
           const isOnlySelected = isSelected && value.length === 1;
 
           return (
-            <div
+            <motion.div
               key={category.id}
+              variants={cardVariants}
+              initial="initial"
+              whileHover={!disabled && !isOnlySelected ? "hover" : "initial"}
+              whileTap={!disabled && !isOnlySelected ? "tap" : "initial"}
+              animate={isSelected ? "selected" : "initial"}
+              transition={{ delay: index * 0.05 }}
               className={cn(
                 "relative flex items-start space-x-3 p-4 rounded-lg border transition-all duration-200",
                 "hover:shadow-md cursor-pointer",
@@ -97,7 +117,7 @@ export function CategoriesSelector({
                   ? "bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-500/20"
                   : "bg-slate-700/30 border-slate-600/30 hover:bg-slate-700/50",
                 disabled && "opacity-50 cursor-not-allowed",
-                error && "border-red-500/50",
+                error && "border-red-500/50"
               )}
               onClick={() => {
                 if (!disabled && !isOnlySelected) {
@@ -116,7 +136,7 @@ export function CategoriesSelector({
                 disabled={disabled || isOnlySelected}
                 className={cn(
                   "mt-0.5 border-slate-500/50 data-[state=checked]:bg-purple-600",
-                  "data-[state=checked]:border-purple-600 focus-visible:ring-purple-500/50",
+                  "data-[state=checked]:border-purple-600 focus-visible:ring-purple-500/50"
                 )}
               />
 
@@ -134,7 +154,7 @@ export function CategoriesSelector({
                     className={cn(
                       "font-bangers tracking-wide cursor-pointer",
                       isSelected ? "text-white" : "text-purple-200/90",
-                      disabled && "cursor-not-allowed",
+                      disabled && "cursor-not-allowed"
                     )}
                   >
                     {category.label}
@@ -143,19 +163,27 @@ export function CategoriesSelector({
                 <p
                   className={cn(
                     "text-sm font-bangers tracking-wide",
-                    isSelected ? "text-purple-200/80" : "text-slate-400",
+                    isSelected ? "text-purple-200/80" : "text-slate-400"
                   )}
                 >
                   {category.description}
                 </p>
               </div>
 
-              {isSelected && (
-                <div className="absolute top-2 right-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
-                </div>
-              )}
-            </div>
+              <AnimatePresence>
+                {isSelected && (
+                  <motion.div
+                    className="absolute top-2 right-2"
+                    variants={badgeVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           );
         })}
       </div>
@@ -165,6 +193,6 @@ export function CategoriesSelector({
       </div>
 
       <FieldError error={error} />
-    </div>
+    </motion.div>
   );
 }

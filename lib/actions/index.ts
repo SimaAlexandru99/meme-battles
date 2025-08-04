@@ -3,18 +3,9 @@
 // ============================================================================
 
 export {
-  // Session management
-  setSessionCookie,
-  signOut,
-
-  // User authentication
-  signUp,
   signIn,
-  signInWithGoogle,
-  signInWithGitHub,
-  signInAsGuest,
-
-  // User data
+  signUp,
+  signOut,
   getCurrentUser,
   isAuthenticated,
   isAnonymousUser,
@@ -24,9 +15,10 @@ export {
   updateUserProfile,
   getUserDisplayName,
   getUserActiveLobby,
-
-  // Cache management
-  clearUserCache,
+  setSessionCookie,
+  signInWithGoogle,
+  signInWithGitHub,
+  signInAsGuest,
 } from "./auth.action";
 
 // ============================================================================
@@ -34,16 +26,13 @@ export {
 // ============================================================================
 
 export {
-  // Lobby creation and joining
-  createLobby,
   joinLobby,
-
-  // Lobby management
-  getLobbyData,
-  startGame,
+  createLobby,
   leaveLobby,
   updateLobbySettings,
-
-  // Lobby queries
+  addAIPlayerToLobby,
+  removeAIPlayerFromLobby,
+  getLobbyData,
+  startGame,
   getUserActiveLobbies,
 } from "./lobby.action";

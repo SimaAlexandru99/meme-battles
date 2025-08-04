@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { AlertCircle, X } from "lucide-react";
 import { GameSettingsValidationErrors } from "./types";
+import { messageVariants, microInteractionVariants } from "./animations";
 
 interface FormErrorDisplayProps {
   errors: GameSettingsValidationErrors;
@@ -23,14 +25,18 @@ export function FormErrorDisplay({
   }
 
   return (
-    <div
+    <motion.div
       className={cn(
         "rounded-lg border border-red-500/50 bg-red-500/10 p-4",
         "animate-in slide-in-from-top-2 duration-300",
-        className,
+        className
       )}
       role="alert"
       aria-live="polite"
+      variants={messageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
     >
       <div className="flex items-start gap-3">
         <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -42,32 +48,38 @@ export function FormErrorDisplay({
 
           <ul className="space-y-1">
             {errorMessages.map((error, index) => (
-              <li
+              <motion.li
                 key={index}
                 className="text-sm text-red-200 font-bangers tracking-wide flex items-start gap-2"
+                variants={microInteractionVariants}
+                initial="initial"
+                animate="animate"
+                transition={{ delay: index * 0.1 }}
               >
                 <span className="text-red-400 mt-1">•</span>
                 <span>{error}</span>
-              </li>
+              </motion.li>
             ))}
           </ul>
         </div>
 
         {onDismiss && (
-          <button
+          <motion.button
             onClick={onDismiss}
             className={cn(
               "flex-shrink-0 p-1 rounded-md text-red-400 hover:text-red-300",
               "hover:bg-red-500/20 transition-colors duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-red-500/50",
+              "focus:outline-none focus:ring-2 focus:ring-red-500/50"
             )}
             aria-label="Dismiss errors"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <X className="h-4 w-4" />
-          </button>
+          </motion.button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -82,17 +94,20 @@ export function FieldError({ error, className }: FieldErrorProps) {
   }
 
   return (
-    <p
+    <motion.p
       className={cn(
         "text-sm text-red-400 font-bangers tracking-wide",
         "animate-in slide-in-from-top-1 duration-200",
-        className,
+        className
       )}
       role="alert"
       aria-live="polite"
+      variants={microInteractionVariants}
+      initial="initial"
+      animate="animate"
     >
       {error}
-    </p>
+    </motion.p>
   );
 }
 
@@ -108,14 +123,18 @@ export function FormSuccessDisplay({
   className,
 }: FormSuccessDisplayProps) {
   return (
-    <div
+    <motion.div
       className={cn(
         "rounded-lg border border-green-500/50 bg-green-500/10 p-4",
         "animate-in slide-in-from-top-2 duration-300",
-        className,
+        className
       )}
       role="alert"
       aria-live="polite"
+      variants={messageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
     >
       <div className="flex items-start gap-3">
         <div className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5">✓</div>
@@ -127,19 +146,21 @@ export function FormSuccessDisplay({
         </div>
 
         {onDismiss && (
-          <button
+          <motion.button
             onClick={onDismiss}
             className={cn(
               "flex-shrink-0 p-1 rounded-md text-green-400 hover:text-green-300",
               "hover:bg-green-500/20 transition-colors duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-green-500/50",
+              "focus:outline-none focus:ring-2 focus:ring-green-500/50"
             )}
             aria-label="Dismiss success message"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <X className="h-4 w-4" />
-          </button>
+          </motion.button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

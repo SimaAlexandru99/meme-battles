@@ -1,9 +1,11 @@
-import { ArenaDemo } from "@/components/arena-demo";
+import { Arena } from "@/components/arena";
+import { getCurrentUser } from "@/lib/actions/auth.action";
 
-export default function ArenaPage() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <ArenaDemo />
-    </div>
-  );
+export default async function ArenaPage() {
+  const currentUser = await getCurrentUser();
+
+  // Demo lobby code for testing
+  const demoLobbyCode = "DEMO1";
+
+  return <Arena lobbyCode={demoLobbyCode} currentUser={currentUser as User} />;
 }

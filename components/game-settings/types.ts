@@ -60,6 +60,40 @@ export const DEFAULT_GAME_SETTINGS: GameSettingsFormData = {
   categories: ["funny", "random"],
 };
 
+// Available AI personalities for selection
+export const AVAILABLE_AI_PERSONALITIES = [
+  {
+    id: "sarcastic-sam",
+    name: "Sarcastic Sam",
+    description: "Witty and edgy humor",
+  },
+  {
+    id: "wholesome-wendy",
+    name: "Wholesome Wendy",
+    description: "Kind and positive vibes",
+  },
+  {
+    id: "chaos-carl",
+    name: "Chaos Carl",
+    description: "Unpredictable and random",
+  },
+  {
+    id: "brainy-betty",
+    name: "Brainy Betty",
+    description: "Clever and strategic",
+  },
+  {
+    id: "random-rick",
+    name: "Random Rick",
+    description: "Completely unpredictable",
+  },
+  {
+    id: "meme-master-mike",
+    name: "Meme Master Mike",
+    description: "Meme connoisseur",
+  },
+];
+
 // Validation function
 export function validateGameSettings(
   settings: Partial<GameSettingsFormData>

@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "./FormErrorDisplay";
+import { formFieldVariants } from "./animations";
 
 interface TimeLimitSliderProps {
   value: number; // seconds
@@ -40,8 +42,20 @@ export function TimeLimitSlider({
   error,
   className,
 }: TimeLimitSliderProps) {
+  const handleValueChange = React.useCallback(
+    (values: number[]) => {
+      onChange(values[0]);
+    },
+    [onChange]
+  );
+
   return (
-    <div className={cn("space-y-4", className)}>
+    <motion.div
+      className={cn("space-y-4", className)}
+      variants={formFieldVariants}
+      initial="initial"
+      animate="animate"
+    >
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
           Time Limit per Round
@@ -54,7 +68,7 @@ export function TimeLimitSlider({
       <div className="relative px-2">
         <Slider
           value={[value]}
-          onValueChange={(values) => onChange(values[0])}
+          onValueChange={handleValueChange}
           min={30}
           max={300}
           step={15}
@@ -68,7 +82,7 @@ export function TimeLimitSlider({
             "[&_[role=slider]]:focus-visible:ring-2 [&_[role=slider]]:focus-visible:ring-purple-500/50",
             "[&_.slider-track]:bg-slate-700/50",
             "[&_.slider-range]:bg-gradient-to-r [&_.slider-range]:from-purple-600 [&_.slider-range]:to-purple-700",
-            error && "[&_[role=slider]]:border-red-500/50",
+            error && "[&_[role=slider]]:border-red-500/50"
           )}
         />
 
@@ -102,6 +116,6 @@ export function TimeLimitSlider({
       </div>
 
       <FieldError error={error} />
-    </div>
+    </motion.div>
   );
 }
