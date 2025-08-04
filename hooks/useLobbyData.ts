@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
+import useSWR from "swr";
 import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
 import { getLobbyData } from "@/lib/actions/lobby.action";
 
@@ -18,6 +19,8 @@ interface UseLobbyDataReturn {
   error: string | null;
   lobbyData: LobbyData | null;
   refresh: () => Promise<void>;
+  isHost: (userId: string) => boolean;
+  isValidating: boolean;
 }
 
 /**
@@ -35,10 +38,12 @@ export function useLobbyData({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lobbyData, setLobbyData] = useState<LobbyData | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   const fetchLobbyData = useCallback(async () => {
     if (!enabled || !lobbyCode) return;
 
+    setIsValidating(true);
     return Sentry.startSpan(
       {
         op: "ui.action",
@@ -104,6 +109,7 @@ export function useLobbyData({
           span.setAttribute("success", false);
         } finally {
           setIsLoading(false);
+          setIsValidating(false);
         }
       }
     );
@@ -137,6 +143,11 @@ export function useLobbyData({
     error,
     lobbyData,
     refresh,
+    isHost: (userId: string) => {
+      if (!lobbyData) return false;
+      return lobbyData.hostUid === userId;
+    },
+    isValidating,
   };
 }
 
