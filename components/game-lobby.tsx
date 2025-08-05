@@ -131,7 +131,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   React.useEffect(() => {
     if (error) {
       const errorMessage =
-        typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string"
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
           ? (error as { message: string }).message
           : "Failed to load lobby";
       console.error("Lobby error:", errorMessage);
@@ -157,7 +160,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           toast.error("Failed to copy invitation code");
           Sentry.captureException(err);
         }
-      }
+      },
     );
   }, [lobbyCode, copyToClipboard]);
 
@@ -194,7 +197,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(err);
           }
         }
-      }
+      },
     );
   }, [lobbyCode, copyToClipboard]);
 
@@ -222,7 +225,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         } finally {
           setIsStarting(false);
         }
-      }
+      },
     );
   }, [lobbyCode, isCurrentUserHost, router]);
 
@@ -257,7 +260,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           setIsLeaving(false);
           setShowExitDialog(false);
         }
-      }
+      },
     );
   }, [lobbyCode, router]);
 
@@ -322,10 +325,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           } finally {
             setIsSavingSettings(false);
           }
-        }
+        },
       );
     },
-    [lobbyCode, isCurrentUserHost, refresh]
+    [lobbyCode, isCurrentUserHost, refresh],
   );
 
   // Handle adding AI player
@@ -363,10 +366,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           } finally {
             setIsAddingBot(false);
           }
-        }
+        },
       );
     },
-    [lobbyCode, isCurrentUserHost, refresh]
+    [lobbyCode, isCurrentUserHost, refresh],
   );
 
   // Loading state
@@ -497,7 +500,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg sm:text-xl tracking-wide",
                       "shadow-lg shadow-slate-500/30",
                       "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     )}
                   >
                     <RiArrowLeftLine className="w-5 h-5 mr-2" />
@@ -593,13 +596,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
                     isOnline
                       ? "bg-green-500/20 text-green-400 border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border-red-500/30"
+                      : "bg-red-500/20 text-red-400 border-red-500/30",
                   )}
                 >
                   <motion.div
                     className={cn(
                       "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-                      isOnline ? "bg-green-400" : "bg-red-400"
+                      isOnline ? "bg-green-400" : "bg-red-400",
                     )}
                     animate={isOnline ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
@@ -673,7 +676,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg tracking-wide",
                       "shadow-lg shadow-purple-500/30",
                       "focus-visible:ring-2 focus-visible:ring-purple-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     )}
                   >
                     <RiShareLine className="w-5 h-5 mr-2" />
@@ -753,7 +756,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             "focus-visible:ring-2 focus-visible:ring-green-500/50",
                             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                             // Mobile-specific enhancements
-                            "sm:ring-1 sm:hover:ring-2"
+                            "sm:ring-1 sm:hover:ring-2",
                           )}
                         >
                           {isStarting ? (
@@ -830,7 +833,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         className={cn(
                           "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg",
                           "bg-slate-700/30 border border-slate-600/30",
-                          "hover:bg-slate-700/50 transition-colors duration-200"
+                          "hover:bg-slate-700/50 transition-colors duration-200",
                         )}
                         variants={microInteractionVariants}
                         whileHover="hover"
@@ -844,7 +847,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                                 "font-bangers text-sm sm:text-base",
                                 player.isAI
                                   ? "bg-blue-600 text-white"
-                                  : "bg-purple-600 text-white"
+                                  : "bg-purple-600 text-white",
                               )}
                             >
                               {player.isAI ? (

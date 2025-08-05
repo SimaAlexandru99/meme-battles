@@ -105,10 +105,10 @@ export const GameSettingsForm = React.forwardRef<
     className,
     hideActions = false,
   },
-  ref
+  ref,
 ) {
   const [successMessage, setSuccessMessage] = React.useState<string | null>(
-    null
+    null,
   );
 
   const {
@@ -154,7 +154,7 @@ export const GameSettingsForm = React.forwardRef<
       setSuccessMessage("Settings saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     },
-    [onSubmit]
+    [onSubmit],
   );
 
   // Handle unsaved changes warning
@@ -187,7 +187,7 @@ export const GameSettingsForm = React.forwardRef<
         }
       } else {
         const newCategories = currentCategories.filter(
-          (id) => id !== categoryId
+          (id) => id !== categoryId,
         );
         // Always require at least one category
         if (newCategories.length > 0) {
@@ -195,7 +195,7 @@ export const GameSettingsForm = React.forwardRef<
         }
       }
     },
-    [watchedCategories, setValue]
+    [watchedCategories, setValue],
   );
 
   return (
@@ -326,7 +326,7 @@ export const GameSettingsForm = React.forwardRef<
                       ? "bg-purple-600/20 border-purple-500/50 shadow-lg shadow-purple-500/20"
                       : "bg-slate-700/30 border-slate-600/30 hover:bg-slate-700/50",
                     disabled && "opacity-50 cursor-not-allowed",
-                    errors.categories && "border-red-500/50"
+                    errors.categories && "border-red-500/50",
                   )}
                   onClick={() => {
                     if (!disabled && !isOnlySelected) {
@@ -359,7 +359,7 @@ export const GameSettingsForm = React.forwardRef<
                     disabled={disabled || isOnlySelected}
                     className={cn(
                       "mt-0.5 border-slate-500/50 data-[state=checked]:bg-purple-600",
-                      "data-[state=checked]:border-purple-600 focus-visible:ring-purple-500/50"
+                      "data-[state=checked]:border-purple-600 focus-visible:ring-purple-500/50",
                     )}
                   />
 
@@ -377,7 +377,7 @@ export const GameSettingsForm = React.forwardRef<
                         className={cn(
                           "font-bangers tracking-wide cursor-pointer",
                           isSelected ? "text-white" : "text-purple-200/90",
-                          disabled && "cursor-not-allowed"
+                          disabled && "cursor-not-allowed",
                         )}
                       >
                         {category.label}
@@ -386,7 +386,7 @@ export const GameSettingsForm = React.forwardRef<
                     <p
                       className={cn(
                         "text-sm font-bangers tracking-wide",
-                        isSelected ? "text-purple-200/80" : "text-slate-400"
+                        isSelected ? "text-purple-200/80" : "text-slate-400",
                       )}
                     >
                       {category.description}
@@ -439,7 +439,7 @@ export const GameSettingsForm = React.forwardRef<
                 "disabled:cursor-not-allowed disabled:opacity-50",
                 "text-white shadow-lg transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-purple-500/50",
-                "active:scale-95"
+                "active:scale-95",
               )}
             >
               {isSubmitting ? (
@@ -464,7 +464,7 @@ export const GameSettingsForm = React.forwardRef<
                 "text-white border border-slate-600/50",
                 "transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-                "active:scale-95"
+                "active:scale-95",
               )}
             >
               Cancel
@@ -482,7 +482,7 @@ export const GameSettingsForm = React.forwardRef<
                 "text-slate-400 hover:text-white",
                 "hover:bg-slate-700/30 transition-all duration-200",
                 "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-                "disabled:cursor-not-allowed disabled:opacity-50"
+                "disabled:cursor-not-allowed disabled:opacity-50",
               )}
             >
               Reset

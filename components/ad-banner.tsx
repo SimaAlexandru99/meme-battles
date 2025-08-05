@@ -3,15 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAdLocalization } from "@/lib/use-ad-localization";
 import React from "react";
 
-interface AdBannerProps {
-  position: "left" | "right";
-  adId: string;
-  upgradeUrl?: string;
-  removeAdsText?: string;
-  locale?: string;
-  customLocalizations?: AdLocalizationConfig;
-  adNetworks?: AdNetworkConfig[];
-}
+// AdBannerProps interface is defined in types/index.d.ts
 
 export default function AdBanner({
   position,

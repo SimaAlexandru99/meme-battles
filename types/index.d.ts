@@ -187,6 +187,7 @@ interface LobbySettings {
   rounds: number;
   timeLimit: number;
   categories: string[];
+  aiSettings?: AISettings; // Optional to maintain backward compatibility
 }
 
 interface Lobby {
@@ -404,6 +405,32 @@ interface LobbyData {
     timeLimit: number;
     categories: string[];
   };
+  gameState?: {
+    currentRound: number;
+    phase: "submission" | "voting" | "results";
+    phaseStartTime: string;
+    currentSituation: string;
+    submissions: {
+      [playerId: string]: {
+        cardId: string;
+        submittedAt: string;
+        playerId: string;
+      };
+    };
+    votes: {
+      [playerId: string]: string; // voted submission playerId
+    };
+    playerUsedCards?: {
+      [playerId: string]: string[]; // array of used card IDs
+    };
+    roundHistory: Array<{
+      roundNumber: number;
+      situation: string;
+      submissions: Submission[];
+      votes: Vote[];
+      completedAt: string;
+    }>;
+  };
 }
 
 // SWR Hook interfaces
@@ -602,6 +629,9 @@ interface Player {
   cards: MemeCard[];
   selectedCard?: MemeCard;
   isCurrentPlayer?: boolean;
+  // AI-specific properties
+  isAI?: boolean;
+  aiPersonalityId?: string;
 }
 
 interface Submission {
@@ -775,13 +805,7 @@ interface AISettings {
   difficulty: "easy" | "medium" | "hard"; // affects decision quality and timing
 }
 
-// Extend LobbySettings to include AI configuration
-interface LobbySettings {
-  rounds: number;
-  timeLimit: number;
-  categories: string[];
-  aiSettings: AISettings;
-}
+// LobbySettings interface is already defined above with optional aiSettings
 
 // AI Player Management Types
 interface AIPlayerManagerState {

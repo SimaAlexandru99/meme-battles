@@ -39,8 +39,14 @@ class AIPlayerManager {
       },
       async (span) => {
         try {
+          // Check if already initialized
+          if (this.state.isInitialized) {
+            return;
+          }
+
           console.log("AI Player Manager: Starting initialization...");
-          // Load personality pool
+
+          // Lazy load personalities only when needed
           const { getAllPersonalities } = await import("./personalities");
           this.state.personalityPool = getAllPersonalities();
           console.log(

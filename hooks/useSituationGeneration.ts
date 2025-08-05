@@ -50,7 +50,7 @@ export function useSituationGeneration(): UseSituationGenerationReturn {
           console.error("Error generating situation:", error);
           Sentry.captureException(error);
           toast.error(
-            "Failed to generate new situation. Using fallback prompt."
+            "Failed to generate new situation. Using fallback prompt.",
           );
 
           // Fallback to a default prompt if API fails
@@ -73,7 +73,7 @@ export function useSituationGeneration(): UseSituationGenerationReturn {
         } finally {
           setIsGenerating(false);
         }
-      }
+      },
     );
   }, []);
 

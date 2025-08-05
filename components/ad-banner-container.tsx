@@ -3,13 +3,7 @@ import AdBanner from "./ad-banner";
 
 // Import types from global definitions
 
-interface AdBannerContainerProps {
-  upgradeUrl?: string;
-  removeAdsText?: string;
-  locale?: string;
-  customLocalizations?: AdLocalizationConfig;
-  adNetworks?: AdNetworkConfig[];
-}
+// AdBannerContainerProps interface is defined in types/index.d.ts
 
 export default function AdBannerContainer({
   upgradeUrl = "/upgrade",

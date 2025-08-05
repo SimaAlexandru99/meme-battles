@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
 import useSWR from "swr";
@@ -7,7 +7,7 @@ import { getLobbyData } from "@/lib/actions/lobby.action";
 
 interface UseLobbyDataOptions {
   lobbyCode: string;
-  currentUser: User;
+  currentUser?: User;
   refreshInterval?: number;
   enabled?: boolean;
 }
@@ -30,7 +30,7 @@ interface UseLobbyDataReturn {
 export function useLobbyData({
   lobbyCode,
   currentUser,
-  refreshInterval = 2000,
+  refreshInterval = 3000, // Increased from 2000ms to 3000ms
   enabled = true,
 }: UseLobbyDataOptions): UseLobbyDataReturn {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -39,6 +39,10 @@ export function useLobbyData({
   const [error, setError] = useState<string | null>(null);
   const [lobbyData, setLobbyData] = useState<LobbyData | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+
+  // Persist cards for the current player to prevent regeneration
+  const currentPlayerCardsRef = useRef<MemeCard[]>([]);
+  const hasGeneratedCardsRef = useRef(false);
 
   const fetchLobbyData = useCallback(async () => {
     if (!enabled || !lobbyCode) return;
@@ -56,13 +60,33 @@ export function useLobbyData({
           const response = await getLobbyData(lobbyCode);
 
           if (response.success && response.lobby) {
-            const lobby: LobbyData = response.lobby;
+            const lobby: LobbyData = response.lobby as unknown as LobbyData;
             setLobbyData(lobby);
 
             // Convert Firebase lobby players to Arena Player interface
             const convertedPlayers: Player[] = lobby.players.map(
               (lobbyPlayer: LobbyPlayer) => {
-                const isCurrentPlayer = lobbyPlayer.uid === currentUser.id;
+                const isCurrentPlayer = currentUser
+                  ? lobbyPlayer.uid === currentUser.id
+                  : false;
+
+                // Only generate cards once for the current player
+                let playerCards: MemeCard[] = [];
+                if (isCurrentPlayer) {
+                  if (!hasGeneratedCardsRef.current) {
+                    // Generate cards only once per session
+                    playerCards = getRandomMemeCards(7);
+                    currentPlayerCardsRef.current = playerCards;
+                    hasGeneratedCardsRef.current = true;
+                  } else {
+                    // Use persisted cards but filter out used cards
+                    const usedCardIds =
+                      lobby.gameState?.playerUsedCards?.[lobbyPlayer.uid] || [];
+                    playerCards = currentPlayerCardsRef.current.filter(
+                      (card) => !usedCardIds.includes(card.id)
+                    );
+                  }
+                }
 
                 return {
                   id: lobbyPlayer.uid,
@@ -70,12 +94,12 @@ export function useLobbyData({
                   avatar: lobbyPlayer.profileURL || "/icons/cool-pepe.png",
                   score: lobbyPlayer.score || 0, // Use real score from Firebase
                   status: "playing" as const,
-                  cards: isCurrentPlayer ? getRandomMemeCards(7) : [], // Only current player needs cards
+                  cards: playerCards,
                   isCurrentPlayer,
-                  // AI-specific properties
+                  // AI-specific properties - extend the Player interface
                   isAI: lobbyPlayer.isAI || false,
                   aiPersonalityId: lobbyPlayer.aiPersonalityId,
-                };
+                } as Player & { isAI?: boolean; aiPersonalityId?: string };
               }
             );
 
@@ -91,7 +115,9 @@ export function useLobbyData({
             span.setAttribute("player_count", convertedPlayers.length);
             span.setAttribute(
               "ai_player_count",
-              convertedPlayers.filter((p) => p.isAI).length
+              convertedPlayers.filter(
+                (p) => (p as Player & { isAI?: boolean }).isAI
+              ).length
             );
             span.setAttribute("success", true);
           } else {
@@ -115,21 +141,44 @@ export function useLobbyData({
     );
   }, [lobbyCode, currentUser, enabled]);
 
+  // Reset card generation when lobby code changes
+  useEffect(() => {
+    hasGeneratedCardsRef.current = false;
+    currentPlayerCardsRef.current = [];
+  }, [lobbyCode]);
+
   // Initial fetch
   useEffect(() => {
     fetchLobbyData();
   }, [fetchLobbyData]);
 
-  // Set up polling for real-time updates
+  // Set up intelligent polling for real-time updates
   useEffect(() => {
     if (!enabled || !lobbyCode) return;
 
+    // Adjust polling frequency based on lobby state
+    const getPollingInterval = () => {
+      if (!lobbyData) return refreshInterval;
+
+      // More frequent polling during active game
+      if (lobbyData.status === "started") {
+        return 2000; // 2 seconds during active gameplay
+      }
+
+      // Less frequent polling when waiting
+      if (lobbyData.status === "waiting") {
+        return 5000; // 5 seconds when waiting
+      }
+
+      return refreshInterval;
+    };
+
     const interval = setInterval(() => {
       fetchLobbyData();
-    }, refreshInterval);
+    }, getPollingInterval());
 
     return () => clearInterval(interval);
-  }, [fetchLobbyData, refreshInterval, enabled, lobbyCode]);
+  }, [fetchLobbyData, refreshInterval, enabled, lobbyCode, lobbyData]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -228,7 +277,11 @@ export function useLobbyAndActiveData(
 ) {
   const { lobbyOptions = {}, activeLobbiesOptions = {} } = options;
 
-  const lobbyData = useLobbyData(lobbyCode, lobbyOptions);
+  const lobbyData = useLobbyData({
+    lobbyCode: lobbyCode || "",
+    currentUser: lobbyOptions.currentUser as User,
+    ...lobbyOptions,
+  });
   const activeLobbies = useActiveLobbies(activeLobbiesOptions);
 
   return {

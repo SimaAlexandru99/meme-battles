@@ -351,6 +351,23 @@ export async function joinLobby(invitationCode: string) {
 // LOBBY MANAGEMENT FUNCTIONS
 // ============================================================================
 
+// Simple in-memory cache for lobby data
+const lobbyCache = new Map<
+  string,
+  { data: Record<string, unknown>; timestamp: number }
+>();
+const CACHE_TTL = 1000; // 1 second cache
+
+/**
+ * Invalidate cache for a specific lobby
+ */
+function invalidateLobbyCache(lobbyCode: string) {
+  const normalizedCode = normalizeInvitationCode(lobbyCode);
+  lobbyCache.delete(normalizedCode);
+}
+
+// clearLobbyCache function removed - not used
+
 /**
  * Gets lobby data by invitation code
  * @param invitationCode - The 5-character invitation code
@@ -371,6 +388,20 @@ export async function getLobbyData(invitationCode: string) {
 
         const normalizedCode = normalizeInvitationCode(invitationCode);
         span.setAttribute("lobby.code", normalizedCode);
+
+        // Check cache first
+        const cached = lobbyCache.get(normalizedCode);
+        const now = Date.now();
+        if (cached && now - cached.timestamp < CACHE_TTL) {
+          span.setAttribute("cache.hit", true);
+          span.setAttribute("cache.age_ms", now - cached.timestamp);
+          return {
+            success: true,
+            lobby: cached.data,
+          };
+        }
+        span.setAttribute("cache.hit", false);
+        span.setAttribute("cache.age_ms", cached ? now - cached.timestamp : 0);
 
         // Get session cookie
         const cookieStore = await cookies();
@@ -414,7 +445,6 @@ export async function getLobbyData(invitationCode: string) {
         }
 
         // Use players directly from Firebase since AI players are now stored there
-        const allPlayers = lobbyData.players;
 
         // Migrate categories if needed
         const allowedCategories = [
@@ -449,41 +479,23 @@ export async function getLobbyData(invitationCode: string) {
           // Update the lobby with migrated categories
           await lobbyRef.update({
             "settings.categories": finalCategories,
-            updatedAt: new Date().toISOString(),
           });
 
-          // Update the lobby data for serialization
           lobbyData.settings = {
             ...lobbyData.settings,
             categories: finalCategories,
           };
         }
 
-        // Serialize Firestore Timestamps
-        const serializedPlayers = allPlayers.map((player: LobbyPlayer) => ({
-          ...player,
-          joinedAt: serializeTimestamp(player.joinedAt as Date),
-        })) as LobbyPlayer[];
-
-        const serializedLobby = {
-          ...lobbyData,
-          players: serializedPlayers,
-          createdAt: serializeTimestamp(lobbyData.createdAt),
-          updatedAt: serializeTimestamp(lobbyData.updatedAt),
-        } as LobbyData;
-
-        span.setAttribute("lobby.player_count", serializedLobby.players.length);
-        span.setAttribute("lobby.status", serializedLobby.status);
-        span.setAttribute(
-          "lobby.ai_player_count",
-          allPlayers.filter((p: LobbyPlayer) => p.isAI).length
-        );
+        // Cache the result
+        lobbyCache.set(normalizedCode, { data: lobbyData, timestamp: now });
 
         return {
           success: true,
-          lobby: serializedLobby,
+          lobby: lobbyData,
         };
       } catch (error) {
+        console.error("Error getting lobby data:", error);
         Sentry.captureException(error);
         throw error;
       }
@@ -554,11 +566,40 @@ export async function startGame(invitationCode: string) {
           throw new Error("Game is already in progress or finished");
         }
 
-        // Update lobby status to started
+        // Initialize comprehensive game state
+        const gameState = {
+          phase: "submission" as const,
+          currentRound: 1,
+          totalRounds: lobbyData.settings?.rounds || 5,
+          currentSituation: "",
+          submissions: {},
+          votes: {},
+          results: {},
+          playerUsedCards: {},
+          playerScores: {},
+          roundWinners: {},
+          timeLeft: lobbyData.settings?.timeLimit || 60,
+          roundStartTime: new Date().toISOString(),
+          lastActivity: new Date().toISOString(),
+        };
+
+        // Initialize player scores
+        const playerScores: Record<string, number> = {};
+        lobbyData.players.forEach((player: { uid: string }) => {
+          playerScores[player.uid] = 0;
+        });
+
+        // Update lobby with comprehensive game state
         await lobbyRef.update({
           status: "started",
+          gameState,
+          playerScores,
+          startedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
+
+        // Invalidate cache
+        invalidateLobbyCache(normalizedCode);
 
         // Get updated lobby data
         const updatedLobbyDoc = await lobbyRef.get();
@@ -569,6 +610,7 @@ export async function startGame(invitationCode: string) {
           "lobby.player_count",
           updatedLobbyData?.players.length
         );
+        span.setAttribute("lobby.game_state_initialized", "true");
 
         return {
           success: true,
@@ -1536,7 +1578,10 @@ export async function getLobbyScores(invitationCode: string) {
         }));
 
         // Sort by score (highest first)
-        scores.sort((a: typeof scores[number], b: typeof scores[number]) => b.score - a.score);
+        scores.sort(
+          (a: (typeof scores)[number], b: (typeof scores)[number]) =>
+            b.score - a.score
+        );
 
         span.setAttribute("scores.count", scores.length);
 
@@ -1602,6 +1647,876 @@ export async function awardRoundWinner(
           success: true,
           message: `Awarded points for round ${roundNumber}`,
           winnerScore: winnerResult.newScore,
+        };
+      } catch (error) {
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+// ============================================================================
+// GAME SUBMISSION FUNCTIONS
+// ============================================================================
+
+/**
+ * Submits a meme card for the current round
+ * @param invitationCode - The 5-character invitation code
+ * @param cardId - The ID of the meme card being submitted
+ * @returns Success response or error
+ */
+export async function submitMemeCard(invitationCode: string, cardId: string) {
+  return Sentry.startSpan(
+    {
+      op: "game.submit_card",
+      name: "Submit Meme Card",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+        span.setAttribute("card.id", cardId);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Check if game is started
+        if (lobbyData.status !== "started") {
+          throw new Error("Game has not started yet");
+        }
+
+        // Initialize game state if it doesn't exist
+        if (!lobbyData.gameState) {
+          const gameState = {
+            currentRound: 1,
+            phase: "submission",
+            phaseStartTime: new Date().toISOString(),
+            currentSituation: "",
+            submissions: {},
+            votes: {},
+            roundHistory: [],
+          };
+
+          await lobbyRef.update({
+            gameState,
+            updatedAt: new Date().toISOString(),
+          });
+
+          lobbyData.gameState = gameState;
+        }
+
+        // Check if game is in submission phase
+        if (lobbyData.gameState.phase !== "submission") {
+          throw new Error("Submissions are not currently being accepted");
+        }
+
+        // Check if player has already submitted for this round
+        if (
+          lobbyData.gameState.submissions &&
+          lobbyData.gameState.submissions[uid]
+        ) {
+          throw new Error("You have already submitted a card for this round");
+        }
+
+        // Validate card ID (basic validation - could be enhanced)
+        if (!cardId || typeof cardId !== "string") {
+          throw new Error("Invalid card ID");
+        }
+
+        // Submit the card
+        const submission = {
+          cardId,
+          submittedAt: new Date().toISOString(),
+          playerId: uid,
+        };
+
+        await lobbyRef.update({
+          [`gameState.submissions.${uid}`]: submission,
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Invalidate cache
+        invalidateLobbyCache(normalizedCode);
+
+        // Check if all players have submitted
+        const totalPlayers = lobbyData.players.length;
+        const totalSubmissions =
+          Object.keys(lobbyData.gameState.submissions || {}).length + 1; // +1 for current submission
+
+        let shouldTransitionToVoting = false;
+        if (totalSubmissions >= totalPlayers) {
+          // All players have submitted, transition to voting phase
+          await lobbyRef.update({
+            "gameState.phase": "voting",
+            "gameState.phaseStartTime": new Date().toISOString(),
+          });
+          shouldTransitionToVoting = true;
+        }
+
+        span.setAttribute("submission.total_count", totalSubmissions);
+        span.setAttribute("submission.total_players", totalPlayers);
+        span.setAttribute(
+          "submission.phase_transition",
+          shouldTransitionToVoting
+        );
+
+        return {
+          success: true,
+          message: "Card submitted successfully",
+          submission,
+          phaseTransition: shouldTransitionToVoting ? "voting" : null,
+        };
+      } catch (error) {
+        console.error("Error submitting meme card:", error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Gets all submissions for the current round
+ * @param invitationCode - The 5-character invitation code
+ * @returns Submissions data or error
+ */
+export async function getRoundSubmissions(invitationCode: string) {
+  return Sentry.startSpan(
+    {
+      op: "game.get_submissions",
+      name: "Get Round Submissions",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Check if game state exists
+        if (!lobbyData.gameState) {
+          return {
+            success: true,
+            submissions: [],
+            phase: "waiting",
+            currentRound: 0,
+          };
+        }
+
+        // Get submissions with player names
+        const submissions = [];
+        for (const [playerId, submissionData] of Object.entries(
+          lobbyData.gameState.submissions || {}
+        )) {
+          const player = lobbyData.players.find(
+            (p: { uid: string }) => p.uid === playerId
+          );
+
+          submissions.push({
+            id: playerId,
+            playerId,
+            playerName: player?.displayName || "Unknown Player",
+            cardId: (submissionData as Record<string, unknown>)
+              .cardId as string,
+            submittedAt: (submissionData as Record<string, unknown>)
+              .submittedAt as string,
+            votes: 0, // Will be calculated from votes object
+          });
+        }
+
+        // Calculate vote counts if in voting or results phase
+        if (lobbyData.gameState.votes) {
+          const voteCounts: { [playerId: string]: number } = {};
+
+          Object.values(lobbyData.gameState.votes).forEach(
+            (votedPlayerId: unknown) => {
+              const playerId = votedPlayerId as string;
+              voteCounts[playerId] = (voteCounts[playerId] || 0) + 1;
+            }
+          );
+
+          submissions.forEach((submission) => {
+            submission.votes = voteCounts[submission.playerId] || 0;
+          });
+        }
+
+        span.setAttribute("submissions.count", submissions.length);
+        span.setAttribute("game.phase", lobbyData.gameState.phase);
+        span.setAttribute("game.round", lobbyData.gameState.currentRound);
+
+        return {
+          success: true,
+          submissions,
+          phase: lobbyData.gameState.phase,
+          currentRound: lobbyData.gameState.currentRound,
+          currentSituation: lobbyData.gameState.currentSituation,
+        };
+      } catch (error) {
+        console.error("Error getting round submissions:", error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Updates the current game situation/prompt
+ * @param invitationCode - The 5-character invitation code
+ * @param situation - The new situation/prompt
+ * @returns Success response or error
+ */
+export async function updateGameSituation(
+  invitationCode: string,
+  situation: string
+) {
+  return Sentry.startSpan(
+    {
+      op: "game.update_situation",
+      name: "Update Game Situation",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Initialize game state if it doesn't exist
+        if (!lobbyData.gameState) {
+          const gameState = {
+            currentRound: 1,
+            phase: "submission",
+            phaseStartTime: new Date().toISOString(),
+            currentSituation: situation,
+            submissions: {},
+            votes: {},
+            roundHistory: [],
+          };
+
+          await lobbyRef.update({
+            gameState,
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          // Update existing game state
+          await lobbyRef.update({
+            "gameState.currentSituation": situation,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        // Invalidate cache
+        invalidateLobbyCache(normalizedCode);
+
+        span.setAttribute("situation.length", situation.length);
+
+        return {
+          success: true,
+          message: "Game situation updated successfully",
+          situation,
+        };
+      } catch (error) {
+        console.error("Error updating game situation:", error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Starts a new round by resetting submissions and votes
+ * @param invitationCode - The 5-character invitation code
+ * @param roundNumber - The round number to start
+ * @param situation - The situation/prompt for the new round
+ * @returns Success response or error
+ */
+export async function startNewRound(
+  invitationCode: string,
+  roundNumber: number,
+  situation: string
+) {
+  return Sentry.startSpan(
+    {
+      op: "game.start_round",
+      name: "Start New Round",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+        span.setAttribute("round.number", roundNumber);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Save previous round to history if it exists
+        if (
+          lobbyData.gameState &&
+          Object.keys(lobbyData.gameState.submissions || {}).length > 0
+        ) {
+          const previousRound = {
+            roundNumber: lobbyData.gameState.currentRound,
+            situation: lobbyData.gameState.currentSituation,
+            submissions: lobbyData.gameState.submissions,
+            votes: lobbyData.gameState.votes,
+            completedAt: new Date().toISOString(),
+          };
+
+          await lobbyRef.update({
+            [`gameState.roundHistory`]: FieldValue.arrayUnion(previousRound),
+          });
+        }
+
+        // Start new round
+        const newGameState = {
+          currentRound: roundNumber,
+          phase: "submission",
+          phaseStartTime: new Date().toISOString(),
+          currentSituation: situation,
+          submissions: {},
+          votes: {},
+        };
+
+        await lobbyRef.update({
+          gameState: {
+            ...lobbyData.gameState,
+            ...newGameState,
+          },
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Invalidate cache
+        invalidateLobbyCache(normalizedCode);
+
+        return {
+          success: true,
+          message: `Round ${roundNumber} started successfully`,
+          gameState: newGameState,
+        };
+      } catch (error) {
+        console.error("Error starting new round:", error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+/**
+ * Removes a card from a player's hand after submission
+ * @param invitationCode - The 5-character invitation code
+ * @param cardId - The ID of the card to remove
+ * @returns Success response or error
+ */
+export async function removeCardFromHand(
+  invitationCode: string,
+  cardId: string
+) {
+  return Sentry.startSpan(
+    {
+      op: "game.remove_card",
+      name: "Remove Card From Hand",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+        span.setAttribute("card.id", cardId);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const playerIndex = lobbyData.players.findIndex(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (playerIndex === -1) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Initialize player's used cards if not exists
+        if (!lobbyData.gameState) {
+          lobbyData.gameState = {
+            currentRound: 1,
+            phase: "submission",
+            phaseStartTime: new Date().toISOString(),
+            currentSituation: "",
+            submissions: {},
+            votes: {},
+            roundHistory: [],
+          };
+        }
+
+        // Track used cards for this player
+        const playerUsedCards = lobbyData.gameState.playerUsedCards || {};
+        if (!playerUsedCards[uid]) {
+          playerUsedCards[uid] = [];
+        }
+
+        // Add the card to used cards list
+        if (!playerUsedCards[uid].includes(cardId)) {
+          playerUsedCards[uid].push(cardId);
+        }
+
+        // Update the lobby with the used cards
+        await lobbyRef.update({
+          "gameState.playerUsedCards": playerUsedCards,
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Invalidate cache
+        invalidateLobbyCache(normalizedCode);
+
+        span.setAttribute("card.removed", true);
+        span.setAttribute(
+          "player.used_cards_count",
+          playerUsedCards[uid].length
+        );
+
+        return {
+          success: true,
+          message: "Card removed from hand",
+          usedCardsCount: playerUsedCards[uid].length,
+        };
+      } catch (error) {
+        console.error("Error removing card from hand:", error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Gets a new card for a player to replenish their hand
+ * @param invitationCode - The 5-character invitation code
+ * @returns New card data or error
+ */
+export async function replenishPlayerCard(invitationCode: string) {
+  return Sentry.startSpan(
+    {
+      op: "game.replenish_card",
+      name: "Replenish Player Card",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if user is in the lobby
+        const isUserInLobby = lobbyData.players.some(
+          (player: { uid: string }) => player.uid === uid
+        );
+
+        if (!isUserInLobby) {
+          throw new Error("You are not a member of this lobby");
+        }
+
+        // Get used cards for this player
+        const playerUsedCards =
+          lobbyData.gameState?.playerUsedCards?.[uid] || [];
+
+        // Import the meme card pool utility
+        const { getRandomMemeCards } = await import(
+          "@/lib/utils/meme-card-pool"
+        );
+
+        // Get a new card that hasn't been used
+        const newCards = getRandomMemeCards(1, playerUsedCards);
+
+        if (newCards.length === 0) {
+          throw new Error("No more unique cards available");
+        }
+
+        const newCard = newCards[0];
+
+        span.setAttribute("new_card.id", newCard.id);
+
+        return {
+          success: true,
+          newCard,
+          message: "New card added to hand",
+        };
+      } catch (error) {
+        console.error("Error replenishing player card:", error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * Automatically starts a round after all players have joined
+ * @param invitationCode - The 5-character invitation code
+ * @returns Success response or error
+ */
+export async function autoStartRound(invitationCode: string) {
+  return Sentry.startSpan(
+    {
+      op: "lobby.auto_start_round",
+      name: "Auto Start Round",
+    },
+    async (span) => {
+      try {
+        // Validate invitation code
+        if (!validateInvitationCode(invitationCode)) {
+          throw new Error("Invalid invitation code format");
+        }
+
+        const normalizedCode = normalizeInvitationCode(invitationCode);
+        span.setAttribute("lobby.code", normalizedCode);
+
+        // Get session cookie
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+
+        if (!sessionCookie) {
+          throw new Error("Authentication required");
+        }
+
+        // Verify session cookie
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie);
+        const uid = decodedClaims.uid;
+
+        span.setAttribute("user.uid", uid);
+
+        // Get lobby data
+        const lobbyRef = db.collection("lobbies").doc(normalizedCode);
+        const lobbyDoc = await lobbyRef.get();
+
+        if (!lobbyDoc.exists) {
+          throw new Error("Lobby not found");
+        }
+
+        const lobbyData = lobbyDoc.data();
+        if (!lobbyData) {
+          throw new Error("Lobby data not found");
+        }
+
+        // Check if game is already started
+        if (lobbyData.status !== "started") {
+          throw new Error("Game must be started before auto-starting rounds");
+        }
+
+        // Check if round is already in progress
+        if (
+          lobbyData.gameState?.phase &&
+          lobbyData.gameState.phase !== "waiting"
+        ) {
+          throw new Error("Round is already in progress");
+        }
+
+        // Generate random situation
+        const situations = [
+          "Your boss asks you to work overtime on Friday night",
+          "Your crush texts you 'we need to talk'",
+          "You accidentally send a meme to your family group chat",
+          "Your internet goes down during an important meeting",
+          "You realize you're wearing your shirt inside out in public",
+          "Your phone dies right before an important call",
+          "You forget your wallet at home and need to pay for lunch",
+          "Your alarm doesn't go off and you're late for work",
+          "You accidentally like a 3-year-old post on social media",
+          "Your food delivery arrives completely wrong",
+        ];
+
+        const randomSituation =
+          situations[Math.floor(Math.random() * situations.length)];
+
+        // Distribute cards to each player
+        const playerCards: Record<string, string[]> = {};
+        const allMemeFiles = [
+          "meme1.jpg",
+          "meme2.jpg",
+          "meme3.jpg",
+          "meme4.jpg",
+          "meme5.jpg",
+          "meme6.jpg",
+          "meme7.jpg",
+          "meme8.jpg",
+          "meme9.jpg",
+          "meme10.jpg",
+          // Add more meme files as needed
+        ];
+
+        lobbyData.players.forEach((player: { uid: string }) => {
+          // Give each player 7 random cards
+          const playerHand = [];
+          const shuffledCards = [...allMemeFiles].sort(
+            () => Math.random() - 0.5
+          );
+
+          for (let i = 0; i < 7; i++) {
+            playerHand.push(shuffledCards[i]);
+          }
+
+          playerCards[player.uid] = playerHand;
+        });
+
+        // Initialize round state
+        const roundState = {
+          phase: "submission" as const,
+          currentRound: (lobbyData.gameState?.currentRound || 0) + 1,
+          totalRounds: lobbyData.settings?.rounds || 5,
+          currentSituation: randomSituation,
+          submissions: {},
+          votes: {},
+          results: {},
+          playerUsedCards: lobbyData.gameState?.playerUsedCards || {},
+          playerScores: lobbyData.gameState?.playerScores || {},
+          roundWinners: lobbyData.gameState?.roundWinners || {},
+          timeLeft: lobbyData.settings?.timeLimit || 60,
+          roundStartTime: new Date().toISOString(),
+          lastActivity: new Date().toISOString(),
+          playerCards, // Store cards for each player
+          roundStartedAt: new Date().toISOString(),
+        };
+
+        // Update lobby with new round state
+        await lobbyRef.update({
+          gameState: roundState,
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Log round start for debugging
+        console.log(
+          `Round ${roundState.currentRound} started for lobby ${normalizedCode}`
+        );
+        console.log(`Situation: ${randomSituation}`);
+        console.log(
+          `Players: ${lobbyData.players.map((p: { displayName: string }) => p.displayName).join(", ")}`
+        );
+        console.log(`Cards distributed to ${lobbyData.players.length} players`);
+
+        // Invalidate cache
+        invalidateLobbyCache(normalizedCode);
+
+        span.setAttribute("lobby.round_number", roundState.currentRound);
+        span.setAttribute("lobby.player_count", lobbyData.players.length);
+        span.setAttribute("lobby.situation", randomSituation);
+
+        return {
+          success: true,
+          roundState,
+          message: `Round ${roundState.currentRound} started with ${lobbyData.players.length} players`,
         };
       } catch (error) {
         Sentry.captureException(error);

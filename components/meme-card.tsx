@@ -222,6 +222,7 @@ export const MemeCard = memo(function MemeCard({
                 isLoading && "opacity-0",
                 "group-hover:scale-105",
               )}
+              style={{ width: "auto", height: "auto" }}
               onLoad={handleImageLoad}
               onError={handleImageError}
               loading="lazy"

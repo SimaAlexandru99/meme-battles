@@ -92,13 +92,13 @@ export function GameSettingsModal({
         setFormError(
           error instanceof Error
             ? error.message
-            : "Failed to save game settings. Please try again."
+            : "Failed to save game settings. Please try again.",
         );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [onSave, handleClose]
+    [onSave, handleClose],
   );
 
   // Handle form cancel
@@ -227,7 +227,7 @@ export function GameSettingsModal({
                         "text-white border border-slate-600/50",
                         "transition-all duration-200",
                         "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-                        "active:scale-95"
+                        "active:scale-95",
                       )}
                     >
                       Cancel
@@ -245,7 +245,7 @@ export function GameSettingsModal({
                       "disabled:cursor-not-allowed disabled:opacity-50",
                       "text-white shadow-lg transition-all duration-200",
                       "focus:outline-none focus:ring-2 focus:ring-purple-500/50",
-                      "active:scale-95"
+                      "active:scale-95",
                     )}
                   >
                     {isSubmitting ? (

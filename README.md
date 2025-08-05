@@ -16,6 +16,7 @@
 4. All players vote for their favorite meme submission (one vote per player, cannot vote for own submission).
 5. The meme with the most votes wins the round, and the player earns points based on their submission's vote count.
 6. Players draw back up to seven cards from the meme pool, and a new round begins.
+7. After each round user gets a new card.
 
 ### Key Features
 

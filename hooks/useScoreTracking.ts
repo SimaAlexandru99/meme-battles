@@ -17,7 +17,7 @@ interface UseScoreTrackingReturn {
     playerId: string,
     points: number,
     reason: "win" | "participation" | "bonus",
-    roundNumber?: number
+    roundNumber?: number,
   ) => Promise<void>;
   awardWinner: (winnerId: string, roundNumber: number) => Promise<void>;
   getScores: () => Promise<GameScore[]>;
@@ -40,7 +40,7 @@ export function useScoreTracking({
       playerId: string,
       points: number,
       reason: "win" | "participation" | "bonus",
-      roundNumber?: number
+      roundNumber?: number,
     ) => {
       setIsLoading(true);
       setError(null);
@@ -79,10 +79,10 @@ export function useScoreTracking({
           } finally {
             setIsLoading(false);
           }
-        }
+        },
       );
     },
-    [lobbyCode]
+    [lobbyCode],
   );
 
   const awardWinner = useCallback(
@@ -103,7 +103,7 @@ export function useScoreTracking({
             const result = await awardRoundWinner(
               lobbyCode,
               winnerId,
-              roundNumber
+              roundNumber,
             );
 
             if (result.success) {
@@ -123,10 +123,10 @@ export function useScoreTracking({
           } finally {
             setIsLoading(false);
           }
-        }
+        },
       );
     },
-    [lobbyCode]
+    [lobbyCode],
   );
 
   const getScores = useCallback(async (): Promise<GameScore[]> => {
@@ -161,7 +161,7 @@ export function useScoreTracking({
         } finally {
           setIsLoading(false);
         }
-      }
+      },
     );
   }, [lobbyCode]);
 

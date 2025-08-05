@@ -100,7 +100,7 @@ export function PlayersList({
         variant="default"
         className={cn(
           "text-xs font-bold px-2 py-1 flex items-center gap-1",
-          getScoreColor(score, index)
+          getScoreColor(score, index),
         )}
       >
         {score} pts
@@ -120,7 +120,7 @@ export function PlayersList({
           !isOpen &&
             "opacity-0 pointer-events-none transform translate-x-[100%]",
           isOpen && "opacity-100",
-          className
+          className,
         )}
       >
         <Card className="h-full bg-card/95 backdrop-blur-sm border shadow-lg flex flex-col">
@@ -162,7 +162,7 @@ export function PlayersList({
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-card-foreground truncate text-sm">
                           {currentPlayer.name}
-                          {currentPlayer.isAI && (
+                          {currentPlayer.isAI && ( 
                             <span className="ml-2 text-xs text-orange-300">
                               (AI)
                             </span>
