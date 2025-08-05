@@ -1,14 +1,14 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useHover, useKeyPress, useIdle, useTitle } from "react-haiku";
 import { Button } from "@/components/ui/button";
 import {
   RiGlobalLine,
   RiFireLine,
   RiGroupLine,
   RiDiceLine,
-  RiLoginBoxLine,
   RiUserLine,
   RiLogoutBoxLine,
   RiDiscordLine,
@@ -20,11 +20,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useCurrentUser, useIsAnonymous } from "@/hooks/useCurrentUser";
-import { signOut } from "@/lib/actions/auth.action";
 import ProfilePicker from "./profile-picker";
 import GameCard from "./game-card";
-import { useAvatarSetup } from "@/hooks/useAvatarSetup";
 import { PrivateLobbySection } from "@/components/private-lobby-section";
 import {
   cardExitVariants,
@@ -32,8 +29,11 @@ import {
   microInteractionVariants,
   lobbyEnterVariants,
 } from "@/lib/animations/private-lobby-variants";
-import { useLobbyOperations } from "@/hooks/useLobbyOperations";
-import { useEventListener } from "react-haiku";
+import { toast } from "sonner";
+import { signOut } from "@/lib/actions/auth.action";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { generateGuestDisplayName } from "@/firebase/client";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;
@@ -42,25 +42,101 @@ interface AvatarSetupCardProps {
 const AvatarSetupCard = memo(function AvatarSetupCard({
   initialUserData,
 }: AvatarSetupCardProps) {
-  const {
-    nickname,
-    currentAvatar,
-    profileURL,
-    isLoading,
-    isUpdating,
-    isUpdatingAvatar,
-    generateRandomName,
-    handleNicknameChange,
-    handleAvatarChange,
-  } = useAvatarSetup(initialUserData);
+  const { user, refresh } = useCurrentUser(initialUserData);
+  const { updateDisplayName, updateAvatar, isUpdatingName, isUpdatingAvatar } =
+    useUpdateProfile();
+
+  // Use current user data or fallback to initial data
+  const currentUser = user || initialUserData;
+  const [nickname, setNickname] = useState(currentUser?.name || "MemeLord");
+  const [currentAvatar, setCurrentAvatar] = useState(
+    currentUser?.avatarId || "evil-doge",
+  );
+  const [profileURL] = useState(currentUser?.profileURL || "");
+
+  // Update local state when user data changes
+  React.useEffect(() => {
+    if (currentUser) {
+      setNickname(currentUser.name || "MemeLord");
+      setCurrentAvatar(currentUser.avatarId || "evil-doge");
+    }
+  }, [currentUser]);
+
+  // Enhanced hover effects for avatar card
+  const { hovered: isCardHovered, ref: cardRef } = useHover();
+
+  const generateRandomName = useCallback(async () => {
+    const randomName = generateGuestDisplayName();
+    setNickname(randomName);
+
+    // Update in Firebase
+    const result = await updateDisplayName(randomName);
+    if (result.success) {
+      toast.success("Generated new name!");
+      // Refresh user data to get the latest from server
+      refresh();
+    } else {
+      toast.error("Failed to update name");
+      // Revert local state on failure
+      setNickname(currentUser?.name || "MemeLord");
+    }
+  }, [updateDisplayName, currentUser?.name, refresh]);
+
+  const handleNicknameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setNickname(e.target.value);
+    },
+    [],
+  );
+
+  const handleNicknameBlur = useCallback(async () => {
+    if (nickname !== currentUser?.name && nickname.trim().length > 0) {
+      const result = await updateDisplayName(nickname.trim());
+      if (result.success) {
+        toast.success("Name updated!");
+        // Refresh user data to get the latest from server
+        refresh();
+      } else {
+        toast.error("Failed to update name");
+        // Revert local state on failure
+        setNickname(currentUser?.name || "MemeLord");
+      }
+    }
+  }, [nickname, currentUser?.name, updateDisplayName, refresh]);
+
+  const handleAvatarChange = useCallback(
+    async (avatarId: string, avatarSrc: string) => {
+      setCurrentAvatar(avatarId);
+
+      // Update in Firebase
+      const result = await updateAvatar(avatarId, avatarSrc);
+      if (result.success) {
+        toast.success("Avatar updated!");
+        // Refresh user data to get the latest from server
+        refresh();
+      } else {
+        toast.error("Failed to update avatar");
+        // Revert local state on failure
+        setCurrentAvatar(currentUser?.avatarId || "evil-doge");
+      }
+    },
+    [updateAvatar, currentUser?.avatarId, refresh],
+  );
 
   return (
     <motion.div
+      ref={cardRef as React.Ref<HTMLDivElement>}
       variants={cardExitVariants}
       custom={0} // Avatar card slides left
       className="relative w-full max-w-[280px] sm:max-w-sm h-[240px] sm:h-[260px] md:w-56 md:h-[280px]"
     >
-      <Card className="relative w-full h-full bg-transparent md:bg-gradient-to-br md:from-slate-800 md:to-slate-700 border-0 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105">
+      <Card
+        className={`relative w-full h-full bg-transparent md:bg-gradient-to-br md:from-slate-800 md:to-slate-700 border-0 shadow-2xl transition-all duration-300 ${
+          isCardHovered
+            ? "shadow-purple-500/30 scale-105 md:shadow-2xl"
+            : "hover:shadow-purple-500/20 hover:scale-105"
+        }`}
+      >
         <div
           className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-lg opacity-0 md:opacity-100 shadow-none md:shadow-lg"
           aria-hidden="true"
@@ -72,7 +148,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
               profileURL={profileURL}
               onAvatarChange={handleAvatarChange}
               size="md"
-              className={isUpdatingAvatar ? "opacity-75" : ""}
+              className=""
               isUpdating={isUpdatingAvatar}
             />
             <div className="flex flex-col items-center gap-1 sm:gap-2">
@@ -82,15 +158,21 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
               <div className="flex items-center gap-1 sm:gap-2">
                 <div className="relative">
                   <Input
-                    placeholder={isLoading ? "Loading..." : "Meme name"}
+                    placeholder="Meme name"
                     value={nickname}
                     onChange={handleNicknameChange}
-                    disabled={isLoading}
+                    onBlur={handleNicknameBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    disabled={isUpdatingName}
                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 w-20 sm:w-28 md:w-24 text-xs sm:text-sm md:text-xs h-6 sm:h-8 md:h-7 disabled:opacity-50"
                     maxLength={20}
                     aria-label="Enter your meme nickname"
                   />
-                  {isUpdating && (
+                  {isUpdatingName && (
                     <div
                       className="absolute -right-1 -top-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"
                       title="Updating name..."
@@ -107,7 +189,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
                     variant="outline"
                     className="border-slate-600 text-slate-300 hover:bg-slate-600 w-5 h-5 sm:w-6 sm:h-6 md:w-5 md:h-5 p-0 disabled:opacity-50"
                     onClick={generateRandomName}
-                    disabled={isLoading}
+                    disabled={isUpdatingName}
                     title="Generate random funny name"
                     aria-label="Generate random funny name"
                   >
@@ -123,40 +205,29 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
   );
 });
 
-const Header = memo(function Header() {
-  const {
-    user: currentUser,
-    isLoading,
-    refresh: refreshUser,
-  } = useCurrentUser();
-  const { isAnonymous } = useIsAnonymous();
-
-  // Use Haiku's useEventListener for user events
-  useEventListener("userSetupComplete", () => {
-    console.log("User setup completed, refreshing header data...");
-    refreshUser();
-  });
-
-  useEventListener("userAuthenticated", () => {
-    console.log("User authenticated, refreshing header data...");
-    refreshUser();
-  });
-
-  useEventListener("userSignedOut", () => {
-    console.log("User signed out, refreshing header data...");
-    refreshUser();
-  });
-
+const Header = memo(function Header({
+  initialUserData,
+}: {
+  initialUserData?: User | null;
+}) {
   const handleSignOut = async () => {
     try {
       await signOut();
-      window.dispatchEvent(new CustomEvent("userSignedOut"));
+      toast.success("Signed out successfully!");
+      // Redirect to home or refresh the page
+      window.location.href = "/";
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Sign out error:", error);
+      toast.error("Failed to sign out. Please try again.");
     }
   };
 
-  const isAuthenticatedUser = currentUser && !isAnonymous;
+  const handleSignIn = () => {
+    // Navigate to sign in page or show sign in modal
+    window.location.href = "/auth/signin";
+  };
+
+  const isAnonymous = initialUserData?.isAnonymous ?? false;
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50">
@@ -171,47 +242,44 @@ const Header = memo(function Header() {
             priority
           />
         </div>
-        {!isLoading && (
-          <>
-            {isAuthenticatedUser ? (
-              <div className="flex items-center gap-2">
-                <Link href="/profile">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
-                    aria-label="View your profile"
-                  >
-                    <RiUserLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    Profile
-                  </Button>
-                </Link>
+        <div className="flex items-center gap-2">
+          {isAnonymous ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-green-500/30 text-green-300 hover:bg-green-500/10 hover:border-green-400/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
+              onClick={handleSignIn}
+              aria-label="Sign in to your account"
+            >
+              <RiUserLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              Sign In
+            </Button>
+          ) : (
+            <>
+              <Link href="/profile">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-red-500/30 text-red-300 hover:bg-red-500/10 hover:border-red-400/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
-                  onClick={handleSignOut}
-                  aria-label="Sign out of your account"
+                  className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
+                  aria-label="View your profile"
                 >
-                  <RiLogoutBoxLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <Link href="/sign-in">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-white/30 text-white hover:bg-white/10 hover:border-white/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2 md:text-base md:px-6 md:py-2.5"
-                  aria-label="Sign in to your account"
-                >
-                  <RiLoginBoxLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                  Sign In
+                  <RiUserLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                  Profile
                 </Button>
               </Link>
-            )}
-          </>
-        )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-red-500/30 text-red-300 hover:bg-red-500/10 hover:border-red-400/50 transition-all duration-200 font-bangers tracking-wide backdrop-blur-sm text-xs px-3 py-1.5 sm:text-sm sm:px-4 sm:py-2"
+                onClick={handleSignOut}
+                aria-label="Sign out of your account"
+              >
+                <RiLogoutBoxLine className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                Sign Out
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -245,6 +313,7 @@ const BottomNavigation = memo(function BottomNavigation() {
         <button
           className="flex flex-col items-center gap-1 text-white font-bangers text-base sm:text-lg md:text-xl hover:scale-110 transition-all duration-200"
           aria-label="Learn how to play"
+          onClick={() => toast.info("How to play guide coming soon!")}
         >
           <span className="text-shadow-lg">How to Play</span>
           <RiArrowDownLine className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 -mt-1" />
@@ -263,7 +332,7 @@ const GameCardsSection = memo(function GameCardsSection({
   onPrivateWarClick: () => void;
 }) {
   const handleMemeBattleClick = useCallback(() => {
-    console.log("Starting meme battle");
+    toast.success("Starting meme battle!");
   }, []);
 
   return (
@@ -327,9 +396,18 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Use the lobby operations hook
-  const { lobbyState, handleJoinLobby, handleCreateLobby, resetLobbyState } =
-    useLobbyOperations();
+  // React Haiku hooks for enhanced UX
+  const isIdle = useIdle(300000); // 5 minutes idle detection
+
+  // Set dynamic page title
+  useTitle("Meme Battles - Join the Ultimate Meme War!");
+
+  // Handle idle state
+  React.useEffect(() => {
+    if (isIdle && currentView === "private-lobby") {
+      toast.info("You've been idle for a while. Your lobby might expire soon!");
+    }
+  }, [isIdle, currentView]);
 
   // Handle private war click with animation transition
   const handlePrivateWarClick = useCallback(() => {
@@ -344,20 +422,37 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
   // Handle back to main view
   const handleBackToMain = useCallback(() => {
     setCurrentView("main");
-    // Reset lobby state when going back
-    resetLobbyState();
-  }, [resetLobbyState]);
+  }, []);
 
   const handleBrowseLobbies = useCallback(() => {
-    console.log("Browsing lobbies");
+    toast.info("Browse lobbies feature coming soon!");
   }, []);
+
+  // Keyboard shortcuts for power users
+  useKeyPress(["ctrl", "b"], () => {
+    if (currentView === "main") {
+      handleBrowseLobbies();
+    }
+  });
+
+  useKeyPress(["ctrl", "p"], () => {
+    if (currentView === "main") {
+      handlePrivateWarClick();
+    }
+  });
+
+  useKeyPress(["escape"], () => {
+    if (currentView === "private-lobby") {
+      handleBackToMain();
+    }
+  });
 
   return (
     <section
       className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden"
       role="banner"
     >
-      <Header />
+      <Header initialUserData={initialUserData} />
       <div className="absolute inset-0 z-0" aria-hidden="true">
         <Particles
           particleCount={150}
@@ -439,12 +534,18 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
             >
               <PrivateLobbySection
                 onBackToMain={handleBackToMain}
-                onJoinLobby={handleJoinLobby}
-                onCreateLobby={handleCreateLobby}
-                isLoading={lobbyState.isLoading}
-                error={lobbyState.error}
-                createdLobbyCode={lobbyState.createdLobbyCode}
-                joinSuccess={lobbyState.joinSuccess}
+                onJoinLobby={async () => {
+                  toast.success("Joining lobby...");
+                  return Promise.resolve();
+                }}
+                onCreateLobby={async () => {
+                  toast.success("Creating lobby...");
+                  return Promise.resolve("");
+                }}
+                isLoading={false}
+                error={null}
+                createdLobbyCode=""
+                joinSuccess={false}
                 className="w-full h-full flex flex-col items-center justify-start"
               />
             </motion.div>

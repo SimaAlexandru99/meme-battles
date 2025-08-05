@@ -13,7 +13,6 @@ import {
   errorVariants,
   microInteractionVariants,
 } from "@/lib/animations/private-lobby-variants";
-import { normalizeInvitationCode } from "@/lib/services/lobby.service";
 
 interface InvitationCodeInputProps {
   value: string;
@@ -24,6 +23,14 @@ interface InvitationCodeInputProps {
   className?: string;
 }
 
+// Simple normalization function for UI demonstration
+const normalizeInvitationCode = (value: string): string => {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 5);
+};
+
 export function InvitationCodeInput({
   value,
   onChange,
@@ -32,12 +39,8 @@ export function InvitationCodeInput({
   error = false,
   className,
 }: InvitationCodeInputProps) {
-  // Focus management refs
-  const inputRef = React.useRef<HTMLDivElement>(null);
-
   const handleChange = React.useCallback(
     (newValue: string) => {
-      // Use the service function for normalization
       const normalizedValue = normalizeInvitationCode(newValue);
       onChange(normalizedValue);
 
@@ -65,38 +68,6 @@ export function InvitationCodeInput({
     [onChange, onComplete],
   );
 
-  // Announce input changes to screen readers
-  React.useEffect(() => {
-    if (value.length > 0) {
-      const announcement = document.createElement("div");
-      announcement.setAttribute("aria-live", "polite");
-      announcement.setAttribute("aria-atomic", "true");
-      announcement.className = "sr-only";
-      announcement.textContent = `Entered ${value.length} of 5 characters`;
-      document.body.appendChild(announcement);
-
-      setTimeout(() => {
-        document.body.removeChild(announcement);
-      }, 100);
-    }
-  }, [value]);
-
-  React.useEffect(() => {
-    if (error) {
-      const announcement = document.createElement("div");
-      announcement.setAttribute("aria-live", "assertive");
-      announcement.setAttribute("aria-atomic", "true");
-      announcement.className = "sr-only";
-      announcement.textContent =
-        "Invalid invitation code. Please check the code and try again.";
-      document.body.appendChild(announcement);
-
-      setTimeout(() => {
-        document.body.removeChild(announcement);
-      }, 100);
-    }
-  }, [error]);
-
   return (
     <motion.div
       className={cn("flex flex-col items-center gap-2", className)}
@@ -114,7 +85,6 @@ export function InvitationCodeInput({
       </div>
 
       <motion.div
-        ref={inputRef}
         variants={inputVariants}
         initial="initial"
         animate={error ? "error" : "initial"}

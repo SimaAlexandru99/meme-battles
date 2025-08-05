@@ -47,7 +47,7 @@ export function JoinWithCodeSection({
         try {
           await onJoinLobby(code);
         } catch (err) {
-          // Error handling is managed by parent component
+          // Error handling is managed by a parent component
           console.error("Failed to join lobby:", err);
         } finally {
           setIsJoining(false);
@@ -73,7 +73,7 @@ export function JoinWithCodeSection({
         !isJoining
       ) {
         event.preventDefault();
-        handleJoinClick();
+        handleJoinClick().then((r) => console.log(r));
       }
     },
     [invitationCode, isLoading, isJoining, handleJoinClick],

@@ -106,7 +106,7 @@ export default function ProfilePicker({
       <DialogTrigger asChild>
         <div className={`relative cursor-pointer ${className}`}>
           <Avatar
-            className={`${sizeClasses[size]} border-4 border-purple-400/50 shadow-lg hover:border-purple-400/70 transition-colors`}
+            className={`${sizeClasses[size]} border-4 border-purple-400/50 shadow-lg transition-colors`}
           >
             <AvatarImage src={avatarSrc} alt={avatarAlt} />
             <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white font-bold">
@@ -118,9 +118,7 @@ export default function ProfilePicker({
             disabled={isUpdating}
             className={`absolute -bottom-1 -right-1 ${
               editButtonSizeClasses[size]
-            } rounded-full bg-purple-600 hover:bg-purple-700 p-0 ${
-              isUpdating ? "opacity-50" : ""
-            }`}
+            } rounded-full bg-purple-600 p-0 ${isUpdating ? "opacity-50" : ""}`}
             aria-label="Change avatar"
           >
             <RiEditLine className={editIconSizeClasses[size]} />
@@ -146,12 +144,18 @@ export default function ProfilePicker({
               disabled={isUpdating}
               className={`relative group transition-all duration-200 hover:scale-105 ${
                 selectedAvatar === avatar.id
-                  ? "ring-2 ring-purple-400 ring-offset-2 ring-offset-slate-800"
+                  ? "ring-2 ring-purple-400 ring-offset-2 ring-offset-slate-800 shadow-lg shadow-purple-500/25"
                   : ""
               } ${isUpdating ? "opacity-50 cursor-not-allowed" : ""}`}
               title={avatar.name}
             >
-              <Avatar className="w-20 h-20 border-2 border-slate-600 group-hover:border-purple-400/50">
+              <Avatar
+                className={`w-20 h-20 border-2 ${
+                  selectedAvatar === avatar.id
+                    ? "border-purple-400 shadow-inner shadow-purple-500/20"
+                    : "border-slate-600"
+                }`}
+              >
                 <AvatarImage src={avatar.src} alt={avatar.name} />
                 <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-700 text-white font-bold text-sm">
                   {avatar.fallback}
@@ -159,12 +163,10 @@ export default function ProfilePicker({
               </Avatar>
 
               {selectedAvatar === avatar.id && (
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                <div className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/50 border-2 border-white">
                   <RiCheckLine className="w-4 h-4 text-white" />
                 </div>
               )}
-
-              <div className="absolute inset-0 bg-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
             </button>
           ))}
         </div>

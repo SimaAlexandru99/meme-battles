@@ -1,73 +1,81 @@
-# Project Structure & Organization
+---
+inclusion: always
+---
 
-## Directory Layout
+# Project Structure & Code Organization
 
-```
-/app                    # Next.js App Router pages
+## Directory Structure Rules
+
+**ALWAYS follow this exact structure when creating new files:**
+
+```text
+/app                    # Next.js App Router - pages and layouts only
   /(auth)              # Authentication routes (grouped)
   /(front)             # Main application routes (grouped)
-  /test-invitation-code # Testing utilities
   layout.tsx           # Root layout with providers
   globals.css          # Global styles and Tailwind
 
-/components             # React components
+/components             # React components - organized by domain
   /forms               # Form-specific components
   /game-settings       # Game configuration components
-  /logos               # Brand assets
-  /shared              # Reusable components
-  /ui                  # shadcn/ui components
+  /shared              # Reusable cross-feature components
+  /ui                  # shadcn/ui components ONLY
 
-/hooks                  # Custom React hooks
-/lib                    # Utility functions and services
-  /actions             # Server actions
-  /animations          # Animation variants and configs
+/hooks                  # Custom React hooks - business logic
+/lib                    # Utilities and services
+  /actions             # Next.js Server Actions
   /services            # Business logic services
+  /utils               # Pure utility functions
 
 /providers              # React context providers
-/firebase               # Firebase configuration
+/firebase               # Firebase configuration files (Realtime Database)
 /types                  # TypeScript type definitions
-/__tests__              # Test files
-  /utils               # Test utilities
 ```
 
-## Naming Conventions
+## Mandatory Naming Conventions
 
 - **Files**: kebab-case (e.g., `game-lobby.tsx`, `use-mobile.ts`)
-- **Components**: PascalCase exports, kebab-case files
+- **Components**: PascalCase exports, kebab-case filenames
 - **Hooks**: camelCase starting with `use` (e.g., `useCurrentUser`)
-- **Types**: PascalCase interfaces/types
-- **Constants**: UPPER_SNAKE_CASE
+- **Types/Interfaces**: PascalCase (e.g., `GameState`, `PlayerData`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_PLAYERS`)
 
-## Component Organization
+## Import Order Requirements
 
-- **UI Components**: Located in `/components/ui` (shadcn/ui)
-- **Feature Components**: Organized by domain (e.g., game, auth, forms)
-- **Shared Components**: Reusable across features in `/components/shared`
-- **Page Components**: Co-located with routes in `/app`
-
-## Import Patterns
+**ALWAYS organize imports in this exact order:**
 
 ```typescript
-// External libraries first
+// 1. External libraries first
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 
-// Internal imports with path aliases
+// 2. Internal imports with path aliases
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { GameService } from "@/lib/services/game-service";
+
+// 3. Type imports last
+import type { GameState } from "@/types";
 ```
 
-## Code Organization Principles
+## Component Placement Rules
 
-- **Feature-based**: Group related functionality together
-- **Separation of Concerns**: UI, business logic, and data layers separated
-- **Accessibility First**: All components include proper ARIA labels and keyboard navigation
-- **Type Safety**: Comprehensive TypeScript coverage with strict mode
-- **Testing**: Co-located test files with `.test.tsx` suffix
+- **UI Components**: `/components/ui` - shadcn/ui components ONLY
+- **Feature Components**: `/components/{domain}` - group by game feature
+- **Shared Components**: `/components/shared` - reusable across features
+- **Page Components**: Co-located with routes in `/app`
 
-## Configuration Files
+## Architecture Patterns
 
-- `components.json`: shadcn/ui configuration
-- `tsconfig.json`: TypeScript compiler options with path aliases
-- `jest.config.ts`: Testing configuration with coverage thresholds
-- `next.config.ts`: Next.js configuration with Sentry integration
+- **Separation of Concerns**: UI components should NOT contain business logic
+- **Custom Hooks**: Extract all stateful logic into custom hooks
+- **Server Actions**: Place all server-side operations in `/lib/actions`
+- **Type Safety**: Every component must have proper TypeScript types
+- **Accessibility**: Include ARIA labels and keyboard navigation for all interactive elements
+
+## File Creation Guidelines
+
+- **Components**: Create in appropriate domain folder with `.tsx` extension
+- **Hooks**: Place in `/hooks` with descriptive names starting with `use`
+- **Services**: Business logic goes in `/lib/services` with class-based structure
+- **Types**: Define in `/types/index.d.ts` or co-located type files
+- **Tests**: Co-locate with `.test.tsx` suffix in same directory

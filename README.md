@@ -1,26 +1,75 @@
 # 📘 Meme Battles — Project Documentation & Development Plan
 
-**Meme Battles** is a real-time multiplayer web game where players compete to create the funniest meme matches. Inspired by **What Do You Meme?**, players draw seven random meme image cards from a pool of 800 images stored in `/public/memes/`, select one to match an AI-generated situation (using Vercel AI SDK), and rate submissions to determine the winner.
+**Meme Battles** is a real-time multiplayer web game where players compete to create the funniest meme matches. Inspired
+by **What Do You Meme?**, players draw seven random meme image cards from a pool of 800 images stored in
+`/public/memes/`, select one to match an AI-generated situation (using Vercel AI SDK), and rate submissions to determine
+the winner.
 
 ## 🎯 Project Overview
 
-- **Platform**: Web-based, built with **Next.js**, **Tailwind CSS**, **shadcn/ui**, **Firebase**, and **Vercel AI SDK** (`npm i ai`).
-- **Core Gameplay**: Players join rooms, receive seven random meme image cards from a folder of 800 images, submit one card to match an AI-generated situation, and rate all submissions (1-5 stars) to score points.
+- **Platform**: Web-based, built with **Next.js**, **Tailwind CSS**, **shadcn/ui**, **Firebase**, and **Vercel AI SDK
+  ** (`npm i ai`).
+- **Core Gameplay**: Players join rooms, receive seven random meme image cards from a folder of 800 images, submit one
+  card to match an AI-generated situation, and rate all submissions (1-5 stars) to score points.
 - **Goal**: Launch by **August 25, 2025 @ 10:00 PM**.
 
 ## 🎲 Game Mechanics (Inverted from What Do You Meme?)
 
-1. Each player receives **seven random meme image cards** from a pool of 800 images in `/public/memes/`.
-2. An **AI-generated situation** (e.g., "When you realize the meeting is all-you-can-eat...") is presented each round using Vercel AI SDK.
-3. Players select and submit one meme image card to match the situation.
-4. All players vote for their favorite meme submission (one vote per player, cannot vote for own submission).
-5. The meme with the most votes wins the round, and the player earns points based on their submission's vote count.
-6. Players draw back up to seven cards from the meme pool, and a new round begins.
-7. After each round user gets a new card.
+1. **Card Distribution**:
+   - Each player receives **seven random meme image cards** from a pool of 800 images in `/public/memes/` (e.g.,
+     `meme001.jpg` to `meme800.jpg`), with no duplicates within their hand.
+   - Memes are tracked in Realtime database(`/rooms/{roomId}/usedMemes`). If the pool runs low (<100 memes), used memes
+     are
+     reshuffled (excluding active hands).
+   - Rounds may feature **themed sub-pools** (e.g., pop culture, animals) to add variety.
+
+2. **AI-Generated Situation**:
+   - An **AI-generated situation** (e.g., “When you realize the meeting is all-you-can-eat...”) is presented each round
+     using Vercel AI SDK.
+   - A basic keyword filter ensures prompts are appropriate. If AI output fails or is flagged, a pre-approved
+     template (from a curated list of 50–100) is used.
+   - Situations may align with a round theme (e.g., “Workplace Fails”) for cohesive creativity.
+
+3. **Meme Submission**:
+   - Players have **60 seconds** or **custom timer** to select and submit one meme card to match the situation.
+   - If a player fails to submit, a random card from their hand is auto-submitted to keep the round moving.
+
+4. **Voting System**:
+   - Players rate submissions on a **1–5-star scale** within a **30-second window**. In rooms with 6+ players, each
+     player rates a random subset of five submissions to reduce fatigue.
+   - Players cannot rate their own submission (disabled in UI).
+   - The meme with the **highest average rating** wins. Ties are broken by total votes received.
+   - Visual feedback shows ratings and highlights the winner with confetti effects.
+
+5. **Scoring**:
+   - Players earn **1 point per vote** received, a **3-point bonus** for the winning meme, and **1 participation point
+     ** for submitting.
+   - **Streak Bonus**: +2 points for winning consecutive rounds.
+   - **Power-Ups**: After every three rounds, players earn a random power-up (e.g., “Swap Card” to trade with the deck,
+     “Double Vote” to amplify one vote).
+
+6. **Round Progression**:
+   - After voting, players draw back to seven cards, ensuring no duplicates in their hand.
+   - A new round begins with a fresh AI situation. Minimum three active players are required; otherwise, the game pauses with
+     an “Invite More Players” prompt.
+   - Disconnected players are marked inactive but can rejoin within 2 minutes without losing their score.
+
+7. **Game End**:
+   - The game ends after **10 rounds** or when a player reaches **50 points**, whichever comes first.
+   - The highest-scoring player is declared the winner, displayed on a leaderboard with shareable winning memes.
 
 ### Key Features
 
-- **Random Meme Selection**: Randomly assign seven unique meme images per player from 800 images, ensuring no duplicates within a player's hand.
+- **Random Meme Selection**: Ensures unique hands per player, with themed sub-pools for variety.
+- **AI Situations**: Dynamic, moderated prompts with fallback templates for reliability.
+- **Engaging Voting**: 1–5 star ratings with time limits and subset voting for scalability.
+- **Social Features**: Real-time chat, shareable memes, and power-ups for interactivity.
+- **Robustness**: Handles disconnections, no-submissions, and low player counts gracefully.
+
+### Key Features
+
+- **Random Meme Selection**: Randomly assign seven unique meme images per player from 800 images, ensuring no duplicates
+  within a player's hand.
 - **AI Situations**: Dynamic, humorous prompts generated via Vercel AI SDK.
 - **Voting System**: Simple one-vote-per-player system where the meme with the most votes wins.
 - **Social Features**: Real-time chat and shareable winning memes.
@@ -35,7 +84,7 @@ Players vote for their favorite meme submission:
 - Each player can vote for **only one meme** per round
 - Players cannot vote for their own submission
 - The meme with the most votes wins the round
-- In case of a tie, the submission with the most unique voters wins
+- In case of a tie, the submission with the unique voters wins
 - Players earn points based on their submission's vote count
 
 **Voting UI:**
@@ -69,9 +118,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - [ ] Initialize project: Next.js, Tailwind, shadcn/ui, Firebase, Vercel AI SDK.
 - [ ] Configure Firebase: Auth (Google + Guest), Firestore, Storage.
-- [ ] Build Create/Join Room flows with username/avatar input and guest with random name.
-- [ ] Create real-time Lobby UI with player list and game status.
-- [ ] Implement **MemeCardDeck** component to display seven random meme cards per player.
+- [ ] Build Create/Join Room flows with username/avatar input and guest with a random name.
+- [ ] Create a real-time Lobby UI with a player list and game status.
+- [ ] Implement **the MemeCardDeck** component to display seven random meme cards per player.
 
 ### 🔹 Week 2: August 5 – August 11
 
@@ -180,8 +229,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## 📋 Meme Card Selection Logic
 
 - **Folder**: `/public/memes/` contains 800 images (e.g., `meme001.jpg` to `meme800.jpg`).
-- **Distribution**: For each player, randomly select seven unique images without replacement within their hand, but allow overlap across players.
-- **Implementation**: Use `memeSelector.ts` to generate a list of image URLs (e.g., `/memes/meme123.jpg`) and store them in Firestore under `players.cards`.
+- **Distribution**: For each player, randomly select seven unique images without replacement within their hand, but
+  allow overlap across players.
+- **Implementation**: Use `memeSelector.ts` to generate a list of image URLs (e.g., `/memes/meme123.jpg`) and store them
+  in Firestore under `players.cards`.
 - **Refill**: After each round, replenish each player's hand to seven cards, ensuring no duplicates in their new hand.
 
 ### Sample Code for `memeSelector.ts`

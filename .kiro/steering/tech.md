@@ -1,57 +1,74 @@
-# Tech Stack & Development
+---
+inclusion: always
+---
+
+# Tech Stack & Development Guidelines
 
 ## Core Technologies
 
-- **Framework**: Next.js 15.4.5 with App Router
-- **Language**: TypeScript 5.8.3
-- **Styling**: Tailwind CSS 4.1.11
-- **UI Components**: shadcn/ui (New York style) with Radix UI primitives
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth (Google + Guest)
-- **AI**: Vercel AI SDK with Google AI
-- **Animations**: Framer Motion + GSAP
-- **Package Manager**: pnpm 9.15.4
+- **Framework**: Next.js 15.4.5 with App Router (use App Router patterns, not Pages Router)
+- **Language**: TypeScript 5.8.3 (strict mode enabled, always use proper typing)
+- **Styling**: Tailwind CSS 4.1.11 (use utility classes, avoid custom CSS when possible)
+- **UI Components**: shadcn/ui New York style with Radix UI (import from `@/components/ui`)
+- **Database**: Firebase Realtime Database (real-time listeners for game state and chat)
+- **Authentication**: Firebase Auth with Google + Guest modes
+- **AI**: Vercel AI SDK with Google AI for situation generation
+- **Animations**: Framer Motion for UI, GSAP for complex sequences
+- **Package Manager**: pnpm (never use npm or yarn commands)
+- **Type Checking**: ESLint for TypeScript, Prettier for formatting
 
-## Key Libraries
+## Required Libraries & Patterns
 
-- **State Management**: SWR for data fetching
-- **Forms**: React Hook Form with Zod validation
-- **Icons**: Lucide React
-- **Notifications**: Sonner (toast notifications)
-- **Theming**: next-themes
-- **Error Tracking**: Sentry
-- **Testing**: Jest + Testing Library
+- **State Management**: SWR for server state, React state for UI state
+- **Forms**: React Hook Form + Zod validation (always validate both client/server)
+- **Icons**: Lucide React only (consistent icon family)
+- **Notifications**: Sonner for toast messages
+- **Theming**: next-themes for dark/light mode
+- **Error Tracking**: Sentry for production errors
+- **Testing**: Jest + Testing Library (70% coverage minimum)
+- **Linter**: ESLint + Prettier (always use strict mode, never allow console.log)
+- **Code Style**: Prettier + ESLint (always use strict mode, never allow console.log)
+- **Deployment**: Vercel with automatic deployments
 
-## Common Commands
+## Development Commands
 
 ```bash
-# Development
-pnpm dev              # Start dev server with Turbopack
+# Always use pnpm, never npm/yarn
+pnpm dev              # Development with Turbopack
 pnpm build            # Production build
-pnpm start            # Start production server
-
-# Code Quality
-pnpm lint             # ESLint check
-pnpm format           # Prettier formatting
-
-# Testing
-pnpm test             # Run tests
-pnpm test:watch       # Watch mode
-pnpm test:coverage    # Coverage report
-pnpm test:ci          # CI testing
+pnpm test             # Run test suite
+pnpm lint             # ESLint validation
 ```
 
-## Configuration
+## Code Style Requirements
 
-- **TypeScript**: Strict mode enabled, path aliases via `@/*`
-- **ESLint**: Next.js recommended config with TypeScript
-- **Prettier**: Automatic formatting on save
-- **shadcn/ui**: New York style, CSS variables, Lucide icons
-- **Jest**: jsdom environment, 70% coverage threshold
+- **TypeScript**: Use strict mode, proper types for all props/functions, don't use `any` and for interfaces use index.d.ts what is global
+- **Path Aliases**: Always use `@/*` imports, never relative paths for cross-directory imports
+- **Component Props**: Define interfaces for all component props
+- **Error Handling**: Wrap async operations in try-catch, use error boundaries
+- **Performance**: Use React.memo for expensive components, useMemo for calculations
+
+## Firebase Integration Rules
+
+- **Real-time**: Use Firebase Realtime Database listeners for game state and chat
+- **Security**: All Realtime Database operations must respect security rules
+- **Offline**: Handle offline states gracefully with SWR fallbacks
+- **Data Structure**: Use JSON tree structure for efficient real-time updates
+- **Listeners**: Implement proper cleanup of real-time listeners to prevent memory leaks
+- **Optimization**: Flatten data structure to minimize listener overhead
+- **Security Rules**: Define granular read/write rules for different user roles
+
+## UI/UX Standards
+
+- **Responsive**: Mobile-first design, test on 320px minimum width
+- **Accessibility**: Include ARIA labels, keyboard navigation, focus management
+- **Loading States**: Show skeletons/spinners for all async operations
+- **Error States**: Provide clear error messages with recovery actions
+- **Animations**: Use Framer Motion variants, respect prefers-reduced-motion
 
 ## Build & Deployment
 
-- **Platform**: Vercel
-- **Asset Prefix**: `/exp4-static`
-- **Image Optimization**: Next.js Image with remote patterns
-- **Monitoring**: Sentry integration with source maps
+- **Platform**: Vercel with automatic deployments
+- **Assets**: Use Next.js Image component, optimize for mobile bandwidth
+- **Monitoring**: Sentry integration with source maps enabled
+- **Environment**: Use `.env.local` for development secrets

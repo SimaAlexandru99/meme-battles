@@ -15,9 +15,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import * as Sentry from "@sentry/nextjs";
-import { kickPlayerService } from "@/lib/services/lobby.service";
-import { removeAIPlayerFromLobbyService } from "@/lib/services/lobby.service";
 import { cn } from "@/lib/utils";
 
 interface KickPlayerButtonProps {
@@ -32,8 +29,6 @@ interface KickPlayerButtonProps {
 }
 
 export function KickPlayerButton({
-  lobbyCode,
-  playerId,
   playerName,
   isHost,
   isCurrentUser,
@@ -49,36 +44,28 @@ export function KickPlayerButton({
   }, []);
 
   const handleConfirmKick = React.useCallback(async () => {
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Kick Player",
-      },
-      async () => {
-        setIsKicking(true);
-        try {
-          if (isAI) {
-            await removeAIPlayerFromLobbyService(lobbyCode, playerId);
-            toast.success(
-              `Successfully removed AI player ${playerName} from the lobby`,
-            );
-          } else {
-            await kickPlayerService(lobbyCode, playerId);
-            toast.success(`Successfully kicked ${playerName} from the lobby`);
-          }
-          setShowConfirmDialog(false);
-          onKickSuccess?.();
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to kick player";
-          toast.error(errorMessage);
-          Sentry.captureException(err);
-        } finally {
-          setIsKicking(false);
-        }
-      },
-    );
-  }, [lobbyCode, playerId, playerName, isAI, onKickSuccess]);
+    setIsKicking(true);
+    try {
+      // Mock implementation
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (isAI) {
+        toast.success(
+          `Successfully removed AI player ${playerName} from the lobby`,
+        );
+      } else {
+        toast.success(`Successfully kicked ${playerName} from the lobby`);
+      }
+      setShowConfirmDialog(false);
+      onKickSuccess?.();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to kick player";
+      toast.error(errorMessage);
+    } finally {
+      setIsKicking(false);
+    }
+  }, [playerName, isAI, onKickSuccess]);
 
   const handleCancelKick = React.useCallback(() => {
     setShowConfirmDialog(false);

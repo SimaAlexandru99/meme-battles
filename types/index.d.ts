@@ -93,17 +93,6 @@ interface FormSwitchProps<T extends FieldValues> {
   className?: string;
 }
 
-interface FormFileUploadProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
-  label: string;
-  description?: string;
-  folder: string;
-  userId?: string;
-  className?: string;
-  disabled?: boolean;
-}
-
 interface FormRadioGroupProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
@@ -119,17 +108,6 @@ interface AdSlotData {
   containerId: string;
   googleAdId?: string;
   pokiAdId?: string;
-}
-
-interface AdConfig {
-  id: string;
-  size: {
-    width: number;
-    height: number;
-  };
-  position: "left" | "right";
-  upgradeUrl: string;
-  removeAdsText: string;
 }
 
 type AdNetwork = "google" | "poki";
@@ -169,7 +147,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string
+      div: string,
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;
@@ -182,40 +160,6 @@ interface PokiWindow extends Window {
     displayAd: (containerId: string) => Promise<void>;
   };
 }
-
-interface LobbySettings {
-  rounds: number;
-  timeLimit: number;
-  categories: string[];
-  aiSettings?: AISettings; // Optional to maintain backward compatibility
-}
-
-interface Lobby {
-  code: string;
-  hostUid: string;
-  hostDisplayName: string;
-  status: "waiting" | "started" | "finished";
-  maxPlayers: number;
-  players: LobbyPlayer[];
-  createdAt: Date | FirebaseFirestore.Timestamp; // Can be either Date or Firestore timestamp
-  updatedAt: Date | FirebaseFirestore.Timestamp; // Can be either Date or Firestore timestamp
-  settings: LobbySettings;
-}
-
-interface JoinLobbyResponse {
-  success: boolean;
-  lobby: Lobby;
-}
-
-interface CreateLobbyResponse {
-  success: boolean;
-  lobby: Lobby;
-}
-
-interface ApiError {
-  error: string;
-}
-
 // Avatar-related interfaces
 interface AvatarState {
   nickname: string;
@@ -235,251 +179,23 @@ type AvatarAction =
     }
   | { type: "RESET_STATE" };
 
-// Lobby operations interfaces
-interface LobbyState {
-  isLoading: boolean;
-  error: string | null;
-  createdLobbyCode: string | null;
-  joinSuccess: boolean;
-}
-
-interface UseLobbyOperationsReturn {
-  lobbyState: LobbyState;
-  handleJoinLobby: (code: string) => Promise<void>;
-  handleCreateLobby: () => Promise<string>;
-  resetLobbyState: () => void;
-}
-
 // Ad localization interface
 interface UseAdLocalizationOptions {
   locale?: string;
   removeAdsText?: string;
   customLocalizations?: AdLocalizationConfig;
 }
-
-// View transition types
-type ViewState =
-  | "main"
-  | "transitioning-out"
-  | "private-lobby"
-  | "transitioning-in";
-
-interface ViewTransitionState {
-  currentView: ViewState;
-  isAnimating: boolean;
-  animationPhase: "idle" | "exit" | "enter" | "complete";
-}
-
-// Private lobby types
-interface PrivateLobbyState {
-  showPrivateLobby: boolean;
-  isJoining: boolean;
-  isCreating: boolean;
-  invitationCode: string;
-  error: string | null;
-  createdLobbyCode: string | null;
-}
-
-interface LobbyInvitation {
-  code: string; // 5-character alphanumeric
-  lobbyId: string;
-  createdBy: string;
-  createdAt: Date;
-  expiresAt: Date;
-  maxPlayers: number;
-  currentPlayers: number;
-}
-
-interface PrivateLobby {
-  id: string;
-  invitationCode: string;
-  hostId: string;
-  players: LobbyPlayer[];
-  status: "waiting" | "starting" | "in-progress" | "completed";
-  createdAt: Date;
-  settings: {
-    maxPlayers: number;
-    gameMode: string;
-    timeLimit: number;
-  };
-}
-
-// Lobby-related interfaces
-interface LobbyPlayer {
-  uid: string;
-  displayName: string;
-  profileURL?: string | null;
-  joinedAt: Date | string | { toDate: () => Date }; // Can be Date, ISO string, or Firestore Timestamp
-  isHost: boolean;
-  // AI-specific properties
-  isAI?: boolean;
-  aiPersonalityId?: string;
-  aiPlayer?: AIPlayer;
-  // Score tracking
-  score?: number;
-  totalWins?: number;
-  totalGames?: number;
-}
-
-interface GameScore {
-  playerId: string;
-  playerName: string;
-  score: number;
-  roundScores: {
-    [roundNumber: number]: {
-      points: number;
-      reason: "win" | "participation" | "bonus";
-      timestamp: Date | string;
-    };
-  };
-  totalWins: number;
-  totalGames: number;
-  lastUpdated: Date | string;
-}
-
-type LobbyError =
-  | "INVALID_CODE"
-  | "LOBBY_NOT_FOUND"
-  | "LOBBY_FULL"
-  | "LOBBY_EXPIRED"
-  | "NETWORK_ERROR"
-  | "CREATION_FAILED"
-  | "PERMISSION_DENIED";
-
-// Hook-related interfaces
-interface ReconnectionState {
-  isConnected: boolean;
-  isReconnecting: boolean;
-  reconnectAttempts: number;
-  lastConnectionTime: Date | null;
-  connectionError: string | null;
-}
-
-interface UseReconnectionOptions {
-  lobbyCode: string;
-  maxReconnectAttempts?: number;
-  reconnectInterval?: number;
-  onReconnectSuccess?: () => void;
-  onReconnectFailure?: () => void;
-}
-
-interface UseLobbyRefreshOptions {
-  lobbyCode: string;
-  enabled?: boolean;
-  refreshInterval?: number;
-  onDataUpdate?: (lobbyData: LobbyData) => void;
-  onError?: (error: string) => void;
-}
-
 // Provider interfaces
 interface SWRProviderProps {
   children: React.ReactNode;
 }
-
-interface FirstTimeSetupProviderProps {
-  children: React.ReactNode;
-  initialUserData?: User | null;
-}
-
-interface AnonymousAuthProviderProps {
-  children: React.ReactNode;
-}
-
 // Component prop interfaces (non-UI components)
 interface GameLobbyProps {
   lobbyCode: string;
   currentUser: User;
 }
 
-interface LobbyData {
-  code: string;
-  hostUid: string;
-  hostDisplayName: string;
-  status: "waiting" | "started" | "finished";
-  maxPlayers: number;
-  players: LobbyPlayer[];
-  createdAt: Date | FirebaseFirestore.Timestamp | string;
-  updatedAt: Date | FirebaseFirestore.Timestamp | string;
-  settings: {
-    rounds: number;
-    timeLimit: number;
-    categories: string[];
-  };
-  gameState?: {
-    currentRound: number;
-    phase: "submission" | "voting" | "results";
-    phaseStartTime: string;
-    currentSituation: string;
-    submissions: {
-      [playerId: string]: {
-        cardId: string;
-        submittedAt: string;
-        playerId: string;
-      };
-    };
-    votes: {
-      [playerId: string]: string; // voted submission playerId
-    };
-    playerUsedCards?: {
-      [playerId: string]: string[]; // array of used card IDs
-    };
-    roundHistory: Array<{
-      roundNumber: number;
-      situation: string;
-      submissions: Submission[];
-      votes: Vote[];
-      completedAt: string;
-    }>;
-  };
-}
-
 // SWR Hook interfaces
-interface UseLobbyDataOptions {
-  refreshInterval?: number;
-  enabled?: boolean;
-  revalidateOnFocus?: boolean;
-  revalidateOnReconnect?: boolean;
-  keepPreviousData?: boolean;
-  errorRetryCount?: number;
-  errorRetryInterval?: number;
-  [key: string]: unknown; // Allow other SWR options
-}
-
-interface UseLobbyDataReturn {
-  lobbyData: LobbyData | undefined;
-  error: Error | null;
-  isLoading: boolean;
-  isValidating: boolean;
-  mutate: () => Promise<LobbyData | undefined>;
-  refresh: () => Promise<LobbyData | undefined>;
-  hasData: boolean;
-  isHost: (userId: string) => boolean;
-  playerCount: number;
-  addAIPlayer: (botConfig: {
-    personalityId: string;
-    difficulty: "easy" | "medium" | "hard";
-  }) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
-  removeAIPlayer: (
-    aiPlayerId: string
-  ) => Promise<{ success: boolean; lobby: Lobby; message: string }>;
-  aiPlayers: LobbyPlayer[];
-  humanPlayers: LobbyPlayer[];
-}
-
-interface UseActiveLobbiesOptions {
-  enabled?: boolean;
-  refreshInterval?: number;
-  keepPreviousData?: boolean;
-  errorRetryCount?: number;
-  errorRetryInterval?: number;
-  [key: string]: unknown; // Allow other SWR options
-}
-
-interface UseLobbyAndActiveDataOptions {
-  lobbyOptions?: UseLobbyDataOptions;
-  activeLobbiesOptions?: UseActiveLobbiesOptions;
-}
-
 interface ProfilePickerProps {
   currentAvatar?: string;
   profileURL?: string;
@@ -488,87 +204,6 @@ interface ProfilePickerProps {
   className?: string;
   isUpdating?: boolean;
 }
-
-interface PrivateLobbySectionProps {
-  onJoinLobby: (code: string) => Promise<void>;
-  onCreateLobby: () => Promise<string>;
-  isLoading?: boolean;
-}
-
-interface LanguageSelectorProps {
-  currentLocale: string;
-  onLocaleChange: (locale: string) => void;
-  className?: string;
-}
-
-interface JoinWithCodeSectionProps {
-  onJoinLobby: (code: string) => Promise<void>;
-  isLoading?: boolean;
-}
-
-interface InvitationCodeInputProps {
-  onSubmit: (code: string) => void;
-  isLoading?: boolean;
-  error?: string | null;
-  className?: string;
-}
-
-interface AvatarSetupCardProps {
-  currentUser: User;
-  onProfileUpdate: (updates: {
-    name?: string;
-    profileURL?: string;
-    avatarId?: string;
-  }) => void;
-  isLoading?: boolean;
-}
-
-interface HeroSectionProps {
-  currentUser: User | null;
-  onProfileUpdate: (updates: {
-    name?: string;
-    profileURL?: string;
-    avatarId?: string;
-  }) => void;
-  isLoading?: boolean;
-}
-
-interface GameRedirectProps {
-  lobbyCode: string;
-  currentUser: User;
-}
-
-interface GamePlayProps {
-  lobbyCode: string;
-  currentUser: User;
-}
-
-interface GameCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  className?: string;
-}
-
-interface CreateLobbySectionProps {
-  onCreateLobby: () => Promise<string>;
-  isLoading?: boolean;
-}
-
-interface FirstTimeSetupDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentUser: User | null;
-}
-
-interface AuthErrorProps {
-  error: string;
-  onRetry?: () => void;
-  className?: string;
-}
-
 interface AdBannerProps {
   position: "left" | "right";
   adId: string;
@@ -586,11 +221,6 @@ interface AdBannerContainerProps {
   customLocalizations?: AdLocalizationConfig;
   adNetworks?: AdNetworkConfig[];
 }
-
-interface ActiveGameCheckProps {
-  children: React.ReactNode;
-}
-
 // Page prop interfaces
 interface GamePlayPageProps {
   params: Promise<{
@@ -602,15 +232,6 @@ interface GameLobbyPageProps {
   params: Promise<{
     code: string;
   }>;
-}
-
-// Meme Battle Game Types
-enum GamePhase {
-  LOADING = "loading",
-  SUBMISSION = "submission",
-  VOTING = "voting",
-  RESULTS = "results",
-  GAME_OVER = "game_over",
 }
 
 interface MemeCard {
@@ -634,23 +255,6 @@ interface Player {
   aiPersonalityId?: string;
 }
 
-interface Submission {
-  id: string;
-  playerId: string;
-  playerName: string;
-  memeCard: MemeCard;
-  votes: number;
-  submittedAt: Date;
-  isWinner?: boolean;
-}
-
-interface Vote {
-  id: string;
-  voterId: string;
-  submissionId: string;
-  votedAt: Date;
-}
-
 interface ChatMessage {
   id: string;
   playerId: string;
@@ -659,6 +263,7 @@ interface ChatMessage {
   timestamp: Date;
   type: "chat" | "system" | "action";
 }
+
 interface GameState {
   currentRound: number;
   totalRounds: number;
@@ -668,280 +273,191 @@ interface GameState {
   winner?: Player;
 }
 
-interface GameDocument {
-  // Meta
-  id: string;
-  lobbyCode: string;
-  status: "waiting" | "playing" | "finished";
-  createdAt: Date | FirebaseFirestore.Timestamp;
-  updatedAt: Date | FirebaseFirestore.Timestamp;
+// Lobby Management Types - Core Data Interfaces
+type LobbyStatus = "waiting" | "starting" | "started" | "ended";
+type PlayerStatus = "waiting" | "ready" | "disconnected";
+type ConnectionStatus =
+  | "connected"
+  | "connecting"
+  | "disconnected"
+  | "reconnecting";
 
-  // Game Settings
-  settings: {
-    rounds: number;
-    submissionTime: number; // seconds
-    votingTime: number; // seconds
-  };
-
-  // Current State
-  currentRound: number;
-  phase: GamePhase;
-  phaseStartTime: Date | FirebaseFirestore.Timestamp;
-  currentSituation: string;
-
-  // Players
-  players: {
-    [playerId: string]: {
-      id: string;
-      name: string;
-      profileURL?: string;
-      score: number;
-      isConnected: boolean;
-      hand: string[]; // meme filenames
-    };
-  };
-
-  // Round Data
-  submissions: {
-    [playerId: string]: {
-      memeFilename: string;
-      submittedAt: Date | FirebaseFirestore.Timestamp;
-    };
-  };
-
-  votes: {
-    [playerId: string]: string; // voted submission playerId
-  };
-
-  // Chat
-  chat: ChatMessage[];
+// Core lobby data interface matching Firebase Realtime Database schema
+interface LobbyData {
+  code: string;
+  hostUid: string;
+  hostDisplayName: string;
+  maxPlayers: number;
+  status: LobbyStatus;
+  settings: GameSettings;
+  players: Record<string, PlayerData>;
+  createdAt: string;
+  updatedAt: string;
+  gameState?: GameState;
+  chat?: Record<string, ChatMessage>;
 }
 
-// AI Player Types
-interface AIPersonality {
-  id: string;
-  name: string;
+// Player data interface with all properties and status fields
+interface PlayerData {
   displayName: string;
   avatarId: string;
-  description: string;
-  traits: {
-    humorStyle: "sarcastic" | "wholesome" | "edgy" | "clever" | "random";
-    responseTime: {
-      min: number; // seconds
-      max: number; // seconds
-    };
-    chatFrequency: "low" | "medium" | "high";
-    memePreference: "funny" | "relevant" | "shocking" | "clever" | "random";
-    votingStyle: "strategic" | "humor-focused" | "random" | "popular";
-  };
-  chatTemplates: {
-    thinking: string[];
-    submission: string[];
-    voting: string[];
-    winning: string[];
-    losing: string[];
-    general: string[];
-  };
-}
-
-interface AIDecision {
-  type: "meme-selection" | "voting" | "chat-message";
-  context: {
-    situation?: string;
-    availableMemes?: string[];
-    submissions?: Submission[];
-    gamePhase?: GamePhase;
-    currentRound?: number;
-  };
-  personalityId: string;
-  decision: {
-    selectedMeme?: string;
-    votedSubmissionId?: string;
-    chatMessage?: string;
-    confidence: number; // 0-1
-    reasoning?: string;
-  };
-  timestamp: Date;
-  processingTime: number; // milliseconds
-}
-
-interface AIPlayer {
-  id: string;
-  personality: AIPersonality;
-  isConnected: boolean;
-  score: number;
-  hand: string[]; // meme filenames
-  selectedCard?: MemeCard;
-  status: "waiting" | "playing" | "submitted" | "winner";
-  lastActivity: Date;
-  decisionHistory: AIDecision[];
-  chatHistory: ChatMessage[];
-}
-
-// Extend existing LobbyPlayer interface with AI-specific properties
-interface LobbyPlayer {
-  uid: string;
-  displayName: string;
-  profileURL?: string | null;
-  joinedAt: Date | string | { toDate: () => Date }; // Can be Date, ISO string, or Firestore Timestamp
+  profileURL?: string;
+  joinedAt: string;
   isHost: boolean;
-  // AI-specific properties
-  isAI?: boolean;
-  aiPersonalityId?: string;
-  aiPlayer?: AIPlayer;
-  // Score tracking
-  score?: number;
-  totalWins?: number;
-  totalGames?: number;
+  score: number;
+  status: PlayerStatus;
+  lastSeen: string;
 }
 
-// AI Settings for lobby configuration
-interface AISettings {
-  enabled: boolean;
-  maxAIPlayers: number; // 1-6
-  minHumanPlayers: number; // minimum human players before adding AI
-  personalityPool: string[]; // array of personality IDs to choose from
-  autoBalance: boolean; // automatically remove AI when humans join
-  difficulty: "easy" | "medium" | "hard"; // affects decision quality and timing
+// Game settings interface with validation constraints
+interface GameSettings {
+  rounds: number; // 3-15 rounds constraint
+  timeLimit: number; // 30-120 seconds constraint
+  categories: string[]; // enabled meme categories array
 }
 
-// LobbySettings interface is already defined above with optional aiSettings
-
-// AI Player Management Types
-interface AIPlayerManagerState {
-  activeAIPlayers: Map<string, Map<string, AIPlayer>>; // lobbyCode -> playerId -> AIPlayer
-  personalityPool: AIPersonality[];
-  isInitialized: boolean;
-}
-
-interface AIPlayerCreationOptions {
-  lobbyCode: string;
-  personalityId?: string;
-  forcePersonality?: boolean; // if true, use specified personality even if already in use
-  maxPlayers?: number;
-  personalityPool?: string[]; // array of personality IDs to choose from
-}
-
-interface AIPlayerRemovalOptions {
-  lobbyCode: string;
-  playerId: string;
-  reason:
-    | "human-joined"
-    | "lobby-full"
-    | "settings-changed"
-    | "error"
-    | "manual"
-    | "lobby-cleanup"
-    | "inactive";
-}
-
-// AI Decision Engine Types
-interface AIDecisionEngineOptions {
-  personality: AIPersonality;
-  context: {
-    situation?: string;
-    availableMemes?: string[];
-    submissions?: Submission[];
-    gamePhase?: GamePhase;
-    currentRound?: number;
+// Game settings validation constraints
+interface GameSettingsConstraints {
+  rounds: {
+    min: 3;
+    max: 15;
   };
-  timeout?: number; // milliseconds
+  timeLimit: {
+    min: 30;
+    max: 120;
+  };
+  categories: {
+    available: string[];
+    minSelected: number;
+  };
 }
 
-interface AIDecisionResult {
+// Service Layer Interfaces and Response Types
+
+// Generic service result interface for consistent API responses
+interface ServiceResult<T = unknown> {
   success: boolean;
-  decision?: AIDecision;
   error?: string;
-  processingTime: number;
+  data?: T;
+  timestamp?: string;
+  retryable?: boolean;
 }
 
-// AI Chat System Types
-interface AIChatMessageOptions {
-  personality: AIPersonality;
-  gameContext: {
-    phase: GamePhase;
-    currentRound: number;
-    totalRounds: number;
-    playerCount: number;
-    aiPlayerCount: number;
-  };
-  trigger:
-    | "thinking"
-    | "submission"
-    | "voting"
-    | "winning"
-    | "losing"
-    | "general";
-  customContext?: Record<string, unknown>;
+// Validation result interface for settings validation
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings?: string[];
+  field?: string;
 }
 
-// AI Player Error Types
-type AIPlayerError =
-  | "PERSONALITY_NOT_FOUND"
-  | "DECISION_TIMEOUT"
-  | "API_UNAVAILABLE"
-  | "INVALID_CONTEXT"
-  | "PERSONALITY_CONFLICT"
-  | "LOBBY_FULL"
-  | "INVALID_SETTINGS";
-
-interface AIPlayerErrorInfo {
-  error: AIPlayerError;
-  message: string;
-  context?: Record<string, unknown>;
-  timestamp: Date;
+// Event types for real-time updates
+interface LobbyEvent {
+  type:
+    | "player_joined"
+    | "player_left"
+    | "settings_updated"
+    | "game_started"
+    | "host_changed"
+    | "lobby_deleted"
+    | "player_kicked";
+  timestamp: string;
+  data: unknown;
   playerId?: string;
   lobbyCode?: string;
 }
 
-// AI Performance Monitoring Types
-interface AIPlayerMetrics {
-  playerId: string;
-  lobbyCode: string;
-  personalityId: string;
-  decisionsMade: number;
-  averageDecisionTime: number;
-  winRate: number;
-  chatMessagesSent: number;
-  errorsEncountered: number;
-  lastActive: Date;
+// Lobby creation parameters interface
+interface CreateLobbyParams {
+  hostUid: string;
+  hostDisplayName: string;
+  hostAvatarId: string;
+  hostProfileURL?: string;
+  maxPlayers?: number;
+  settings?: Partial<GameSettings>;
 }
 
-// AI Configuration Types
-interface AIPersonalityConfig {
-  id: string;
-  name: string;
+// Join lobby parameters interface
+interface JoinLobbyParams {
+  uid: string;
   displayName: string;
   avatarId: string;
-  description: string;
-  traits: {
-    humorStyle: "sarcastic" | "wholesome" | "edgy" | "clever" | "random";
-    responseTime: {
-      min: number;
-      max: number;
-    };
-    chatFrequency: "low" | "medium" | "high";
-    memePreference: "funny" | "relevant" | "shocking" | "clever" | "random";
-    votingStyle: "strategic" | "humor-focused" | "random" | "popular";
-  };
-  chatTemplates: {
-    thinking: string[];
-    submission: string[];
-    voting: string[];
-    winning: string[];
-    losing: string[];
-    general: string[];
-  };
-  enabled: boolean;
-  difficulty: "easy" | "medium" | "hard";
+  profileURL?: string;
 }
 
-interface AISystemConfig {
-  maxConcurrentAIPlayers: number;
-  defaultPersonalities: string[];
-  decisionTimeout: number; // milliseconds
-  chatCooldown: number; // milliseconds
-  enableLogging: boolean;
-  enableMetrics: boolean;
-  fallbackPersonalityId: string;
+// Additional service method parameters
+interface UpdateLobbySettingsParams {
+  code: string;
+  settings: Partial<GameSettings>;
+  hostUid: string;
+}
+
+interface KickPlayerParams {
+  code: string;
+  targetUid: string;
+  hostUid: string;
+}
+
+interface TransferHostParams {
+  code: string;
+  newHostUid: string;
+  currentHostUid: string;
+}
+
+interface UpdatePlayerStatusParams {
+  code: string;
+  playerUid: string;
+  status: PlayerStatus;
+}
+
+// Error types for classification
+type LobbyErrorType =
+  | "NETWORK_ERROR"
+  | "LOBBY_NOT_FOUND"
+  | "LOBBY_FULL"
+  | "LOBBY_ALREADY_STARTED"
+  | "PERMISSION_DENIED"
+  | "VALIDATION_ERROR"
+  | "CODE_GENERATION_FAILED"
+  | "UNKNOWN_ERROR";
+
+interface LobbyError extends Error {
+  type: LobbyErrorType;
+  retryable: boolean;
+  userMessage: string;
+}
+
+// Unsubscribe function type
+type UnsubscribeFunction = () => void;
+
+// Validation schemas for lobby settings and player data
+interface LobbyValidationSchema {
+  code: {
+    pattern: RegExp;
+    length: number;
+  };
+  displayName: {
+    minLength: number;
+    maxLength: number;
+    pattern: RegExp;
+  };
+  maxPlayers: {
+    min: number;
+    max: number;
+  };
+}
+
+// Player session data for connection tracking
+interface PlayerSession {
+  currentLobby: string | null;
+  lastActivity: string;
+  connectionStatus: ConnectionStatus;
+}
+
+// Lobby statistics for monitoring
+interface LobbyStats {
+  totalLobbies: number;
+  activeLobbies: number;
+  totalPlayers: number;
+  averagePlayersPerLobby: number;
 }

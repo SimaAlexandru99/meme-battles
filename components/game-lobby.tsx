@@ -36,27 +36,18 @@ import { cn, formatJoinTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
-import { useLobbyData } from "@/hooks/useLobbyData";
 import { useEventListener, useClipboard, useNetwork } from "react-haiku";
 
 import { GameRedirect } from "@/components/game-redirect";
-import { AuthError } from "@/components/auth-error";
-import { startGame, leaveLobby } from "@/lib/actions";
 import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
 import { AddBotButton } from "@/components/game-settings/AddBotButton";
 import { KickPlayerButton } from "@/components/kick-player-button";
-import { updateLobbySettingsService } from "@/lib/services/lobby.service";
-import { addAIPlayerToLobbyService } from "@/lib/services/lobby.service";
-import { GameSettingsFormData } from "@/components/game-settings/types";
 import {
   buttonVariants,
   badgeVariants,
   microInteractionVariants,
   successVariants,
-  loadingVariants,
 } from "@/lib/animations/private-lobby-variants";
-
-// Import types from global definitions
 
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
@@ -72,15 +63,6 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   // Network status monitoring
   const isOnline = useNetwork();
   const prevOnlineRef = React.useRef(isOnline);
-
-  // SWR hook for lobby data with real-time updates
-  const { lobbyData, error, isLoading, isValidating, refresh, isHost } =
-    useLobbyData({
-      lobbyCode,
-      currentUser,
-      refreshInterval: 5000, // 5 seconds auto-refresh
-      enabled: true,
-    });
 
   // Network status effect
   React.useEffect(() => {
@@ -99,20 +81,14 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Use Haiku's useEventListener for beforeunload event
   useEventListener("beforeunload", (event: BeforeUnloadEvent) => {
-    if (lobbyData && lobbyData.status === "waiting") {
-      event.preventDefault();
-      event.returnValue = "";
-      return "";
-    }
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
   });
 
   // Use Haiku's useEventListener for visibility change
   useEventListener("visibilitychange", () => {
-    if (
-      document.visibilityState === "hidden" &&
-      lobbyData &&
-      lobbyData.status === "waiting"
-    ) {
+    if (document.visibilityState === "hidden") {
       // Log that user left the tab while in lobby
       Sentry.addBreadcrumb({
         category: "navigation",
@@ -120,29 +96,11 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         level: "info",
         data: {
           lobbyCode,
-          lobbyStatus: lobbyData.status,
-          playerCount: lobbyData.players.length,
+          playerCount: 3,
         },
       });
     }
   });
-
-  // Handle errors
-  React.useEffect(() => {
-    if (error) {
-      const errorMessage =
-        typeof error === "object" &&
-        error !== null &&
-        "message" in error &&
-        typeof (error as { message?: unknown }).message === "string"
-          ? (error as { message: string }).message
-          : "Failed to load lobby";
-      console.error("Lobby error:", errorMessage);
-    }
-  }, [error]);
-
-  // Check if current user is the host (now using the helper from hook)
-  const isCurrentUserHost = isHost(currentUser.id);
 
   // Copy invitation code to clipboard
   const handleCopyCode = React.useCallback(async () => {
@@ -201,68 +159,49 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     );
   }, [lobbyCode, copyToClipboard]);
 
-  // Start the game using server action
+  // Start the game
   const handleStartGame = React.useCallback(async () => {
-    if (!isCurrentUserHost) return;
+    setIsStarting(true);
+    try {
+      // Mock start game
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success("Game started!");
 
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Start Game",
-      },
-      async () => {
-        setIsStarting(true);
-        try {
-          await startGame(lobbyCode);
-
-          // Redirect to game page
-          router.push(`/game/${lobbyCode}/play`);
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to start game";
-          toast.error(errorMessage);
-          Sentry.captureException(err);
-        } finally {
-          setIsStarting(false);
-        }
-      },
-    );
-  }, [lobbyCode, isCurrentUserHost, router]);
+      // Redirect to game page
+      router.push(`/game/${lobbyCode}/play`);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to start game";
+      toast.error(errorMessage);
+      Sentry.captureException(err);
+    } finally {
+      setIsStarting(false);
+    }
+  }, [lobbyCode, router]);
 
   // Handle back navigation with confirmation
   const handleBackToMain = React.useCallback(() => {
-    if (lobbyData && lobbyData.status === "waiting") {
-      setShowExitDialog(true);
-    } else {
-      router.push("/");
-    }
-  }, [router, lobbyData]);
+    setShowExitDialog(true);
+  }, []);
 
   // Handle leaving the lobby
   const handleLeaveLobby = React.useCallback(async () => {
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Leave Lobby",
-      },
-      async () => {
-        setIsLeaving(true);
-        try {
-          await leaveLobby(lobbyCode);
-          toast.success("Successfully left the lobby");
-          router.push("/");
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to leave lobby";
-          toast.error(errorMessage);
-          Sentry.captureException(err);
-        } finally {
-          setIsLeaving(false);
-          setShowExitDialog(false);
-        }
-      },
-    );
-  }, [lobbyCode, router]);
+    setIsLeaving(true);
+    try {
+      // Mock leave lobby
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success("Successfully left the lobby");
+      router.push("/");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to leave lobby";
+      toast.error(errorMessage);
+      Sentry.captureException(err);
+    } finally {
+      setIsLeaving(false);
+      setShowExitDialog(false);
+    }
+  }, [router]);
 
   // Handle canceling exit
   const handleCancelExit = React.useCallback(() => {
@@ -279,10 +218,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Handle opening settings modal
   const handleOpenSettings = React.useCallback(() => {
-    if (!isCurrentUserHost) return;
     setSettingsError(null);
     setIsSettingsModalOpen(true);
-  }, [isCurrentUserHost]);
+  }, []);
 
   // Handle closing settings modal
   const handleCloseSettings = React.useCallback(() => {
@@ -291,116 +229,128 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   }, []);
 
   // Handle saving settings
-  const handleSaveSettings = React.useCallback(
-    async (settings: GameSettingsFormData) => {
-      if (!isCurrentUserHost) return;
+  const handleSaveSettings = React.useCallback(async () => {
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Save Game Settings",
+      },
+      async () => {
+        setIsSavingSettings(true);
+        setSettingsError(null);
 
-      return Sentry.startSpan(
-        {
-          op: "ui.action",
-          name: "Save Game Settings",
-        },
-        async () => {
-          setIsSavingSettings(true);
-          setSettingsError(null);
+        try {
+          // Mock implementation
+          await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          try {
-            await updateLobbySettingsService(lobbyCode, settings);
+          // Show success notification
+          toast.success("Game settings updated successfully!");
 
-            // Refresh lobby data to show updated settings
-            await refresh();
-
-            // Show success notification
-            toast.success("Game settings updated successfully!");
-
-            // Close modal
-            setIsSettingsModalOpen(false);
-          } catch (err) {
-            const errorMessage =
-              err instanceof Error ? err.message : "Failed to update settings";
-            setSettingsError(errorMessage);
-            toast.error(errorMessage);
-            Sentry.captureException(err);
-            throw err; // Re-throw to let the form handle it
-          } finally {
-            setIsSavingSettings(false);
-          }
-        },
-      );
-    },
-    [lobbyCode, isCurrentUserHost, refresh],
-  );
+          // Close modal
+          setIsSettingsModalOpen(false);
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error ? err.message : "Failed to update settings";
+          setSettingsError(errorMessage);
+          toast.error(errorMessage);
+          Sentry.captureException(err);
+          throw err; // Re-throw to let the form handle it
+        } finally {
+          setIsSavingSettings(false);
+        }
+      },
+    );
+  }, []);
 
   // Handle adding AI player
-  const handleAddBot = React.useCallback(
-    async (botConfig: {
-      personalityId: string;
-      difficulty: "easy" | "medium" | "hard";
-    }) => {
-      if (!isCurrentUserHost) return;
+  const handleAddBot = React.useCallback(async () => {
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Add AI Player",
+      },
+      async () => {
+        setIsAddingBot(true);
+        setBotError(null);
 
-      return Sentry.startSpan(
-        {
-          op: "ui.action",
-          name: "Add AI Player",
-        },
-        async () => {
-          setIsAddingBot(true);
-          setBotError(null);
+        try {
+          // Mock implementation
+          await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          try {
-            await addAIPlayerToLobbyService(lobbyCode, botConfig);
-
-            // Refresh lobby data to show new AI player
-            await refresh();
-
-            // Show success notification
-            toast.success("AI player added successfully!");
-          } catch (err) {
-            const errorMessage =
-              err instanceof Error ? err.message : "Failed to add AI player";
-            setBotError(errorMessage);
-            toast.error(errorMessage);
-            Sentry.captureException(err);
-            throw err; // Re-throw to let the dialog handle it
-          } finally {
-            setIsAddingBot(false);
-          }
-        },
-      );
-    },
-    [lobbyCode, isCurrentUserHost, refresh],
-  );
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <motion.div
-          className="flex flex-col items-center gap-6 p-8"
-          variants={microInteractionVariants}
-          initial="initial"
-          animate="animate"
-        >
-          <motion.div
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/30"
-            variants={loadingVariants}
-            animate="animate"
-          >
-            <RiGamepadLine className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-          </motion.div>
-          <div className="text-center">
-            <h2 className="text-xl sm:text-2xl font-bangers text-white tracking-wide mb-2">
-              Loading lobby...
-            </h2>
-            <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
-              Connecting to game server
-            </p>
-          </div>
-        </motion.div>
-      </div>
+          // Show success notification
+          toast.success("AI player added successfully!");
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error ? err.message : "Failed to add AI player";
+          setBotError(errorMessage);
+          toast.error(errorMessage);
+          Sentry.captureException(err);
+          throw err; // Re-throw to let the dialog handle it
+        } finally {
+          setIsAddingBot(false);
+        }
+      },
     );
-  }
+  }, []);
+
+  // Mock data for UI demonstration
+  const lobbyData = {
+    code: lobbyCode,
+    hostUid: currentUser.id,
+    status: "waiting" as "waiting" | "started" | "finished",
+    maxPlayers: 8,
+    players: [
+      {
+        uid: currentUser.id,
+        id: currentUser.id,
+        name: currentUser.name,
+        displayName: currentUser.name,
+        avatar: currentUser.profileURL || "",
+        profileURL: currentUser.profileURL || "",
+        joinedAt: new Date().toISOString(),
+        isHost: true,
+        score: 0,
+        isAI: false,
+        aiPersonalityId: undefined,
+      },
+      {
+        uid: "player2",
+        id: "player2",
+        name: "Alice",
+        displayName: "Alice",
+        avatar: "",
+        profileURL: "",
+        joinedAt: new Date(Date.now() - 5000).toISOString(),
+        isHost: false,
+        score: 0,
+        isAI: false,
+        aiPersonalityId: undefined,
+      },
+      {
+        uid: "player3",
+        id: "player3",
+        name: "Bob",
+        displayName: "Bob",
+        avatar: "",
+        profileURL: "",
+        joinedAt: new Date(Date.now() - 10000).toISOString(),
+        isHost: false,
+        score: 0,
+        isAI: false,
+        aiPersonalityId: undefined,
+      },
+    ],
+    settings: {
+      rounds: 5,
+      timeLimit: 30,
+      categories: ["funny", "reaction"],
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const isHost = lobbyData.hostUid === currentUser.id;
+  const isCurrentUserHost = isHost;
 
   // Show offline UI when not connected
   if (!isOnline) {
@@ -442,81 +392,6 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         </motion.div>
       </div>
     );
-  }
-
-  if (error) {
-    // Check if it's an authentication error
-    const isAuthError =
-      error.toLowerCase().includes("authentication") ||
-      error.toLowerCase().includes("auth");
-
-    if (isAuthError) {
-      return <AuthError error={error} onRetry={refresh} />;
-    }
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <motion.div
-          className="w-full max-w-md p-6 sm:p-8"
-          variants={microInteractionVariants}
-          initial="initial"
-          animate="animate"
-        >
-          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
-            <CardContent className="p-6">
-              <div className="text-center space-y-6">
-                <motion.div
-                  className="flex justify-center"
-                  variants={microInteractionVariants}
-                >
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-500/20 flex items-center justify-center shadow-lg shadow-red-500/30">
-                    <RiWifiOffLine className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
-                  </div>
-                </motion.div>
-
-                <motion.div variants={microInteractionVariants}>
-                  <h2 className="text-xl sm:text-2xl font-bangers text-red-400 mb-2">
-                    Lobby Not Found
-                  </h2>
-                  <div className="space-y-3">
-                    <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
-                      {error}
-                    </p>
-                    <div className="text-xs text-purple-200/50 font-bangers tracking-wide space-y-1">
-                      <p>• Check that the lobby code is correct</p>
-                      <p>• Ensure the lobby hasn&apos;t been deleted</p>
-                      <p>• Try refreshing the page</p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div variants={buttonVariants}>
-                  <Button
-                    onClick={handleBackToMain}
-                    className={cn(
-                      "w-full h-12 sm:h-14",
-                      "bg-gradient-to-r from-slate-600 to-slate-700",
-                      "hover:from-slate-500 hover:to-slate-600",
-                      "text-white font-bangers text-lg sm:text-xl tracking-wide",
-                      "shadow-lg shadow-slate-500/30",
-                      "focus-visible:ring-2 focus-visible:ring-slate-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                    )}
-                  >
-                    <RiArrowLeftLine className="w-5 h-5 mr-2" />
-                    Back to Main Menu
-                  </Button>
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (!lobbyData) {
-    return null;
   }
 
   // Handle game state redirects
@@ -567,13 +442,6 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 </h1>
                 <div className="text-xs sm:text-sm text-purple-200/70 flex items-center justify-center gap-2 font-bangers tracking-wide">
                   <span>Waiting for players...</span>
-                  {isValidating && (
-                    <motion.div
-                      className="w-2 h-2 sm:w-3 sm:h-3 border border-purple-400/30 border-t-purple-400 rounded-full"
-                      variants={loadingVariants}
-                      animate="animate"
-                    />
-                  )}
                 </div>
               </motion.div>
             </div>
@@ -719,7 +587,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                 >
                   <Separator className="bg-slate-700/50" />
                   <Button
-                    onClick={refresh}
+                    onClick={() => toast.info("Refreshing lobby...")}
                     variant="outline"
                     className="w-full border-slate-600/50 text-white hover:bg-slate-700/50 font-bangers tracking-wide"
                   >
@@ -865,7 +733,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                             <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
                               {player.isAI && player.aiPersonalityId
-                                ? `${player.displayName} (${player.aiPersonalityId.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())})`
+                                ? `${player.displayName} (${(player.aiPersonalityId as string).replace("-", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())})`
                                 : player.displayName || "Anonymous Player"}
                             </span>
                             <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -916,11 +784,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             }
                             isHost={isCurrentUserHost}
                             isCurrentUser={player.uid === currentUser.id}
-                            isAI={player.isAI}
+                            isAI={player.isAI || false}
                             disabled={
                               isStarting || isSavingSettings || isAddingBot
                             }
-                            onKickSuccess={refresh}
+                            onKickSuccess={() =>
+                              toast.success("Player kicked successfully!")
+                            }
                           />
                         </motion.div>
                       </motion.div>

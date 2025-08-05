@@ -22,21 +22,8 @@ export {
 } from "./auth.action";
 
 // ============================================================================
-// LOBBY ACTIONS
+// LOBBY ACTIONS - REMOVED FOR STATIC UI
 // ============================================================================
 
-export {
-  joinLobby,
-  createLobby,
-  leaveLobby,
-  updateLobbySettings,
-  addAIPlayerToLobby,
-  removeAIPlayerFromLobby,
-  getLobbyData,
-  startGame,
-  getUserActiveLobbies,
-  kickPlayer,
-  updatePlayerScore,
-  getLobbyScores,
-  awardRoundWinner,
-} from "./lobby.action";
+// Lobby actions have been removed to simplify the transition to static UI
+// These will be re-implemented with Realtime Database when needed

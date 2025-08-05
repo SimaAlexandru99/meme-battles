@@ -6,48 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Helper function to ensure a timestamp is converted to a Date object
- */
-export function ensureDate(
-  timestamp: Date | string | FirebaseFirestore.Timestamp,
-): Date {
-  if (timestamp instanceof Date) {
-    return timestamp;
-  }
-  if (typeof timestamp === "string") {
-    return new Date(timestamp);
-  }
-  // Handle Firestore Timestamp
-  if (timestamp && typeof timestamp === "object" && "toDate" in timestamp) {
-    return (timestamp as FirebaseFirestore.Timestamp).toDate();
-  }
-  // Fallback
-  return new Date(timestamp as string);
-}
-
-/**
  * Safely converts a date value (Firestore Timestamp, Date, string, etc.) to a readable time string
  * @param dateValue - The date value to convert
  * @returns A formatted time string or "Unknown" if conversion fails
  */
-/**
- * Serializes a Firestore Timestamp to ISO string
- * @param timestamp - Firestore Timestamp, Date, or string
- * @returns ISO string representation
- */
-export function serializeTimestamp(timestamp: unknown): string {
-  if (timestamp && typeof timestamp === "object" && "toDate" in timestamp) {
-    return (timestamp as { toDate: () => Date }).toDate().toISOString();
-  }
-  if (timestamp instanceof Date) {
-    return timestamp.toISOString();
-  }
-  if (typeof timestamp === "string") {
-    return timestamp;
-  }
-  return new Date().toISOString();
-}
-
 export function formatJoinTime(dateValue: unknown): string {
   try {
     // Handle null/undefined
@@ -156,13 +118,4 @@ export const AVATAR_OPTIONS = [
 export function getRandomAvatar() {
   const randomIndex = Math.floor(Math.random() * AVATAR_OPTIONS.length);
   return AVATAR_OPTIONS[randomIndex];
-}
-
-/**
- * Gets a specific avatar by ID
- * @param avatarId - The ID of the avatar to get
- * @returns Avatar object or undefined if not found
- */
-export function getAvatarById(avatarId: string) {
-  return AVATAR_OPTIONS.find((avatar) => avatar.id === avatarId);
 }

@@ -389,3 +389,9 @@
 [debug] [2025-08-05T11:49:25.685Z] > authorizing via signed-in user (sima.alex33@gmail.com)
 [debug] [2025-08-05T11:49:25.734Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com 200
 [debug] [2025-08-05T11:49:25.734Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-08-05T18:13:34.070Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-05T18:13:34.074Z] > authorizing via signed-in user (sima.alex33@gmail.com)
+[debug] [2025-08-05T18:15:09.996Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-05T18:15:10.000Z] > authorizing via signed-in user (sima.alex33@gmail.com)
+[debug] [2025-08-05T18:34:48.755Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-05T18:34:48.760Z] > authorizing via signed-in user (sima.alex33@gmail.com)
