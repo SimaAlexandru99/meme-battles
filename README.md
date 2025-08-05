@@ -66,7 +66,7 @@ the winner.
 - **Social Features**: Real-time chat, shareable memes, and power-ups for interactivity.
 - **Robustness**: Handles disconnections, no-submissions, and low player counts gracefully.
 
-### Key Features
+### Additional Features
 
 - **Random Meme Selection**: Randomly assign seven unique meme images per player from 800 images, ensuring no duplicates
   within a player's hand.
@@ -114,7 +114,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### 🔹 Week 1: July 29 – August 4
 
-**Goal: Setup & Core Structure**
+#### Goal: Setup & Core Structure
 
 - [ ] Initialize project: Next.js, Tailwind, shadcn/ui, Firebase, Vercel AI SDK.
 - [ ] Configure Firebase: Auth (Google + Guest), Firestore, Storage.
@@ -124,7 +124,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### 🔹 Week 2: August 5 – August 11
 
-**Goal: Game Logic MVP**
+#### Goal: Game Logic MVP
 
 - [ ] Develop logic to randomly select seven unique meme images from `/public/memes/` (800 images).
 - [ ] Set up AI situation generator using Vercel AI SDK.
@@ -135,7 +135,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### 🔹 Week 3: August 12 – August 18
 
-**Goal: Polish & Features**
+#### Goal: Polish & Features
 
 - [ ] Style UI with shadcn/ui (Cards, Buttons, Emoji Rating Buttons).
 - [ ] Add **GameChatBox** for real-time banter.
@@ -145,7 +145,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### 🔹 Week 4: August 19 – August 25
 
-**Goal: Testing & Launch**
+#### Goal: Testing & Launch
 
 - [ ] Optimize for mobile devices.
 - [ ] Test for bugs (multi-device, disconnections, empty submissions).
@@ -155,7 +155,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## 🧱 Project Structure
 
-```
+```text
 /pages
   index.tsx              → Landing Page
   /create.tsx            → Create Room
@@ -185,7 +185,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## 🔐 Firestore Structure
 
-```
+```json
 /rooms/{roomId}
   - players: [{ id, name, avatar, score, cards: [memeUrl, ...] }] # 7 URLs per player
   - situation: "AI-generated text"    # E.g., "When you realize the meeting is all-you-can-eat..."
