@@ -130,7 +130,7 @@ export function AdvancedSettings({
       acc[setting.category].push(setting);
       return acc;
     },
-    {} as Record<string, AdvancedSetting[]>
+    {} as Record<string, AdvancedSetting[]>,
   );
 
   const getCategoryInfo = (category: string) => {

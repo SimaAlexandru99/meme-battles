@@ -106,7 +106,7 @@ export function GameSettings({
   const estimatedGameTime = () => {
     const baseTimePerRound = watchedValues.timeLimit + 45; // submission + voting + results
     const totalMinutes = Math.ceil(
-      (watchedValues.rounds * baseTimePerRound) / 60
+      (watchedValues.rounds * baseTimePerRound) / 60,
     );
     return totalMinutes;
   };

@@ -2,14 +2,6 @@ import { LobbyService } from "../lobby.service";
 import { get, set, update, remove, ref } from "firebase/database";
 import * as Sentry from "@sentry/nextjs";
 import type { DataSnapshot } from "firebase/database";
-import type {
-  LobbyData,
-  PlayerData,
-  GameSettings,
-  CreateLobbyParams,
-  JoinLobbyParams,
-  LobbyError,
-} from "@/types";
 
 // Mock Firebase
 jest.mock("firebase/database", () => ({
@@ -88,7 +80,7 @@ describe("LobbyService", () => {
   beforeEach(() => {
     lobbyService = LobbyService.getInstance();
     jest.clearAllMocks();
-    mockRef.mockReturnValue({} as any);
+    mockRef.mockReturnValue({} as ReturnType<typeof ref>);
   });
 
   describe("Atomic Code Generation", () => {
@@ -124,6 +116,9 @@ describe("LobbyService", () => {
           } as DataSnapshot)
           .mockResolvedValueOnce({
             exists: () => false, // Second attempt - code doesn't exist
+          } as DataSnapshot)
+          .mockResolvedValueOnce({
+            exists: () => false, // Third attempt - code doesn't exist
           } as DataSnapshot);
 
         mockSet.mockResolvedValueOnce(undefined);
@@ -134,7 +129,7 @@ describe("LobbyService", () => {
         const code = await codePromise;
 
         expect(code).toHaveLength(5);
-        expect(mockGet).toHaveBeenCalledTimes(2);
+        expect(mockGet).toHaveBeenCalledTimes(3);
         expect(mockSet).toHaveBeenCalledTimes(1);
       });
 
@@ -180,7 +175,7 @@ describe("LobbyService", () => {
           type: "CODE_GENERATION_FAILED",
           retryable: true,
           userMessage: expect.stringContaining(
-            "Unable to create a unique lobby code"
+            "Unable to create a unique lobby code",
           ),
         });
 
@@ -190,7 +185,7 @@ describe("LobbyService", () => {
           "Lobby code generation failed after maximum attempts",
           expect.objectContaining({
             level: "warning",
-          })
+          }),
         );
       });
 
@@ -281,7 +276,7 @@ describe("LobbyService", () => {
         mockGet.mockRejectedValueOnce(new Error("Database error"));
 
         await expect(
-          lobbyService.checkLobbyCodeExists("ABC12")
+          lobbyService.checkLobbyCodeExists("ABC12"),
         ).rejects.toMatchObject({
           type: "NETWORK_ERROR",
           retryable: true,
@@ -314,7 +309,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code must be exactly 5 characters"
+          "Lobby code must be exactly 5 characters",
         );
       });
 
@@ -323,7 +318,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code can only contain uppercase letters and numbers"
+          "Lobby code can only contain uppercase letters and numbers",
         );
       });
 
@@ -332,7 +327,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code can only contain uppercase letters and numbers"
+          "Lobby code can only contain uppercase letters and numbers",
         );
       });
     });
@@ -375,7 +370,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Time limit must be between 30 and 120 seconds"
+          "Time limit must be between 30 and 120 seconds",
         );
       });
 
@@ -390,7 +385,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "At least one category must be selected"
+          "At least one category must be selected",
         );
       });
 
@@ -478,7 +473,7 @@ describe("LobbyService", () => {
         };
 
         await expect(
-          lobbyService.createLobby(invalidParams)
+          lobbyService.createLobby(invalidParams),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid settings"),
@@ -513,7 +508,7 @@ describe("LobbyService", () => {
         mockSet.mockRejectedValueOnce(new Error("Database error")); // Lobby creation fails
 
         await expect(
-          lobbyService.createLobby(mockCreateLobbyParams)
+          lobbyService.createLobby(mockCreateLobbyParams),
         ).rejects.toMatchObject({
           type: "UNKNOWN_ERROR",
           retryable: true,
@@ -558,7 +553,7 @@ describe("LobbyService", () => {
 
         const result = await lobbyService.joinLobby(
           "ABC12",
-          mockJoinLobbyParams
+          mockJoinLobbyParams,
         );
 
         expect(result.success).toBe(true);
@@ -572,7 +567,7 @@ describe("LobbyService", () => {
 
       it("should reject invalid lobby code format", async () => {
         await expect(
-          lobbyService.joinLobby("abc", mockJoinLobbyParams)
+          lobbyService.joinLobby("abc", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid lobby code"),
@@ -587,7 +582,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -618,7 +613,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_FULL",
           userMessage: "This lobby is full. Try another one.",
@@ -637,7 +632,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_ALREADY_STARTED",
           userMessage: "This game has already started. You cannot join now.",
@@ -668,7 +663,7 @@ describe("LobbyService", () => {
 
         const result = await lobbyService.joinLobby(
           "ABC12",
-          mockJoinLobbyParams
+          mockJoinLobbyParams,
         );
 
         expect(result.success).toBe(true);
@@ -702,7 +697,7 @@ describe("LobbyService", () => {
         const settingsPromise = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 10 },
-          "host123"
+          "host123",
         );
 
         // Fast-forward through debounce delay
@@ -721,7 +716,11 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "player456")
+          lobbyService.updateLobbySettings(
+            "ABC12",
+            { rounds: 10 },
+            "player456",
+          ),
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the host can change game settings.",
@@ -736,7 +735,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123")
+          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123"),
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -755,7 +754,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123")
+          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123"),
         ).rejects.toMatchObject({
           type: "LOBBY_ALREADY_STARTED",
           userMessage: "Cannot change settings after the game has started.",
@@ -769,7 +768,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 2 }, "host123")
+          lobbyService.updateLobbySettings("ABC12", { rounds: 2 }, "host123"),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid settings"),
@@ -788,17 +787,17 @@ describe("LobbyService", () => {
         const promise1 = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 10 },
-          "host123"
+          "host123",
         );
         const promise2 = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 12 },
-          "host123"
+          "host123",
         );
         const promise3 = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 15 },
-          "host123"
+          "host123",
         );
 
         // Fast-forward through debounce delay
@@ -814,7 +813,7 @@ describe("LobbyService", () => {
             "lobbies/ABC12/settings": expect.objectContaining({
               rounds: 15,
             }),
-          })
+          }),
         );
       });
     });
@@ -852,7 +851,7 @@ describe("LobbyService", () => {
         const result = await lobbyService.kickPlayer(
           "ABC12",
           "player456",
-          "host123"
+          "host123",
         );
 
         expect(result.success).toBe(true);
@@ -860,7 +859,7 @@ describe("LobbyService", () => {
           expect.anything(),
           expect.objectContaining({
             "lobbies/ABC12/players/player456": null,
-          })
+          }),
         );
       });
 
@@ -871,7 +870,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.kickPlayer("ABC12", "player456", "player789")
+          lobbyService.kickPlayer("ABC12", "player456", "player789"),
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the host can kick players.",
@@ -885,7 +884,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.kickPlayer("ABC12", "nonexistent", "host123")
+          lobbyService.kickPlayer("ABC12", "nonexistent", "host123"),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "Player not found in this lobby.",
@@ -899,7 +898,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.kickPlayer("ABC12", "host123", "host123")
+          lobbyService.kickPlayer("ABC12", "host123", "host123"),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "You cannot kick yourself from the lobby.",
@@ -911,10 +910,20 @@ describe("LobbyService", () => {
       const lobbyWithMultiplePlayers = {
         ...mockLobbyData,
         players: {
-          ...mockLobbyData.players,
+          host123: {
+            displayName: "HostPlayer",
+            avatarId: "doge-sunglasses",
+            profileURL: "https://example.com/avatar.jpg",
+            joinedAt: "2025-01-08T10:00:00.000Z",
+            isHost: true,
+            score: 0,
+            status: "waiting" as const,
+            lastSeen: "2025-01-08T10:00:00.000Z",
+          },
           player456: {
             displayName: "NewHost",
             avatarId: "cat-happy",
+            profileURL: "https://example.com/player.jpg",
             joinedAt: "2025-01-08T10:01:00.000Z",
             isHost: false,
             score: 0,
@@ -937,6 +946,7 @@ describe("LobbyService", () => {
           hostUid: "player456",
           hostDisplayName: "NewHost",
           players: {
+            ...lobbyWithMultiplePlayers.players,
             host123: {
               ...lobbyWithMultiplePlayers.players.host123,
               isHost: false,
@@ -956,7 +966,7 @@ describe("LobbyService", () => {
         const result = await lobbyService.transferHost(
           "ABC12",
           "player456",
-          "host123"
+          "host123",
         );
 
         expect(result.success).toBe(true);
@@ -969,7 +979,7 @@ describe("LobbyService", () => {
             "lobbies/ABC12/hostDisplayName": "NewHost",
             "lobbies/ABC12/players/host123/isHost": false,
             "lobbies/ABC12/players/player456/isHost": true,
-          })
+          }),
         );
       });
 
@@ -980,7 +990,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.transferHost("ABC12", "player456", "player789")
+          lobbyService.transferHost("ABC12", "player456", "player789"),
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the current host can transfer host privileges.",
@@ -994,7 +1004,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.transferHost("ABC12", "nonexistent", "host123")
+          lobbyService.transferHost("ABC12", "nonexistent", "host123"),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "Cannot transfer host to a player not in the lobby.",
@@ -1008,7 +1018,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.transferHost("ABC12", "host123", "host123")
+          lobbyService.transferHost("ABC12", "host123", "host123"),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "You are already the host.",
@@ -1028,7 +1038,7 @@ describe("LobbyService", () => {
         const result = await lobbyService.updatePlayerStatus(
           "ABC12",
           "host123",
-          "ready"
+          "ready",
         );
 
         expect(result.success).toBe(true);
@@ -1037,7 +1047,7 @@ describe("LobbyService", () => {
           expect.objectContaining({
             "lobbies/ABC12/players/host123/status": "ready",
             "lobbies/ABC12/players/host123/lastSeen": expect.any(String),
-          })
+          }),
         );
       });
 
@@ -1048,7 +1058,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updatePlayerStatus("ABC12", "nonexistent", "ready")
+          lobbyService.updatePlayerStatus("ABC12", "nonexistent", "ready"),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "Player not found in this lobby.",
@@ -1061,7 +1071,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updatePlayerStatus("ABC12", "host123", "ready")
+          lobbyService.updatePlayerStatus("ABC12", "host123", "ready"),
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -1102,7 +1112,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.deleteLobby("ABC12", "player456")
+          lobbyService.deleteLobby("ABC12", "player456"),
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the host can delete the lobby.",
@@ -1135,7 +1145,7 @@ describe("LobbyService", () => {
       mockGet.mockRejectedValueOnce(new Error("Network timeout"));
 
       await expect(
-        lobbyService.checkLobbyCodeExists("ABC12")
+        lobbyService.checkLobbyCodeExists("ABC12"),
       ).rejects.toMatchObject({
         type: "NETWORK_ERROR",
         retryable: true,
@@ -1153,7 +1163,7 @@ describe("LobbyService", () => {
       mockSet.mockRejectedValueOnce(new Error("Unexpected error"));
 
       await expect(
-        lobbyService.createLobby(mockCreateLobbyParams)
+        lobbyService.createLobby(mockCreateLobbyParams),
       ).rejects.toMatchObject({
         type: "UNKNOWN_ERROR",
         retryable: true,
@@ -1170,7 +1180,7 @@ describe("LobbyService", () => {
       mockGet.mockRejectedValueOnce(lobbyError);
 
       await expect(
-        lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+        lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
       ).rejects.toMatchObject({
         type: "LOBBY_NOT_FOUND",
         retryable: false,
@@ -1194,7 +1204,7 @@ describe("LobbyService", () => {
       const settingsPromise = lobbyService.updateLobbySettings(
         "ABC12",
         { rounds: 10 },
-        "host123"
+        "host123",
       );
 
       // Then delete the lobby before the timeout completes

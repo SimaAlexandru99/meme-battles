@@ -236,7 +236,7 @@ describe("useLobbyConnection", () => {
         // Get the event listener that was registered
         const addEventListener = global.addEventListener as jest.Mock;
         const offlineHandler = addEventListener.mock.calls.find(
-          (call) => call[0] === "offline"
+          (call) => call[0] === "offline",
         )?.[1];
 
         if (offlineHandler) {
@@ -277,7 +277,7 @@ describe("useLobbyConnection", () => {
       act(() => {
         const addEventListener = global.addEventListener as jest.Mock;
         const offlineHandler = addEventListener.mock.calls.find(
-          (call) => call[0] === "offline"
+          (call) => call[0] === "offline",
         )?.[1];
 
         if (offlineHandler) {
@@ -297,7 +297,7 @@ describe("useLobbyConnection", () => {
       act(() => {
         const addEventListener = global.addEventListener as jest.Mock;
         const onlineHandler = addEventListener.mock.calls.find(
-          (call) => call[0] === "online"
+          (call) => call[0] === "online",
         )?.[1];
 
         if (onlineHandler) {
@@ -313,7 +313,7 @@ describe("useLobbyConnection", () => {
       await waitFor(() => {
         expect(result.current.isOnline).toBe(true);
         expect(["connected", "reconnecting"]).toContain(
-          result.current.connectionStatus
+          result.current.connectionStatus,
         );
       });
     });

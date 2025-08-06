@@ -4,9 +4,9 @@ import { GamePlay } from "@/components/game-play";
 import { GameRedirect } from "@/components/game-redirect";
 
 interface GamePlayPageProps {
-  params: {
+  params: Promise<{
     code: string;
-  };
+  }>;
 }
 
 export default async function GamePlayPage({ params }: GamePlayPageProps) {
@@ -16,8 +16,10 @@ export default async function GamePlayPage({ params }: GamePlayPageProps) {
     redirect("/");
   }
 
+  // Await the params to get the code
+  const { code } = await params;
+
   // Validate lobby code format (5 characters, alphanumeric)
-  const { code } = params;
   if (!code || code.length !== 5 || !/^[A-Z0-9]+$/.test(code)) {
     redirect("/");
   }

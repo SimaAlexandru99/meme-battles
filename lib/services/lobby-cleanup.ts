@@ -194,12 +194,12 @@ export class LobbyCleanupService {
             (lobby as Record<string, unknown>).players as Record<
               string,
               unknown
-            >
+            >,
           ).length > 0;
 
         if (!hasPlayers) {
           const createdAt = new Date(
-            (lobby as Record<string, unknown>).createdAt as string
+            (lobby as Record<string, unknown>).createdAt as string,
           ).getTime();
 
           if (createdAt < cutoffTime) {
@@ -257,11 +257,11 @@ export class LobbyCleanupService {
 
         // Check if all players are inactive
         const playerLastSeenTimes = Object.values(
-          (lobby as Record<string, unknown>).players as Record<string, unknown>
+          (lobby as Record<string, unknown>).players as Record<string, unknown>,
         ).map((player: unknown) => {
           return new Date(
             ((player as Record<string, unknown>).lastSeen as string) ||
-              ((player as Record<string, unknown>).joinedAt as string)
+              ((player as Record<string, unknown>).joinedAt as string),
           ).getTime();
         });
 
@@ -282,7 +282,7 @@ export class LobbyCleanupService {
                 (lobby as Record<string, unknown>).players as Record<
                   string,
                   unknown
-                >
+                >,
               ).length,
             },
           });
@@ -323,7 +323,7 @@ export class LobbyCleanupService {
       Object.entries(sessions).forEach(
         ([playerId, session]: [string, unknown]) => {
           const lastActivity = new Date(
-            (session as Record<string, unknown>).lastActivity as string
+            (session as Record<string, unknown>).lastActivity as string,
           ).getTime();
 
           if (lastActivity < cutoffTime) {
@@ -343,7 +343,7 @@ export class LobbyCleanupService {
               },
             });
           }
-        }
+        },
       );
 
       // Batch remove stale sessions
@@ -364,7 +364,7 @@ export class LobbyCleanupService {
    */
   async cleanupLobby(
     lobbyCode: string,
-    reason: string = "manual"
+    reason: string = "manual",
   ): Promise<boolean> {
     try {
       const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
@@ -392,7 +392,7 @@ export class LobbyCleanupService {
             ) {
               updates[`playerSessions/${playerId}`] = null;
             }
-          }
+          },
         );
 
         if (Object.keys(updates).length > 0) {
@@ -480,13 +480,13 @@ export class LobbyCleanupService {
     const originalInterval = this.config.cleanupIntervalMs;
     this.config.cleanupIntervalMs = Math.min(
       originalInterval * 2,
-      10 * 60 * 1000 // Max 10 minutes
+      10 * 60 * 1000, // Max 10 minutes
     );
 
     // Reduce batch size
     this.config.maxLobbiesPerCleanup = Math.max(
       Math.floor(this.config.maxLobbiesPerCleanup / 2),
-      1
+      1,
     );
 
     // Reset after 30 minutes
@@ -497,7 +497,7 @@ export class LobbyCleanupService {
           DEFAULT_CLEANUP_CONFIG.maxLobbiesPerCleanup;
         console.log("Restored normal cleanup configuration");
       },
-      30 * 60 * 1000
+      30 * 60 * 1000,
     );
   }
 

@@ -115,7 +115,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         Sentry.captureException(error);
       }
     },
-    [vote]
+    [vote],
   );
 
   const handleStartRound = useCallback(async () => {

@@ -72,7 +72,7 @@ export class LobbySystemIntegrationService {
   }
 
   static getInstance(
-    config?: LobbySystemConfig
+    config?: LobbySystemConfig,
   ): LobbySystemIntegrationService {
     if (!LobbySystemIntegrationService.instance) {
       LobbySystemIntegrationService.instance =
@@ -162,7 +162,7 @@ export class LobbySystemIntegrationService {
               activeLobbies: health.activeLobbies,
               activePlayers: health.activePlayers,
               errorRate: health.errorRate,
-            }
+            },
           );
 
           // Alert on high error rate
@@ -203,7 +203,7 @@ export class LobbySystemIntegrationService {
   async createLobby(
     userId: string,
     lobbyData: unknown,
-    options: { skipRateLimit?: boolean } = {}
+    options: { skipRateLimit?: boolean } = {},
   ): Promise<{ success: boolean; lobbyCode?: string; error?: string }> {
     const startTime = performance.now();
 
@@ -212,7 +212,7 @@ export class LobbySystemIntegrationService {
       if (this.config.enableRateLimiting && !options.skipRateLimit) {
         const rateLimitResult = await RateLimitingService.checkRateLimit(
           userId,
-          "LOBBY_CREATION"
+          "LOBBY_CREATION",
         );
 
         if (!rateLimitResult.allowed) {
@@ -294,7 +294,7 @@ export class LobbySystemIntegrationService {
   async joinLobby(
     userId: string,
     lobbyCode: string,
-    playerData: unknown
+    playerData: unknown,
   ): Promise<{ success: boolean; error?: string }> {
     const startTime = performance.now();
 
@@ -303,7 +303,7 @@ export class LobbySystemIntegrationService {
       if (this.config.enableRateLimiting) {
         const rateLimitResult = await RateLimitingService.checkRateLimit(
           userId,
-          "PLAYER_ACTIONS"
+          "PLAYER_ACTIONS",
         );
 
         if (!rateLimitResult.allowed) {
@@ -330,7 +330,7 @@ export class LobbySystemIntegrationService {
       // Get lobby data with caching
       const lobbyData = await dbOptimization.getCachedData(
         `lobbies/${lobbyCode}`,
-        10000
+        10000,
       );
 
       if (!lobbyData) {
@@ -347,7 +347,7 @@ export class LobbySystemIntegrationService {
             (lobbyData as Record<string, unknown>).players as Record<
               string,
               unknown
-            >
+            >,
           ).length
         : 0;
       if (
@@ -371,7 +371,7 @@ export class LobbySystemIntegrationService {
       dbOptimization.scheduleDeltaUpdate(playerPath, playerInfo);
       dbOptimization.scheduleDeltaUpdate(
         `lobbies/${lobbyCode}/updatedAt`,
-        new Date().toISOString()
+        new Date().toISOString(),
       );
 
       // Update player session
@@ -426,7 +426,7 @@ export class LobbySystemIntegrationService {
       // Check if code exists using cached data
       const existingLobby = await dbOptimization.getCachedData(
         `lobbies/${code}`,
-        1000
+        1000,
       );
 
       if (!existingLobby) {
@@ -437,7 +437,7 @@ export class LobbySystemIntegrationService {
     }
 
     throw new Error(
-      "Unable to generate unique lobby code after maximum attempts"
+      "Unable to generate unique lobby code after maximum attempts",
     );
   }
 

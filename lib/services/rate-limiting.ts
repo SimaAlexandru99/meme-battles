@@ -65,7 +65,7 @@ export class RateLimitingService {
    */
   static async checkRateLimit(
     userId: string,
-    action: keyof typeof RATE_LIMITS
+    action: keyof typeof RATE_LIMITS,
   ): Promise<RateLimitResult> {
     const config = RATE_LIMITS[action];
     const now = Date.now();
@@ -154,7 +154,7 @@ export class RateLimitingService {
    */
   static async resetRateLimit(
     userId: string,
-    action: keyof typeof RATE_LIMITS
+    action: keyof typeof RATE_LIMITS,
   ): Promise<void> {
     try {
       const rateLimitRef = ref(rtdb, `rateLimits/${userId}/${action}`);
@@ -170,7 +170,7 @@ export class RateLimitingService {
    */
   static async getRateLimitStatus(
     userId: string,
-    action: keyof typeof RATE_LIMITS
+    action: keyof typeof RATE_LIMITS,
   ): Promise<RateLimitResult> {
     const config = RATE_LIMITS[action];
     const now = Date.now();
@@ -230,11 +230,11 @@ export class RateLimitingService {
  */
 export function formatRateLimitError(
   result: RateLimitResult,
-  action: string
+  action: string,
 ): string {
   if (result.blocked && result.blockExpiresAt) {
     const timeRemaining = Math.ceil(
-      (result.blockExpiresAt - Date.now()) / 1000
+      (result.blockExpiresAt - Date.now()) / 1000,
     );
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = timeRemaining % 60;
@@ -262,7 +262,7 @@ export function formatRateLimitError(
  */
 export function withRateLimit<T extends unknown[], R>(
   action: keyof typeof RATE_LIMITS,
-  fn: (...args: T) => Promise<R>
+  fn: (...args: T) => Promise<R>,
 ) {
   return async function rateLimitedFunction(
     userId: string,
@@ -270,7 +270,7 @@ export function withRateLimit<T extends unknown[], R>(
   ): Promise<R> {
     const rateLimitResult = await RateLimitingService.checkRateLimit(
       userId,
-      action
+      action,
     );
 
     if (!rateLimitResult.allowed) {

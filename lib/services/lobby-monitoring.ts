@@ -122,7 +122,7 @@ export class LobbyMonitoringService {
    * Log a monitoring event
    */
   logEvent(
-    event: Omit<MonitoringEvent, "id" | "timestamp"> & { timestamp?: number }
+    event: Omit<MonitoringEvent, "id" | "timestamp"> & { timestamp?: number },
   ): void {
     if (!this.isEnabled) {
       return;
@@ -170,7 +170,7 @@ export class LobbyMonitoringService {
     try {
       // Batch write events to Firebase
       const promises = eventsToFlush.map((event) =>
-        push(ref(rtdb, "monitoring/events"), event)
+        push(ref(rtdb, "monitoring/events"), event),
       );
 
       await Promise.all(promises);
@@ -192,7 +192,7 @@ export class LobbyMonitoringService {
   logLobbyCreated(
     lobbyCode: string,
     userId: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): void {
     this.logEvent({
       type: "lobby_created",
@@ -213,7 +213,7 @@ export class LobbyMonitoringService {
   logLobbyJoined(
     lobbyCode: string,
     userId: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): void {
     this.logEvent({
       type: "lobby_joined",
@@ -233,7 +233,7 @@ export class LobbyMonitoringService {
   logLobbyLeft(
     lobbyCode: string,
     userId: string,
-    reason: string = "user_action"
+    reason: string = "user_action",
   ): void {
     this.logEvent({
       type: "lobby_left",
@@ -268,7 +268,7 @@ export class LobbyMonitoringService {
    */
   logPerformanceMetrics(
     metrics: Partial<PerformanceMetrics>,
-    context: Record<string, unknown> = {}
+    context: Record<string, unknown> = {},
   ): void {
     this.logEvent({
       type: "performance",
@@ -288,7 +288,7 @@ export class LobbyMonitoringService {
   async measureOperation<T>(
     operationName: string,
     operation: () => Promise<T>,
-    context: Record<string, unknown> = {}
+    context: Record<string, unknown> = {},
   ): Promise<T> {
     const startTime = performance.now();
 
@@ -298,7 +298,7 @@ export class LobbyMonitoringService {
 
       this.logPerformanceMetrics(
         { [operationName]: duration },
-        { ...context, success: true }
+        { ...context, success: true },
       );
 
       return result;
@@ -332,7 +332,8 @@ export class LobbyMonitoringService {
       const activePlayers = sessionsSnapshot.exists()
         ? Object.values(sessionsSnapshot.val()).filter(
             (session: unknown) =>
-              (session as Record<string, unknown>).connectionStatus === "online"
+              (session as Record<string, unknown>).connectionStatus ===
+              "online",
           ).length
         : 0;
 
@@ -341,8 +342,8 @@ export class LobbyMonitoringService {
         query(
           ref(rtdb, "monitoring/events"),
           orderByChild("type"),
-          limitToLast(100)
-        )
+          limitToLast(100),
+        ),
       );
 
       let averageLatency = 0;
@@ -350,13 +351,13 @@ export class LobbyMonitoringService {
 
       if (metricsSnapshot.exists()) {
         const events = Object.values(
-          metricsSnapshot.val()
+          metricsSnapshot.val(),
         ) as MonitoringEvent[];
         const performanceEvents = events.filter(
-          (e) => e.type === "performance"
+          (e) => e.type === "performance",
         );
         const errorEvents = events.filter(
-          (e) => e.severity === "error" || e.severity === "critical"
+          (e) => e.severity === "error" || e.severity === "critical",
         );
 
         if (performanceEvents.length > 0) {
@@ -396,8 +397,8 @@ export class LobbyMonitoringService {
         query(
           ref(rtdb, "monitoring/events"),
           orderByChild("timestamp"),
-          limitToLast(limit)
-        )
+          limitToLast(limit),
+        ),
       );
 
       if (!snapshot.exists()) {

@@ -57,7 +57,7 @@ export function KickPlayerButton({
 
       if (isAI) {
         toast.success(
-          `Successfully removed AI player ${playerName} from the lobby`
+          `Successfully removed AI player ${playerName} from the lobby`,
         );
       } else {
         toast.success(`Successfully kicked ${playerName} from the lobby`);
@@ -101,7 +101,7 @@ export function KickPlayerButton({
             "focus-visible:ring-2 focus-visible:ring-red-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             "transition-all duration-200",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
+            "disabled:opacity-50 disabled:cursor-not-allowed",
           )}
           aria-label={
             isKicking

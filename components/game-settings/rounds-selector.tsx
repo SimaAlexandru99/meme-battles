@@ -99,7 +99,7 @@ export function RoundsSelector({
   };
 
   const selectedPreset = ROUNDS_PRESETS.find(
-    (preset) => preset.value === value
+    (preset) => preset.value === value,
   );
   const isCustomValue = !selectedPreset;
 

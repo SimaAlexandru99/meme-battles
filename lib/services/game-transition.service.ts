@@ -21,7 +21,7 @@ export class GameTransitionService {
     lobbyCode: string,
     onTransitionStart?: () => void,
     onTransitionComplete?: () => void,
-    onTransitionError?: (error: Error) => void
+    onTransitionError?: (error: Error) => void,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -74,7 +74,7 @@ export class GameTransitionService {
           onTransitionError?.(gameError);
           throw gameError;
         }
-      }
+      },
     );
   }
 
@@ -84,7 +84,7 @@ export class GameTransitionService {
   async handleGameStartFailure(
     lobbyCode: string,
     error: Error,
-    onRetry?: () => Promise<void>
+    onRetry?: () => Promise<void>,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -116,7 +116,7 @@ export class GameTransitionService {
               }
             : undefined,
         });
-      }
+      },
     );
   }
 
@@ -126,7 +126,7 @@ export class GameTransitionService {
   validateGameStartConditions(
     playerCount: number,
     isHost: boolean,
-    lobbyStatus: LobbyStatus
+    lobbyStatus: LobbyStatus,
   ): { isValid: boolean; errorMessage?: string } {
     if (!isHost) {
       return {

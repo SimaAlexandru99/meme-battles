@@ -123,7 +123,7 @@ export function CategorySelector({
   const filteredCategories = MEME_CATEGORIES.filter(
     (category) =>
       category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      category.description.toLowerCase().includes(searchQuery.toLowerCase())
+      category.description.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleCategoryToggle = (categoryId: string) => {

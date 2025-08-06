@@ -53,7 +53,7 @@ const SETTINGS_CONSTRAINTS: GameSettingsConstraints = {
  */
 export function useLobbySettings(
   lobbyCode: string,
-  lobbyData: LobbyData | null
+  lobbyData: LobbyData | null,
 ): UseLobbySettingsReturn {
   // Core state
   const [settings, setSettings] = useState<GameSettings | null>(null);
@@ -127,7 +127,7 @@ export function useLobbySettings(
         // Check if all selected categories are valid
         const invalidCategories = settingsToValidate.categories.filter(
           (category) =>
-            !SETTINGS_CONSTRAINTS.categories.available.includes(category)
+            !SETTINGS_CONSTRAINTS.categories.available.includes(category),
         );
         if (invalidCategories.length > 0) {
           const error = `Invalid categories: ${invalidCategories.join(", ")}`;
@@ -145,7 +145,7 @@ export function useLobbySettings(
         field: Object.keys(fieldErrors)[0], // First field with error
       };
     },
-    []
+    [],
   );
 
   /**
@@ -175,7 +175,7 @@ export function useLobbySettings(
         },
       });
     },
-    [lobbyCode, user?.id, isHost]
+    [lobbyCode, user?.id, isHost],
   );
 
   /**
@@ -224,7 +224,7 @@ export function useLobbySettings(
         const result = await lobbyService.current.updateLobbySettings(
           lobbyCode,
           newSettings,
-          user.id
+          user.id,
         );
 
         if (!result.success) {
@@ -267,7 +267,7 @@ export function useLobbySettings(
       clearError,
       lobbyCode,
       handleError,
-    ]
+    ],
   );
 
   /**

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { SWRProvider } from "@/providers/swr-provider";
 import { InvitationLink } from "@/components/invitation-link";
+import { Suspense } from "react";
 
 const bangers = Bangers({
   weight: "400",
@@ -33,7 +34,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <InvitationLink>{children}</InvitationLink>
+            <Suspense fallback={null}>
+              <InvitationLink>{children}</InvitationLink>
+            </Suspense>
             <Toaster />
           </ThemeProvider>
         </SWRProvider>

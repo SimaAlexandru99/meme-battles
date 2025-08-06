@@ -20,7 +20,6 @@ import {
   errorVariants,
 } from "@/lib/animations/private-lobby-variants";
 
-
 interface CreateLobbySectionProps {
   onCreateLobby: (settings?: Partial<GameSettings>) => Promise<string>;
   isLoading: boolean;
@@ -98,7 +97,7 @@ export function CreateLobbySection({
         handleCreateClick();
       }
     },
-    [isLoading, isCreating, handleCreateClick]
+    [isLoading, isCreating, handleCreateClick],
   );
 
   // Handle copy to clipboard functionality
@@ -162,7 +161,7 @@ export function CreateLobbySection({
         "bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50",
         "shadow-2xl shadow-purple-500/10",
         "h-full justify-between",
-        className
+        className,
       )}
       role="region"
       aria-label="Create new private lobby"
@@ -182,7 +181,7 @@ export function CreateLobbySection({
             "bg-gradient-to-br from-blue-400 to-blue-600",
             "rounded-2xl shadow-lg shadow-blue-500/30",
             "flex items-center justify-center",
-            "transform rotate-[-8deg]"
+            "transform rotate-[-8deg]",
           )}
           variants={microInteractionVariants}
           whileHover="hover"
@@ -221,7 +220,7 @@ export function CreateLobbySection({
             "bg-gradient-to-br from-blue-500 to-blue-700",
             "rounded-2xl shadow-lg shadow-blue-500/40",
             "flex items-center justify-center",
-            "transform rotate-[8deg]"
+            "transform rotate-[8deg]",
           )}
           variants={microInteractionVariants}
           whileHover="hover"
@@ -260,7 +259,7 @@ export function CreateLobbySection({
             "w-12 h-12 sm:w-14 sm:h-14",
             "bg-gradient-to-br from-green-400 to-green-600",
             "rounded-full shadow-lg shadow-green-500/30",
-            "flex items-center justify-center"
+            "flex items-center justify-center",
           )}
           variants={badgeVariants}
           initial="initial"
@@ -284,7 +283,7 @@ export function CreateLobbySection({
             className={cn(
               "absolute top-full left-1/2 transform -translate-x-1/2",
               "w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px]",
-              "border-l-transparent border-r-transparent border-t-green-500"
+              "border-l-transparent border-r-transparent border-t-green-500",
             )}
             aria-hidden="true"
           />
@@ -312,7 +311,7 @@ export function CreateLobbySection({
             className={cn(
               "w-full max-w-md p-4 rounded-lg",
               "bg-red-500/10 border border-red-500/30",
-              "text-center"
+              "text-center",
             )}
             role="alert"
             aria-live="assertive"
@@ -353,7 +352,7 @@ export function CreateLobbySection({
             className={cn(
               "w-full max-w-md p-4 rounded-lg",
               "bg-blue-500/10 border border-blue-500/30",
-              "text-center"
+              "text-center",
             )}
             role="region"
             aria-label="Lobby settings preview"
@@ -406,7 +405,7 @@ export function CreateLobbySection({
             className={cn(
               "w-full max-w-md p-4 rounded-lg",
               "bg-green-500/10 border border-green-500/30",
-              "text-center"
+              "text-center",
             )}
             role="region"
             aria-label="Created invitation code"
@@ -423,7 +422,7 @@ export function CreateLobbySection({
                   "border border-green-500/30 shadow-lg",
                   "focus-visible:ring-2 focus-visible:ring-green-500/50",
                   "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-                  "select-all cursor-pointer"
+                  "select-all cursor-pointer",
                 )}
                 variants={microInteractionVariants}
                 whileHover="hover"
@@ -444,7 +443,7 @@ export function CreateLobbySection({
                   "h-8 w-8 p-0",
                   "text-green-400 hover:text-green-300",
                   "hover:bg-green-500/20",
-                  copied && "text-green-300"
+                  copied && "text-green-300",
                 )}
                 aria-label={copied ? "Code copied!" : "Copy invitation code"}
               >
@@ -497,7 +496,7 @@ export function CreateLobbySection({
             className={cn(
               "w-full border-purple-500/30 text-purple-300",
               "hover:bg-purple-500/10 hover:border-purple-400",
-              "font-bangers tracking-wide"
+              "font-bangers tracking-wide",
             )}
           >
             {showSettings ? "Hide Settings" : "Customize Settings"}
@@ -520,7 +519,7 @@ export function CreateLobbySection({
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "focus-visible:ring-2 focus-visible:ring-green-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-            hasError && canRetry && "animate-pulse"
+            hasError && canRetry && "animate-pulse",
           )}
           aria-label={
             isOperationInProgress

@@ -1,13 +1,7 @@
 import { LobbyService } from "../lobby.service";
-import { get, set, update, remove, ref } from "firebase/database";
+import { get, set, update, ref } from "firebase/database";
 import * as Sentry from "@sentry/nextjs";
 import type { DataSnapshot } from "firebase/database";
-import type {
-  LobbyData,
-  GameSettings,
-  CreateLobbyParams,
-  JoinLobbyParams,
-} from "@/types";
 
 // Mock Firebase
 jest.mock("firebase/database", () => ({
@@ -38,7 +32,6 @@ describe("LobbyService - Unit Tests", () => {
   const mockGet = get as jest.MockedFunction<typeof get>;
   const mockSet = set as jest.MockedFunction<typeof set>;
   const mockUpdate = update as jest.MockedFunction<typeof update>;
-  const mockRemove = remove as jest.MockedFunction<typeof remove>;
   const mockRef = ref as jest.MockedFunction<typeof ref>;
 
   // Mock data
@@ -69,13 +62,6 @@ describe("LobbyService - Unit Tests", () => {
     updatedAt: "2025-01-08T10:00:00.000Z",
   };
 
-  const mockCreateLobbyParams: CreateLobbyParams = {
-    hostUid: "host123",
-    hostDisplayName: "HostPlayer",
-    hostAvatarId: "doge-sunglasses",
-    hostProfileURL: "https://example.com/avatar.jpg",
-  };
-
   const mockJoinLobbyParams: JoinLobbyParams = {
     uid: "player456",
     displayName: "NewPlayer",
@@ -86,7 +72,7 @@ describe("LobbyService - Unit Tests", () => {
   beforeEach(() => {
     lobbyService = LobbyService.getInstance();
     jest.clearAllMocks();
-    mockRef.mockReturnValue({} as any);
+    mockRef.mockReturnValue({} as ReturnType<typeof ref>);
   });
 
   describe("Code Generation and Validation", () => {

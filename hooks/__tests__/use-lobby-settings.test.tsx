@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useLobbySettings } from "@/hooks/use-lobby-settings";
 import { LobbyService } from "@/lib/services/lobby.service";
 import * as Sentry from "@sentry/nextjs";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Mock Firebase Realtime Database
 jest.mock("firebase/database", () => ({
@@ -29,7 +30,7 @@ jest.mock("@/hooks/useCurrentUser", () => ({
   useCurrentUser: jest.fn(),
 }));
 
-const mockUseCurrentUser = require("@/hooks/useCurrentUser").useCurrentUser;
+const mockUseCurrentUser = useCurrentUser;
 
 const mockLobbyService = {
   updateLobbySettings: jest.fn(),
@@ -72,7 +73,7 @@ describe("useLobbySettings", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (LobbyService.getInstance as jest.Mock).mockReturnValue(mockLobbyService);
-    mockUseCurrentUser.mockReturnValue({ user: mockUser });
+    (mockUseCurrentUser as jest.Mock).mockReturnValue({ user: mockUser });
     (Sentry.addBreadcrumb as jest.Mock).mockImplementation(() => {});
     (Sentry.captureException as jest.Mock).mockImplementation(() => {});
   });
@@ -80,7 +81,7 @@ describe("useLobbySettings", () => {
   describe("initialization", () => {
     it("should initialize with lobby settings", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       expect(result.current.settings).toEqual(mockLobbyData.settings);
@@ -92,7 +93,7 @@ describe("useLobbySettings", () => {
 
     it("should identify host correctly", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       expect(result.current.isHost).toBe(true);
@@ -100,12 +101,12 @@ describe("useLobbySettings", () => {
     });
 
     it("should identify non-host correctly", () => {
-      mockUseCurrentUser.mockReturnValue({
+      (mockUseCurrentUser as jest.Mock).mockReturnValue({
         user: { ...mockUser, id: "user456" },
-      });
+      } as unknown as User);
 
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       expect(result.current.isHost).toBe(false);
@@ -124,7 +125,7 @@ describe("useLobbySettings", () => {
   describe("settings validation", () => {
     it("should validate rounds correctly", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       // Valid rounds
@@ -157,7 +158,7 @@ describe("useLobbySettings", () => {
 
     it("should validate time limit correctly", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       // Valid time limit
@@ -176,7 +177,7 @@ describe("useLobbySettings", () => {
       });
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain(
-        "Time limit must be between 30 and 120 seconds"
+        "Time limit must be between 30 and 120 seconds",
       );
 
       // Invalid time limit - too high
@@ -187,13 +188,13 @@ describe("useLobbySettings", () => {
       });
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain(
-        "Time limit must be between 30 and 120 seconds"
+        "Time limit must be between 30 and 120 seconds",
       );
     });
 
     it("should validate categories correctly", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       // Valid categories
@@ -212,7 +213,7 @@ describe("useLobbySettings", () => {
       });
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain(
-        "At least 1 category must be selected"
+        "At least 1 category must be selected",
       );
 
       // Invalid categories - invalid category name
@@ -223,13 +224,13 @@ describe("useLobbySettings", () => {
       });
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toContain(
-        "Invalid categories: invalid-category"
+        "Invalid categories: invalid-category",
       );
     });
 
     it("should update validation errors state", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       act(() => {
@@ -259,7 +260,7 @@ describe("useLobbySettings", () => {
       });
 
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       await act(async () => {
@@ -273,13 +274,13 @@ describe("useLobbySettings", () => {
       expect(mockLobbyService.updateLobbySettings).toHaveBeenCalledWith(
         "ABC12",
         { rounds: 10 },
-        "user123"
+        "user123",
       );
     });
 
     it("should handle validation errors before sending request", async () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       await act(async () => {
@@ -292,11 +293,11 @@ describe("useLobbySettings", () => {
 
     it("should rollback optimistic update on service failure", async () => {
       mockLobbyService.updateLobbySettings.mockRejectedValue(
-        new Error("Network error")
+        new Error("Network error"),
       );
 
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       const originalRounds = result.current.settings?.rounds;
@@ -305,6 +306,7 @@ describe("useLobbySettings", () => {
         try {
           await result.current.updateSettings({ rounds: 10 });
         } catch (error) {
+          console.log(error);
           // Expected to throw
         }
       });
@@ -323,12 +325,12 @@ describe("useLobbySettings", () => {
     });
 
     it("should prevent updates for non-host users", async () => {
-      mockUseCurrentUser.mockReturnValue({
+      (mockUseCurrentUser as jest.Mock).mockReturnValue({
         user: { ...mockUser, id: "user456" },
       });
 
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       // Wait for hook to initialize
@@ -339,7 +341,7 @@ describe("useLobbySettings", () => {
       await expect(
         act(async () => {
           await result.current.updateSettings({ rounds: 10 });
-        })
+        }),
       ).rejects.toThrow("Cannot modify settings: insufficient permissions");
 
       expect(mockLobbyService.updateLobbySettings).not.toHaveBeenCalled();
@@ -351,7 +353,7 @@ describe("useLobbySettings", () => {
         status: "started" as LobbyStatus,
       };
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", startedLobby)
+        useLobbySettings("ABC12", startedLobby),
       );
 
       expect(result.current.canModifySettings).toBe(false);
@@ -364,7 +366,7 @@ describe("useLobbySettings", () => {
       await expect(
         act(async () => {
           await result.current.updateSettings({ rounds: 10 });
-        })
+        }),
       ).rejects.toThrow("Cannot modify settings: insufficient permissions");
     });
   });
@@ -372,7 +374,7 @@ describe("useLobbySettings", () => {
   describe("resetSettings", () => {
     it("should reset settings to lobby data", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       // Simulate some changes
@@ -395,7 +397,7 @@ describe("useLobbySettings", () => {
     it("should sync with lobby data changes when no unsaved changes", () => {
       const { result, rerender } = renderHook(
         ({ lobbyData }) => useLobbySettings("ABC12", lobbyData),
-        { initialProps: { lobbyData: mockLobbyData } }
+        { initialProps: { lobbyData: mockLobbyData } },
       );
 
       const updatedLobbyData = {
@@ -411,7 +413,7 @@ describe("useLobbySettings", () => {
     it("should not sync when there are unsaved changes", () => {
       const { result, rerender } = renderHook(
         ({ lobbyData }) => useLobbySettings("ABC12", lobbyData),
-        { initialProps: { lobbyData: mockLobbyData } }
+        { initialProps: { lobbyData: mockLobbyData } },
       );
 
       // Make local changes
@@ -435,10 +437,12 @@ describe("useLobbySettings", () => {
     it("should reset changes when user loses host privileges", () => {
       const { result, rerender } = renderHook(
         ({ user }) => {
-          mockUseCurrentUser.mockReturnValue({ user });
+          (mockUseCurrentUser as jest.Mock).mockReturnValue({
+            user,
+          } as unknown as User);
           return useLobbySettings("ABC12", mockLobbyData);
         },
-        { initialProps: { user: mockUser } }
+        { initialProps: { user: mockUser } },
       );
 
       // Make some changes as host
@@ -459,7 +463,7 @@ describe("useLobbySettings", () => {
   describe("error handling", () => {
     it("should clear errors", () => {
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       // Set an error
@@ -486,13 +490,14 @@ describe("useLobbySettings", () => {
       mockLobbyService.updateLobbySettings.mockRejectedValue(lobbyError);
 
       const { result } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       await act(async () => {
         try {
           await result.current.updateSettings({ rounds: 10 });
         } catch (error) {
+          console.log(error);
           // Expected to throw
         }
       });
@@ -507,7 +512,7 @@ describe("useLobbySettings", () => {
             userId: "user123",
             isHost: true,
           }),
-        })
+        }),
       );
     });
   });
@@ -516,7 +521,7 @@ describe("useLobbySettings", () => {
     it("should cleanup timeouts on unmount", () => {
       const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
       const { unmount } = renderHook(() =>
-        useLobbySettings("ABC12", mockLobbyData)
+        useLobbySettings("ABC12", mockLobbyData),
       );
 
       unmount();

@@ -23,7 +23,7 @@ describe("Lobby Validation", () => {
       const result = validateLobbyCode("abc12");
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Lobby code must contain only uppercase letters and numbers"
+        "Lobby code must contain only uppercase letters and numbers",
       );
     });
 
@@ -31,7 +31,7 @@ describe("Lobby Validation", () => {
       const result = validateLobbyCode("ABC1");
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Lobby code must be exactly 5 characters"
+        "Lobby code must be exactly 5 characters",
       );
     });
   });
@@ -53,7 +53,7 @@ describe("Lobby Validation", () => {
       const result = validateGameSettings(settings);
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        `Minimum rounds is ${GAME_SETTINGS_CONSTRAINTS.rounds.min}`
+        `Minimum rounds is ${GAME_SETTINGS_CONSTRAINTS.rounds.min}`,
       );
     });
 
@@ -62,7 +62,7 @@ describe("Lobby Validation", () => {
       const result = validateGameSettings(settings);
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        `Minimum time limit is ${GAME_SETTINGS_CONSTRAINTS.timeLimit.min} seconds`
+        `Minimum time limit is ${GAME_SETTINGS_CONSTRAINTS.timeLimit.min} seconds`,
       );
     });
 
@@ -91,7 +91,7 @@ describe("Lobby Validation", () => {
       const result = validateDisplayName("ThisNameIsTooLongForTheSystem");
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Display name must be no more than 20 characters"
+        "Display name must be no more than 20 characters",
       );
     });
   });

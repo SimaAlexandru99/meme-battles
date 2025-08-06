@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RiPlayLine, RiAlertCircleLine } from "react-icons/ri";
+import { RiAlertLine, RiPlayLine } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -162,7 +162,7 @@ export function StartGameButton({
                 animate="animate"
                 exit="exit"
               >
-                <RiAlertCircleLine className="w-5 h-5" />
+                <RiAlertLine className="w-5 h-5" />
                 <span className="truncate">
                   {playerCount < 3
                     ? `Need ${3 - playerCount} more`

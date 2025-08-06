@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ref, onValue, off, set, push, update } from "firebase/database";
+import { ref, onValue, off, set, update } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
 import * as Sentry from "@sentry/nextjs";
 
 interface GameState {
@@ -78,9 +77,9 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     "connected" | "disconnected" | "reconnecting"
   >("disconnected");
 
-  const gameStateRef = useRef<UnsubscribeFunction | null>(null);
-  const playersRef = useRef<UnsubscribeFunction | null>(null);
-  const playerCardsRef = useRef<UnsubscribeFunction | null>(null);
+  const gameStateUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
+  const playersUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
+  const playerCardsUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
 
   /**
    * Clear error state
@@ -103,7 +102,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode]
+    [lobbyCode],
   );
 
   /**
@@ -119,7 +118,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     const gameStatePath = `lobbies/${lobbyCode}/gameState`;
     const gameStateRef = ref(rtdb, gameStatePath);
 
-    gameStateRef.current = onValue(
+    gameStateUnsubscribeRef.current = onValue(
       gameStateRef,
       (snapshot) => {
         if (snapshot.exists()) {
@@ -134,14 +133,14 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       (error) => {
         handleError(error, "game_state_listener");
         setConnectionStatus("disconnected");
-      }
+      },
     );
 
     // Listen to players data
     const playersPath = `lobbies/${lobbyCode}/players`;
     const playersRef = ref(rtdb, playersPath);
 
-    playersRef.current = onValue(
+    playersUnsubscribeRef.current = onValue(
       playersRef,
       (snapshot) => {
         if (snapshot.exists()) {
@@ -155,23 +154,23 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               status: "waiting",
               cards: [],
               isCurrentPlayer: id === user.id,
-              isAI: player.isAI || false,
-              aiPersonalityId: player.aiPersonalityId,
-            })
+              isAI: false, // PlayerData doesn't have isAI property
+              aiPersonalityId: undefined, // PlayerData doesn't have aiPersonalityId property
+            }),
           );
           setPlayers(gamePlayers);
         }
       },
       (error) => {
         handleError(error, "players_listener");
-      }
+      },
     );
 
     // Listen to current player's cards
     const playerCardsPath = `lobbies/${lobbyCode}/playerCards/${user.id}`;
     const playerCardsRef = ref(rtdb, playerCardsPath);
 
-    playerCardsRef.current = onValue(
+    playerCardsUnsubscribeRef.current = onValue(
       playerCardsRef,
       (snapshot) => {
         if (snapshot.exists()) {
@@ -181,18 +180,22 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       },
       (error) => {
         handleError(error, "player_cards_listener");
-      }
+      },
     );
 
     return () => {
-      if (gameStateRef.current) {
-        off(ref(rtdb, gameStatePath), "value", gameStateRef.current);
+      if (gameStateUnsubscribeRef.current) {
+        off(ref(rtdb, gameStatePath), "value", gameStateUnsubscribeRef.current);
       }
-      if (playersRef.current) {
-        off(ref(rtdb, playersPath), "value", playersRef.current);
+      if (playersUnsubscribeRef.current) {
+        off(ref(rtdb, playersPath), "value", playersUnsubscribeRef.current);
       }
-      if (playerCardsRef.current) {
-        off(ref(rtdb, playerCardsPath), "value", playerCardsRef.current);
+      if (playerCardsUnsubscribeRef.current) {
+        off(
+          ref(rtdb, playerCardsPath),
+          "value",
+          playerCardsUnsubscribeRef.current,
+        );
       }
     };
   }, [lobbyCode, user, handleError]);
@@ -230,10 +233,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "submit_card");
             throw error;
           }
-        }
+        },
       );
     },
-    [user, gameState, lobbyCode, playerCards, handleError]
+    [user, gameState, lobbyCode, playerCards, handleError],
   );
 
   /**
@@ -262,10 +265,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "vote");
             throw error;
           }
-        }
+        },
       );
     },
-    [user, gameState, lobbyCode, handleError]
+    [user, gameState, lobbyCode, handleError],
   );
 
   /**
@@ -294,7 +297,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "start_round");
           throw error;
         }
-      }
+      },
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -327,7 +330,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "next_round");
           throw error;
         }
-      }
+      },
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -355,7 +358,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "end_game");
           throw error;
         }
-      }
+      },
     );
   }, [user, lobbyCode, handleError]);
 
@@ -374,7 +377,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         gameState?.submissions?.[playerId] !== undefined
       );
     },
-    [isCurrentPlayer, gameState, hasVoted, user?.id]
+    [isCurrentPlayer, gameState, hasVoted, user?.id],
   );
 
   return {

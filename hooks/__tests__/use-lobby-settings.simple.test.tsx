@@ -83,7 +83,7 @@ describe("useLobbySettings - Core Functionality", () => {
 
   it("should initialize with lobby settings", () => {
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     expect(result.current.settings).toEqual(mockLobbyData.settings);
@@ -93,7 +93,7 @@ describe("useLobbySettings - Core Functionality", () => {
 
   it("should validate settings correctly", () => {
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     // Valid settings
@@ -120,7 +120,7 @@ describe("useLobbySettings - Core Functionality", () => {
     });
 
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     expect(result.current.isHost).toBe(false);
@@ -137,7 +137,7 @@ describe("useLobbySettings - Core Functionality", () => {
     });
 
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     await act(async () => {
@@ -148,13 +148,13 @@ describe("useLobbySettings - Core Functionality", () => {
     expect(mockLobbyService.updateLobbySettings).toHaveBeenCalledWith(
       "ABC12",
       { rounds: 10 },
-      "user123"
+      "user123",
     );
   });
 
   it("should prevent invalid settings updates", async () => {
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     await act(async () => {
@@ -167,7 +167,7 @@ describe("useLobbySettings - Core Functionality", () => {
 
   it("should reset settings to lobby data", () => {
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     act(() => {
@@ -181,7 +181,7 @@ describe("useLobbySettings - Core Functionality", () => {
 
   it("should clear errors", () => {
     const { result } = renderHook(() =>
-      useLobbySettings("ABC12", mockLobbyData)
+      useLobbySettings("ABC12", mockLobbyData),
     );
 
     // Trigger an error

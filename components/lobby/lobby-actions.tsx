@@ -40,7 +40,7 @@ export function LobbyActions({
   const containerClasses = cn(
     "flex gap-3",
     orientation === "horizontal" ? "flex-row" : "flex-col",
-    className
+    className,
   );
 
   return (

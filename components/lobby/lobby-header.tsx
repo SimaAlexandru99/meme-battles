@@ -149,7 +149,7 @@ export function LobbyHeader({
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "sticky top-0 z-20 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50",
-        className
+        className,
       )}
       role="banner"
     >
@@ -232,14 +232,14 @@ export function LobbyHeader({
               variant="secondary"
               className={cn(
                 "flex items-center gap-1.5 font-bangers tracking-wide text-xs sm:text-sm",
-                statusProps.className
+                statusProps.className,
               )}
               aria-label={`Connection status: ${statusProps.text}`}
             >
               <motion.div
                 className={cn(
                   "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-                  statusProps.indicator
+                  statusProps.indicator,
                 )}
                 animate={statusProps.animate}
                 transition={{ duration: 2, repeat: Infinity }}

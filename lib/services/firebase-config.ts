@@ -78,11 +78,11 @@ export class FirebaseOptimizationService {
       console.log(
         "- Set cache size to",
         DEFAULT_OPTIMIZATION_CONFIG.cacheSizeBytes,
-        "bytes"
+        "bytes",
       );
       console.log(
         "- Keep synced paths:",
-        DEFAULT_OPTIMIZATION_CONFIG.keepSyncedPaths
+        DEFAULT_OPTIMIZATION_CONFIG.keepSyncedPaths,
       );
 
       // Setup keep synced for critical paths

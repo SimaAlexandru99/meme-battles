@@ -33,7 +33,7 @@ const normalizeInvitationCode = (value: string): string => {
 
 // Validate invitation code format
 const validateInvitationCodeFormat = (
-  value: string
+  value: string,
 ): { isValid: boolean; error?: string } => {
   if (value.length === 0) {
     return { isValid: true }; // Empty is valid (not complete)
@@ -82,7 +82,7 @@ export function InvitationCodeInput({
         onComplete(normalizedValue);
       }
     },
-    [onChange, onComplete]
+    [onChange, onComplete],
   );
 
   const handlePaste = React.useCallback(
@@ -100,7 +100,7 @@ export function InvitationCodeInput({
         }
       }
     },
-    [onChange, onComplete]
+    [onChange, onComplete],
   );
 
   const handleFocus = React.useCallback(() => {
@@ -147,7 +147,7 @@ export function InvitationCodeInput({
           onBlur={handleBlur}
           className={cn(
             "gap-2 sm:gap-3",
-            (error || localError) && "aria-invalid:true"
+            (error || localError) && "aria-invalid:true",
           )}
           containerClassName="flex items-center justify-center"
           aria-label="Enter 5-character invitation code"
@@ -200,7 +200,7 @@ export function InvitationCodeInput({
 
                     // Animation for filled slots
                     value[index] &&
-                      "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10"
+                      "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10",
                   )}
                   aria-label={`Character ${index + 1} of invitation code`}
                   aria-describedby={`slot-${index}-description`}
@@ -242,7 +242,7 @@ export function InvitationCodeInput({
           className={cn(
             "text-xs sm:text-sm font-bangers tracking-wide transition-colors duration-200",
             error || localError ? "text-red-400" : "text-purple-200/70",
-            disabled && "opacity-50"
+            disabled && "opacity-50",
           )}
           id={error || localError ? "otp-error-message" : undefined}
           role="status"

@@ -39,7 +39,7 @@ describe("ErrorHandler", () => {
       expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("succeeded after 1 retries"),
-        })
+        }),
       );
     });
 
@@ -48,7 +48,7 @@ describe("ErrorHandler", () => {
       const operation = jest.fn().mockRejectedValue(error);
 
       await expect(
-        ErrorHandler.withRetry(operation, { maxRetries: 2 })
+        ErrorHandler.withRetry(operation, { maxRetries: 2 }),
       ).rejects.toEqual(error);
 
       expect(operation).toHaveBeenCalledTimes(1);
@@ -62,7 +62,7 @@ describe("ErrorHandler", () => {
         ErrorHandler.withRetry(operation, {
           maxRetries: 2,
           retryDelays: [1, 2],
-        })
+        }),
       ).rejects.toEqual(error);
 
       expect(operation).toHaveBeenCalledTimes(3);
@@ -100,7 +100,7 @@ describe("ErrorHandler", () => {
       expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
         expect.objectContaining({
           message: "test_operation succeeded after 1 retries",
-        })
+        }),
       );
     });
   });
@@ -108,7 +108,7 @@ describe("ErrorHandler", () => {
   describe("isRetryableError", () => {
     it("should identify retryable network errors", () => {
       expect(ErrorHandler.isRetryableError({ code: "NETWORK_ERROR" })).toBe(
-        true
+        true,
       );
       expect(ErrorHandler.isRetryableError({ code: "TIMEOUT" })).toBe(true);
       expect(ErrorHandler.isRetryableError({ status: 500 })).toBe(true);
@@ -118,10 +118,10 @@ describe("ErrorHandler", () => {
 
     it("should identify non-retryable errors", () => {
       expect(ErrorHandler.isRetryableError({ code: "PERMISSION_DENIED" })).toBe(
-        false
+        false,
       );
       expect(ErrorHandler.isRetryableError({ code: "UNAUTHENTICATED" })).toBe(
-        false
+        false,
       );
       expect(ErrorHandler.isRetryableError({ status: 400 })).toBe(false);
       expect(ErrorHandler.isRetryableError({ status: 404 })).toBe(false);
@@ -132,14 +132,14 @@ describe("ErrorHandler", () => {
         ErrorHandler.isRetryableError({
           type: "NETWORK_ERROR",
           retryable: true,
-        })
+        }),
       ).toBe(true);
 
       expect(
         ErrorHandler.isRetryableError({
           type: "NETWORK_ERROR",
           retryable: false,
-        })
+        }),
       ).toBe(false);
     });
 
@@ -147,19 +147,19 @@ describe("ErrorHandler", () => {
       expect(
         ErrorHandler.isRetryableError({
           message: "Network connection failed",
-        })
+        }),
       ).toBe(true);
 
       expect(
         ErrorHandler.isRetryableError({
           message: "Request timeout occurred",
-        })
+        }),
       ).toBe(true);
 
       expect(
         ErrorHandler.isRetryableError({
           message: "Service temporarily unavailable",
-        })
+        }),
       ).toBe(true);
     });
   });
@@ -318,7 +318,7 @@ describe("ErrorHandler", () => {
 
       const wrappedMethod = ErrorHandler.wrapServiceMethod(
         method,
-        "test_operation"
+        "test_operation",
       );
 
       const result = await wrappedMethod("arg1", "arg2");
@@ -334,7 +334,7 @@ describe("ErrorHandler", () => {
 
       const wrappedMethod = ErrorHandler.wrapServiceMethod(
         method,
-        "test_operation"
+        "test_operation",
       );
 
       await expect(wrappedMethod()).rejects.toEqual(error);

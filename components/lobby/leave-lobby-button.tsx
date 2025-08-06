@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RiArrowLeftLine, RiAlertCircleLine } from "react-icons/ri";
+import { RiAlertLine, RiArrowLeftLine } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -176,7 +176,7 @@ export function LeaveLobbyButton({
         <AlertDialogContent className="bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 shadow-2xl shadow-red-500/10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white font-bangers text-xl tracking-wide flex items-center">
-              <RiAlertCircleLine className="w-6 h-6 text-red-400 mr-2" />
+              <RiAlertLine className="w-6 h-6 text-red-400 mr-2" />
               Leave Lobby
             </AlertDialogTitle>
             <AlertDialogDescription className="text-purple-200/70 font-bangers tracking-wide space-y-2">

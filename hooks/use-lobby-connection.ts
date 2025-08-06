@@ -22,7 +22,7 @@ interface UseLobbyConnectionReturn {
  * Handles connection tracking, automatic reconnection, and offline/online state transitions
  */
 export function useLobbyConnection(
-  lobbyCode: string
+  lobbyCode: string,
 ): UseLobbyConnectionReturn {
   // Connection state
   const [connectionStatus, setConnectionStatus] = useState<
@@ -51,7 +51,7 @@ export function useLobbyConnection(
   const calculateRetryDelay = useCallback((attempt: number): number => {
     const exponentialDelay = Math.min(
       BASE_RETRY_DELAY * Math.pow(2, attempt),
-      MAX_RETRY_DELAY
+      MAX_RETRY_DELAY,
     );
     // Add jitter (±25% of the delay)
     const jitter = exponentialDelay * 0.25 * (Math.random() - 0.5);
@@ -169,7 +169,7 @@ export function useLobbyConnection(
               connect();
             }, delay);
           }
-        }
+        },
       );
 
       // Start heartbeat monitoring
