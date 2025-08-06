@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { SWRProvider } from "@/providers/swr-provider";
+import { InvitationLink } from "@/components/invitation-link";
 
 const bangers = Bangers({
   weight: "400",
@@ -32,7 +33,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <InvitationLink>{children}</InvitationLink>
             <Toaster />
           </ThemeProvider>
         </SWRProvider>

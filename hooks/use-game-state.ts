@@ -1,0 +1,403 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ref, onValue, off, set, push, update } from "firebase/database";
+import { rtdb } from "@/firebase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getRandomMemeCards } from "@/lib/utils/meme-card-pool";
+import * as Sentry from "@sentry/nextjs";
+
+interface GameState {
+  phase:
+    | "waiting"
+    | "countdown"
+    | "submission"
+    | "voting"
+    | "results"
+    | "game_over";
+  timeLeft: number;
+  currentSituation: string;
+  submissions: Record<
+    string,
+    { cardId: string; cardName: string; submittedAt: string }
+  >;
+  votes: Record<string, string>;
+  roundNumber: number;
+  totalRounds: number;
+  winner?: string;
+  scores: Record<string, number>;
+}
+
+interface PlayerGameData {
+  id: string;
+  name: string;
+  avatar: string;
+  score: number;
+  status: "waiting" | "playing" | "submitted" | "winner";
+  cards: MemeCard[];
+  selectedCard?: MemeCard;
+  isCurrentPlayer?: boolean;
+  isAI?: boolean;
+  aiPersonalityId?: string;
+}
+
+interface UseGameStateReturn {
+  // State
+  gameState: GameState | null;
+  players: PlayerGameData[];
+  playerCards: MemeCard[];
+  isLoading: boolean;
+  error: string | null;
+  connectionStatus: "connected" | "disconnected" | "reconnecting";
+
+  // Actions
+  submitCard: (cardId: string) => Promise<void>;
+  vote: (submissionPlayerId: string) => Promise<void>;
+  startRound: () => Promise<void>;
+  nextRound: () => Promise<void>;
+  endGame: () => Promise<void>;
+
+  // Utilities
+  isCurrentPlayer: boolean;
+  hasSubmitted: boolean;
+  hasVoted: boolean;
+  canVote: (playerId: string) => boolean;
+  clearError: () => void;
+}
+
+/**
+ * Custom hook for managing game state with real-time synchronization
+ * Integrates with lobby system and handles all game operations
+ */
+export function useGameState(lobbyCode: string): UseGameStateReturn {
+  const { user } = useCurrentUser();
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [players, setPlayers] = useState<PlayerGameData[]>([]);
+  const [playerCards, setPlayerCards] = useState<MemeCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected" | "reconnecting"
+  >("disconnected");
+
+  const gameStateRef = useRef<UnsubscribeFunction | null>(null);
+  const playersRef = useRef<UnsubscribeFunction | null>(null);
+  const playerCardsRef = useRef<UnsubscribeFunction | null>(null);
+
+  /**
+   * Clear error state
+   */
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  /**
+   * Handle errors with Sentry tracking
+   */
+  const handleError = useCallback(
+    (error: unknown, operation: string) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
+      setError(errorMessage);
+
+      Sentry.captureException(error, {
+        tags: { operation, lobbyCode },
+        extra: { lobbyCode, operation },
+      });
+    },
+    [lobbyCode]
+  );
+
+  /**
+   * Set up real-time listeners for game state
+   */
+  useEffect(() => {
+    if (!lobbyCode || !user) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    // Listen to game state changes
+    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+    const gameStateRef = ref(rtdb, gameStatePath);
+
+    gameStateRef.current = onValue(
+      gameStateRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val() as GameState;
+          setGameState(data);
+          setConnectionStatus("connected");
+        } else {
+          setGameState(null);
+        }
+        setIsLoading(false);
+      },
+      (error) => {
+        handleError(error, "game_state_listener");
+        setConnectionStatus("disconnected");
+      }
+    );
+
+    // Listen to players data
+    const playersPath = `lobbies/${lobbyCode}/players`;
+    const playersRef = ref(rtdb, playersPath);
+
+    playersRef.current = onValue(
+      playersRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const playersData = snapshot.val() as Record<string, PlayerData>;
+          const gamePlayers: PlayerGameData[] = Object.entries(playersData).map(
+            ([id, player]) => ({
+              id,
+              name: player.displayName,
+              avatar: player.profileURL || "",
+              score: player.score || 0,
+              status: "waiting",
+              cards: [],
+              isCurrentPlayer: id === user.id,
+              isAI: player.isAI || false,
+              aiPersonalityId: player.aiPersonalityId,
+            })
+          );
+          setPlayers(gamePlayers);
+        }
+      },
+      (error) => {
+        handleError(error, "players_listener");
+      }
+    );
+
+    // Listen to current player's cards
+    const playerCardsPath = `lobbies/${lobbyCode}/playerCards/${user.id}`;
+    const playerCardsRef = ref(rtdb, playerCardsPath);
+
+    playerCardsRef.current = onValue(
+      playerCardsRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const cards = snapshot.val() as MemeCard[];
+          setPlayerCards(cards || []);
+        }
+      },
+      (error) => {
+        handleError(error, "player_cards_listener");
+      }
+    );
+
+    return () => {
+      if (gameStateRef.current) {
+        off(ref(rtdb, gameStatePath), "value", gameStateRef.current);
+      }
+      if (playersRef.current) {
+        off(ref(rtdb, playersPath), "value", playersRef.current);
+      }
+      if (playerCardsRef.current) {
+        off(ref(rtdb, playerCardsPath), "value", playerCardsRef.current);
+      }
+    };
+  }, [lobbyCode, user, handleError]);
+
+  /**
+   * Submit a card for the current round
+   */
+  const submitCard = useCallback(
+    async (cardId: string): Promise<void> => {
+      if (!user || !gameState || !lobbyCode) {
+        throw new Error("Cannot submit card: missing user or game state");
+      }
+
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Submit Card",
+        },
+        async () => {
+          try {
+            const submission = {
+              cardId,
+              cardName:
+                playerCards.find((card) => card.id === cardId)?.filename || "",
+              submittedAt: new Date().toISOString(),
+            };
+
+            const submissionPath = `lobbies/${lobbyCode}/gameState/submissions/${user.id}`;
+            await set(ref(rtdb, submissionPath), submission);
+
+            // Update player status
+            const playerStatusPath = `lobbies/${lobbyCode}/players/${user.id}/status`;
+            await set(ref(rtdb, playerStatusPath), "submitted");
+          } catch (error) {
+            handleError(error, "submit_card");
+            throw error;
+          }
+        }
+      );
+    },
+    [user, gameState, lobbyCode, playerCards, handleError]
+  );
+
+  /**
+   * Vote for a submission
+   */
+  const vote = useCallback(
+    async (submissionPlayerId: string): Promise<void> => {
+      if (!user || !gameState || !lobbyCode) {
+        throw new Error("Cannot vote: missing user or game state");
+      }
+
+      if (submissionPlayerId === user.id) {
+        throw new Error("Cannot vote for your own submission");
+      }
+
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Vote",
+        },
+        async () => {
+          try {
+            const votePath = `lobbies/${lobbyCode}/gameState/votes/${user.id}`;
+            await set(ref(rtdb, votePath), submissionPlayerId);
+          } catch (error) {
+            handleError(error, "vote");
+            throw error;
+          }
+        }
+      );
+    },
+    [user, gameState, lobbyCode, handleError]
+  );
+
+  /**
+   * Start a new round (host only)
+   */
+  const startRound = useCallback(async (): Promise<void> => {
+    if (!user || !gameState || !lobbyCode) {
+      throw new Error("Cannot start round: missing user or game state");
+    }
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Start Round",
+      },
+      async () => {
+        try {
+          const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+          await update(ref(rtdb, gameStatePath), {
+            phase: "submission",
+            timeLeft: 60, // 60 seconds for submission
+            submissions: {},
+            votes: {},
+          });
+        } catch (error) {
+          handleError(error, "start_round");
+          throw error;
+        }
+      }
+    );
+  }, [user, gameState, lobbyCode, handleError]);
+
+  /**
+   * Move to next round (host only)
+   */
+  const nextRound = useCallback(async (): Promise<void> => {
+    if (!user || !gameState || !lobbyCode) {
+      throw new Error("Cannot start next round: missing user or game state");
+    }
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Next Round",
+      },
+      async () => {
+        try {
+          const nextRoundNumber = (gameState.roundNumber || 1) + 1;
+          const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+
+          await update(ref(rtdb, gameStatePath), {
+            roundNumber: nextRoundNumber,
+            phase: "countdown",
+            timeLeft: 5, // 5 second countdown
+            submissions: {},
+            votes: {},
+          });
+        } catch (error) {
+          handleError(error, "next_round");
+          throw error;
+        }
+      }
+    );
+  }, [user, gameState, lobbyCode, handleError]);
+
+  /**
+   * End the game (host only)
+   */
+  const endGame = useCallback(async (): Promise<void> => {
+    if (!user || !lobbyCode) {
+      throw new Error("Cannot end game: missing user");
+    }
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "End Game",
+      },
+      async () => {
+        try {
+          const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+          await update(ref(rtdb, gameStatePath), {
+            phase: "game_over",
+            timeLeft: 0,
+          });
+        } catch (error) {
+          handleError(error, "end_game");
+          throw error;
+        }
+      }
+    );
+  }, [user, lobbyCode, handleError]);
+
+  // Derived state
+  const isCurrentPlayer = !!user;
+  const hasSubmitted = gameState?.submissions?.[user?.id || ""] !== undefined;
+  const hasVoted = gameState?.votes?.[user?.id || ""] !== undefined;
+
+  const canVote = useCallback(
+    (playerId: string) => {
+      return (
+        isCurrentPlayer &&
+        gameState?.phase === "voting" &&
+        !hasVoted &&
+        playerId !== user?.id &&
+        gameState?.submissions?.[playerId] !== undefined
+      );
+    },
+    [isCurrentPlayer, gameState, hasVoted, user?.id]
+  );
+
+  return {
+    // State
+    gameState,
+    players,
+    playerCards,
+    isLoading,
+    error,
+    connectionStatus,
+
+    // Actions
+    submitCard,
+    vote,
+    startRound,
+    nextRound,
+    endGame,
+
+    // Utilities
+    isCurrentPlayer,
+    hasSubmitted,
+    hasVoted,
+    canVote,
+    clearError,
+  };
+}

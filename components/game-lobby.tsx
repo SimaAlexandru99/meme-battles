@@ -36,12 +36,10 @@ import { cn, formatJoinTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
-import { useEventListener, useClipboard, useNetwork } from "react-haiku";
-import { LobbyService } from "@/lib/services/lobby.service";
+import { useEventListener, useClipboard } from "react-haiku";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { useLobbyConnection } from "@/hooks/use-lobby-connection";
 
-import { GameRedirect } from "@/components/game-redirect";
 import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
 import { AddBotButton } from "@/components/game-settings/AddBotButton";
 import { KickPlayerButton } from "@/components/kick-player-button";
@@ -51,36 +49,26 @@ import {
   microInteractionVariants,
   successVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { useLobbyGameTransition } from "@/hooks/use-lobby-game-transition";
 
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
 
   // Use real lobby management hooks
   const {
-    lobby,
-    players,
-    isLoading,
-    error: lobbyError,
-    connectionStatus,
     leaveLobby,
     updateSettings,
-    startGame,
     kickPlayer,
     isHost,
-    canStartGame,
-    playerCount,
-    clearError,
-    retry,
+    error: lobbyError,
   } = useLobbyManagement(lobbyCode);
 
-  const {
-    connectionStatus: networkStatus,
-    isOnline,
-    reconnect,
-  } = useLobbyConnection(lobbyCode);
+  // Use game transition hook
+  const { startGame, isStarting } = useLobbyGameTransition(lobbyCode);
+
+  const { isOnline } = useLobbyConnection(lobbyCode);
 
   // Local UI state
-  const [isStarting, setIsStarting] = React.useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
   const [settingsError, setSettingsError] = React.useState<string | null>(null);
   const [isSavingSettings, setIsSavingSettings] = React.useState(false);
@@ -221,22 +209,16 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Start the game
   const handleStartGame = React.useCallback(async () => {
-    setIsStarting(true);
     try {
       await startGame();
-      toast.success("Game started!");
-
-      // Redirect to game page
-      router.push(`/game/${lobbyCode}/play`);
+      // Navigation will be handled by the transition hook
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to start game";
       toast.error(errorMessage);
       Sentry.captureException(err);
-    } finally {
-      setIsStarting(false);
     }
-  }, [startGame, lobbyCode, router]);
+  }, [startGame]);
 
   // Handle back navigation with confirmation
   const handleBackToMain = React.useCallback(() => {
@@ -409,7 +391,6 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     updatedAt: new Date().toISOString(),
   };
 
-  const isHost = lobbyData.hostUid === currentUser.id;
   const isCurrentUserHost = isHost;
 
   // Show offline UI when not connected
@@ -456,19 +437,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Handle game state redirects
   if (lobbyData.status === "started") {
-    return (
-      <GameRedirect
-        lobbyCode={lobbyCode}
-        gameStatus="started"
-        onRedirect={() => {
-          toast.info("Redirecting to game...");
-        }}
-      />
-    );
+    router.push(`/game/${lobbyCode}/play`);
+    return null;
   }
 
   if (lobbyData.status === "finished") {
-    return <GameRedirect lobbyCode={lobbyCode} gameStatus="finished" />;
+    router.push("/");
+    return null;
   }
 
   return (

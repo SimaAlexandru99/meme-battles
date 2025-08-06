@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/actions/auth.action";
 import { GameLobby } from "@/components/game-lobby";
+import { GameRedirect } from "@/components/game-redirect";
 
 interface GameLobbyPageProps {
   params: {
@@ -21,5 +22,9 @@ export default async function GameLobbyPage({ params }: GameLobbyPageProps) {
     redirect("/");
   }
 
-  return <GameLobby lobbyCode={code} currentUser={currentUser} />;
+  return (
+    <GameRedirect lobbyCode={code}>
+      <GameLobby lobbyCode={code} currentUser={currentUser} />
+    </GameRedirect>
+  );
 }

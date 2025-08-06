@@ -1,138 +1,223 @@
 "use client";
 
-import * as React from "react";
-import { motion } from "framer-motion";
-import { RiArrowRightLine, RiPlayLine, RiHomeLine } from "react-icons/ri";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import * as Sentry from "@sentry/nextjs";
 
 interface GameRedirectProps {
   lobbyCode: string;
-  gameStatus: "waiting" | "started" | "finished";
-  onRedirect?: () => void;
+  children: React.ReactNode;
 }
 
-export function GameRedirect({
-  lobbyCode,
-  gameStatus,
-  onRedirect,
-}: GameRedirectProps) {
+type RedirectReason =
+  | "not_found"
+  | "not_member"
+  | "game_started"
+  | "loading"
+  | null;
+
+export function GameRedirect({ lobbyCode, children }: GameRedirectProps) {
   const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = React.useState(false);
+  const { user } = useCurrentUser();
+  const [redirectReason, setRedirectReason] =
+    useState<RedirectReason>("loading");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  const handleRedirect = React.useCallback(async () => {
-    setIsRedirecting(true);
-    onRedirect?.();
+  const { lobby, players, isLoading, error, joinLobby } =
+    useLobbyManagement(lobbyCode);
 
-    // Add a small delay for better UX
-    setTimeout(() => {
-      if (gameStatus === "started") {
-        router.push(`/game/${lobbyCode}/play`);
-      } else if (gameStatus === "finished") {
-        router.push("/");
-        toast.info("Game has finished. Redirecting to main menu.");
-      }
-    }, 1000);
-  }, [gameStatus, lobbyCode, router, onRedirect]);
+  // Check lobby access and permissions
+  useEffect(() => {
+    if (isLoading) {
+      setRedirectReason("loading");
+      return;
+    }
 
-  const handleBackToMain = React.useCallback(() => {
-    router.push("/");
-  }, [router]);
+    if (error) {
+      setRedirectReason("not_found");
+      return;
+    }
 
-  const getRedirectContent = () => {
-    switch (gameStatus) {
-      case "started":
-        return {
-          title: "Game Already Started",
-          description:
-            "The game has already begun! You can still join and catch up.",
-          icon: <RiPlayLine className="w-8 h-8 text-green-400" />,
-          buttonText: "Join Game",
-          buttonIcon: <RiArrowRightLine className="w-4 h-4" />,
-          buttonAction: handleRedirect,
-        };
-      case "finished":
-        return {
-          title: "Game Finished",
-          description:
-            "This game has already finished. Start a new game to play again!",
-          icon: <RiHomeLine className="w-8 h-8 text-purple-400" />,
-          buttonText: "Back to Main Menu",
-          buttonIcon: <RiHomeLine className="w-4 h-4" />,
-          buttonAction: handleBackToMain,
-        };
-      default:
-        return {
-          title: "Redirecting...",
-          description: "Preparing to join the game...",
-          icon: (
-            <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
-          ),
-          buttonText: "Continue",
-          buttonIcon: <RiArrowRightLine className="w-4 h-4" />,
-          buttonAction: handleRedirect,
-        };
+    if (!lobby) {
+      setRedirectReason("not_found");
+      return;
+    }
+
+    // Check if user is a member of the lobby
+    const isMember = user?.id ? lobby?.players?.[user.id] !== undefined : false;
+    if (!isMember) {
+      setRedirectReason("not_member");
+      return;
+    }
+
+    // Check if game has already started
+    if (lobby.status === "started") {
+      setRedirectReason("game_started");
+      return;
+    }
+
+    // All checks passed
+    setRedirectReason(null);
+  }, [lobby, players, isLoading, error, user?.id, user?.name]);
+
+  // Handle joining lobby
+  const handleJoinLobby = async () => {
+    if (!user) {
+      toast.error("Please sign in to join the lobby");
+      router.push("/");
+      return;
+    }
+
+    try {
+      setIsRedirecting(true);
+      await joinLobby(lobbyCode);
+      toast.success("Successfully joined the lobby!");
+      setRedirectReason(null);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to join lobby";
+      toast.error(errorMessage);
+      Sentry.captureException(error);
+    } finally {
+      setIsRedirecting(false);
     }
   };
 
-  const content = getRedirectContent();
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Card className="w-full max-w-md bg-slate-800/50 border-slate-700/50">
+  // Loading state
+  if (redirectReason === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
           <CardHeader>
-            <CardTitle className="text-white font-bangers text-xl tracking-wide text-center">
-              {content.title}
+            <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
+              Loading Lobby...
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center">
-                {content.icon}
+            <div className="text-center">
+              <div className="text-4xl font-bangers text-purple-400 mb-4">
+                Connecting
               </div>
-            </div>
-
-            <div className="text-center space-y-2">
-              <p className="text-purple-200/70">{content.description}</p>
-              <p className="text-sm text-purple-200/50">
-                Lobby Code:{" "}
-                <code className="bg-slate-700/50 px-2 py-1 rounded text-purple-300">
-                  {lobbyCode}
-                </code>
+              <p className="text-purple-200/70 font-bangers text-lg tracking-wide">
+                Checking lobby access
               </p>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={content.buttonAction}
-                disabled={isRedirecting}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                {content.buttonIcon}
-                {isRedirecting ? "Redirecting..." : content.buttonText}
-              </Button>
-
-              {gameStatus !== "finished" && (
-                <Button
-                  onClick={handleBackToMain}
-                  variant="outline"
-                  className="border-slate-600/50 text-white hover:bg-slate-700/50"
-                >
-                  <RiHomeLine className="w-4 h-4 mr-2" />
-                  Main Menu
-                </Button>
-              )}
             </div>
           </CardContent>
         </Card>
-      </motion.div>
-    </div>
-  );
+      </div>
+    );
+  }
+
+  // Lobby not found
+  if (redirectReason === "not_found") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+          <CardHeader>
+            <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
+              Lobby Not Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center">
+              <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
+                The lobby with code{" "}
+                <span className="text-purple-400 font-bold">{lobbyCode}</span>{" "}
+                doesn&apos;t exist or has been deleted.
+              </p>
+              <Button
+                onClick={() => router.push("/")}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
+              >
+                Go Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Not a member of the lobby
+  if (redirectReason === "not_member") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+          <CardHeader>
+            <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
+              Join Lobby
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center">
+              <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
+                You&apos;re not a member of this lobby. Would you like to join?
+              </p>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleJoinLobby}
+                  disabled={isRedirecting}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
+                >
+                  {isRedirecting ? "Joining..." : "Join Lobby"}
+                </Button>
+                <Button
+                  onClick={() => router.push("/")}
+                  variant="outline"
+                  className="w-full border-purple-600 text-purple-400 hover:bg-purple-600/10 font-bangers text-lg"
+                >
+                  Go Home
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Game has already started
+  if (redirectReason === "game_started") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+          <CardHeader>
+            <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
+              Game in Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center">
+              <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
+                The game has already started. You can&apos;t join mid-game.
+              </p>
+              <div className="space-y-3">
+                <Button
+                  onClick={() => router.push(`/game/${lobbyCode}/play`)}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
+                >
+                  Watch Game
+                </Button>
+                <Button
+                  onClick={() => router.push("/")}
+                  variant="outline"
+                  className="w-full border-purple-600 text-purple-400 hover:bg-purple-600/10 font-bangers text-lg"
+                >
+                  Go Home
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // All checks passed, render children
+  return <>{children}</>;
 }
