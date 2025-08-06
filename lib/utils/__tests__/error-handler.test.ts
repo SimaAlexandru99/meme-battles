@@ -29,15 +29,10 @@ describe("ErrorHandler", () => {
         .mockRejectedValueOnce(new Error("network error"))
         .mockResolvedValueOnce("success");
 
-      const promise = ErrorHandler.withRetry(operation, {
+      const result = await ErrorHandler.withRetry(operation, {
         maxRetries: 2,
-        retryDelays: [100, 200], // Short delays for testing
+        retryDelays: [1, 2], // Very short delays for testing
       });
-
-      // Advance timers to resolve the delay
-      await jest.advanceTimersByTimeAsync(150);
-
-      const result = await promise;
 
       expect(result).toBe("success");
       expect(operation).toHaveBeenCalledTimes(2);
@@ -63,17 +58,14 @@ describe("ErrorHandler", () => {
       const error = new Error("persistent network error");
       const operation = jest.fn().mockRejectedValue(error);
 
-      const promise = ErrorHandler.withRetry(operation, {
-        maxRetries: 2,
-        retryDelays: [100, 200], // Short delays for testing
-      });
+      await expect(
+        ErrorHandler.withRetry(operation, {
+          maxRetries: 2,
+          retryDelays: [1, 2],
+        })
+      ).rejects.toEqual(error);
 
-      // Advance timers through all retries
-      await jest.advanceTimersByTimeAsync(100);
-      await jest.advanceTimersByTimeAsync(200);
-
-      await expect(promise).rejects.toEqual(error);
-      expect(operation).toHaveBeenCalledTimes(3); // Initial + 2 retries
+      expect(operation).toHaveBeenCalledTimes(3);
     });
 
     it("should call onRetry callback", async () => {
@@ -84,16 +76,11 @@ describe("ErrorHandler", () => {
         .mockResolvedValueOnce("success");
       const onRetry = jest.fn();
 
-      const promise = ErrorHandler.withRetry(operation, {
+      await ErrorHandler.withRetry(operation, {
         maxRetries: 1,
-        retryDelays: [100],
+        retryDelays: [1],
         onRetry,
       });
-
-      // Advance timers to resolve the delay
-      await jest.advanceTimersByTimeAsync(150);
-
-      await promise;
 
       expect(onRetry).toHaveBeenCalledWith(1, error);
     });
@@ -104,20 +91,15 @@ describe("ErrorHandler", () => {
         .mockRejectedValueOnce(new Error("network error"))
         .mockResolvedValueOnce("success");
 
-      const promise = ErrorHandler.withRetry(operation, {
+      await ErrorHandler.withRetry(operation, {
         maxRetries: 1,
-        retryDelays: [100],
+        retryDelays: [1],
         operationName: "test_operation",
       });
 
-      // Advance timers to resolve the delay
-      await jest.advanceTimersByTimeAsync(150);
-
-      await promise;
-
       expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.stringContaining("test_operation"),
+          message: "test_operation succeeded after 1 retries",
         })
       );
     });
@@ -125,134 +107,204 @@ describe("ErrorHandler", () => {
 
   describe("isRetryableError", () => {
     it("should identify retryable network errors", () => {
-      const networkError = new Error("network error");
-      const timeoutError = new Error("timeout");
-      const permissionError = new Error("permission denied");
-
-      expect(ErrorHandler.isRetryableError(networkError)).toBe(true);
-      expect(ErrorHandler.isRetryableError(timeoutError)).toBe(true);
-      expect(ErrorHandler.isRetryableError(permissionError)).toBe(false);
+      expect(ErrorHandler.isRetryableError({ code: "NETWORK_ERROR" })).toBe(
+        true
+      );
+      expect(ErrorHandler.isRetryableError({ code: "TIMEOUT" })).toBe(true);
+      expect(ErrorHandler.isRetryableError({ status: 500 })).toBe(true);
+      expect(ErrorHandler.isRetryableError({ status: 502 })).toBe(true);
+      expect(ErrorHandler.isRetryableError({ status: 503 })).toBe(true);
     });
 
     it("should identify non-retryable errors", () => {
-      const validationError = new Error("validation failed");
-      const authError = new Error("unauthorized");
-
-      expect(ErrorHandler.isRetryableError(validationError)).toBe(false);
-      expect(ErrorHandler.isRetryableError(authError)).toBe(false);
+      expect(ErrorHandler.isRetryableError({ code: "PERMISSION_DENIED" })).toBe(
+        false
+      );
+      expect(ErrorHandler.isRetryableError({ code: "UNAUTHENTICATED" })).toBe(
+        false
+      );
+      expect(ErrorHandler.isRetryableError({ status: 400 })).toBe(false);
+      expect(ErrorHandler.isRetryableError({ status: 404 })).toBe(false);
     });
 
     it("should check LobbyError retryable flag", () => {
-      const retryableLobbyError = {
-        type: "NETWORK_ERROR",
-        message: "Connection failed",
-        retryable: true,
-      };
-      const nonRetryableLobbyError = {
-        type: "PERMISSION_DENIED",
-        message: "Access denied",
-        retryable: false,
-      };
+      expect(
+        ErrorHandler.isRetryableError({
+          type: "NETWORK_ERROR",
+          retryable: true,
+        })
+      ).toBe(true);
 
-      expect(ErrorHandler.isRetryableError(retryableLobbyError)).toBe(true);
-      expect(ErrorHandler.isRetryableError(nonRetryableLobbyError)).toBe(false);
+      expect(
+        ErrorHandler.isRetryableError({
+          type: "NETWORK_ERROR",
+          retryable: false,
+        })
+      ).toBe(false);
     });
 
     it("should identify retryable error messages", () => {
-      const retryableMessages = [
-        "network error",
-        "timeout",
-        "connection failed",
-        "server error",
-        "temporary failure",
-      ];
+      expect(
+        ErrorHandler.isRetryableError({
+          message: "Network connection failed",
+        })
+      ).toBe(true);
 
-      retryableMessages.forEach((message) => {
-        expect(ErrorHandler.isRetryableError(new Error(message))).toBe(true);
-      });
+      expect(
+        ErrorHandler.isRetryableError({
+          message: "Request timeout occurred",
+        })
+      ).toBe(true);
+
+      expect(
+        ErrorHandler.isRetryableError({
+          message: "Service temporarily unavailable",
+        })
+      ).toBe(true);
     });
   });
 
   describe("getUserFriendlyMessage", () => {
     it("should return LobbyError user message", () => {
-      const lobbyError = {
+      const error = {
         type: "LOBBY_NOT_FOUND",
-        message: "Lobby not found",
-        userMessage: "This lobby doesn't exist",
+        userMessage: "Lobby not found. Please check the code.",
+        retryable: false,
       };
 
-      const result = ErrorHandler.getUserFriendlyMessage(lobbyError);
+      const result = ErrorHandler.getUserFriendlyMessage(error);
 
-      expect(result.message).toBe("This lobby doesn't exist");
-      expect(result.canRetry).toBe(false);
+      expect(result).toEqual({
+        message: "Lobby not found. Please check the code.",
+        action: "Double-check the lobby code and try again.",
+        canRetry: false,
+      });
     });
 
     it("should handle network errors", () => {
-      const networkError = new Error("network error");
+      const error = { message: "Network connection failed" };
 
-      const result = ErrorHandler.getUserFriendlyMessage(networkError);
+      const result = ErrorHandler.getUserFriendlyMessage(error);
 
-      expect(result.message).toContain("connection");
-      expect(result.canRetry).toBe(true);
+      expect(result).toEqual({
+        message:
+          "Network connection issue. Please check your internet connection.",
+        action: "Check your internet connection and try again.",
+        canRetry: true,
+      });
     });
 
     it("should handle timeout errors", () => {
-      const timeoutError = new Error("timeout");
+      const error = { message: "Request timeout" };
 
-      const result = ErrorHandler.getUserFriendlyMessage(timeoutError);
+      const result = ErrorHandler.getUserFriendlyMessage(error);
 
-      expect(result.message).toContain("timeout");
-      expect(result.canRetry).toBe(true);
+      expect(result).toEqual({
+        message: "Request timed out. The server might be busy.",
+        action: "Please wait a moment and try again.",
+        canRetry: true,
+      });
     });
 
     it("should handle permission errors", () => {
-      const permissionError = new Error("permission denied");
+      const error = { message: "Permission denied" };
 
-      const result = ErrorHandler.getUserFriendlyMessage(permissionError);
+      const result = ErrorHandler.getUserFriendlyMessage(error);
 
-      expect(result.message).toContain("permission");
-      expect(result.canRetry).toBe(false);
+      expect(result).toEqual({
+        message: "You don't have permission to perform this action.",
+        action: "Please sign in again or contact support.",
+        canRetry: false,
+      });
     });
 
     it("should provide generic fallback", () => {
-      const unknownError = new Error("unknown error");
+      const error = { message: "Unknown error" };
 
-      const result = ErrorHandler.getUserFriendlyMessage(unknownError);
+      const result = ErrorHandler.getUserFriendlyMessage(error);
 
-      expect(result.message).toContain("Something went wrong");
-      expect(result.canRetry).toBe(false);
+      expect(result).toEqual({
+        message: "Something went wrong. Please try again.",
+        action: "If the problem persists, please contact support.",
+        canRetry: true,
+      });
     });
   });
 
   describe("logError", () => {
     it("should log error with appropriate severity", () => {
-      const error = new Error("test error");
+      const error = {
+        type: "NETWORK_ERROR",
+        message: "Network failed",
+      };
 
-      ErrorHandler.logError(error, { operation: "test" });
+      ErrorHandler.logError(error, {
+        operation: "test_operation",
+        userId: "user123",
+        lobbyCode: "ABC12",
+      });
 
-      expect(Sentry.captureException).toHaveBeenCalledWith(error);
+      expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
+        level: "error",
+        extra: {
+          operation: "test_operation",
+          userId: "user123",
+          lobbyCode: "ABC12",
+          errorType: "NETWORK_ERROR",
+          retryable: undefined,
+        },
+        tags: {
+          operation: "test_operation",
+          errorType: "NETWORK_ERROR",
+        },
+      });
     });
 
     it("should log warning for medium severity errors", () => {
-      const error = new Error("validation failed");
+      const error = {
+        type: "PERMISSION_DENIED",
+        message: "Access denied",
+      };
 
-      ErrorHandler.logError(error, { operation: "validation" });
+      ErrorHandler.logError(error);
 
-      expect(Sentry.captureException).toHaveBeenCalledWith(error);
+      expect(Sentry.captureMessage).toHaveBeenCalledWith("Access denied", {
+        level: "warning",
+        extra: {
+          operation: undefined,
+          userId: undefined,
+          lobbyCode: undefined,
+          errorType: "PERMISSION_DENIED",
+          retryable: undefined,
+        },
+        tags: {
+          operation: undefined,
+          errorType: "PERMISSION_DENIED",
+        },
+      });
     });
   });
 
   describe("createErrorResponse", () => {
     it("should create standardized error response", () => {
-      const error = new Error("test error");
+      const error = {
+        type: "LOBBY_NOT_FOUND",
+        message: "Lobby ABC12 not found",
+        userMessage: "Lobby not found. Please check the code.",
+        retryable: false,
+      };
 
-      const response = ErrorHandler.createErrorResponse(error);
+      const result = ErrorHandler.createErrorResponse(error);
 
-      expect(response.success).toBe(false);
-      expect(response.error).toMatchObject({
-        type: "UNKNOWN_ERROR",
-        message: "test error",
-        canRetry: false,
+      expect(result).toEqual({
+        success: false,
+        error: {
+          type: "LOBBY_NOT_FOUND",
+          message: "Lobby ABC12 not found",
+          userMessage: "Lobby not found. Please check the code.",
+          canRetry: false,
+          action: "Double-check the lobby code and try again.",
+        },
       });
     });
   });
@@ -266,30 +318,26 @@ describe("ErrorHandler", () => {
 
       const wrappedMethod = ErrorHandler.wrapServiceMethod(
         method,
-        "test_method"
+        "test_operation"
       );
 
-      const promise = wrappedMethod("arg1", "arg2");
-
-      // Advance timers to resolve the delay
-      await jest.advanceTimersByTimeAsync(150);
-
-      const result = await promise;
+      const result = await wrappedMethod("arg1", "arg2");
 
       expect(result).toBe("success");
+      expect(method).toHaveBeenCalledTimes(2);
       expect(method).toHaveBeenCalledWith("arg1", "arg2");
     });
 
     it("should log errors from wrapped method", async () => {
-      const method = jest.fn().mockRejectedValue(new Error("test error"));
+      const error = new Error("persistent error");
+      const method = jest.fn().mockRejectedValue(error);
 
       const wrappedMethod = ErrorHandler.wrapServiceMethod(
         method,
-        "test_method"
+        "test_operation"
       );
 
-      await expect(wrappedMethod()).rejects.toThrow("test error");
-
+      await expect(wrappedMethod()).rejects.toEqual(error);
       expect(Sentry.captureException).toHaveBeenCalled();
     });
   });

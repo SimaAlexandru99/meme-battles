@@ -28,5 +28,6 @@
   "editor.wordWrap": "on",
   "[jsonc]": {
     "editor.defaultFormatter": "vscode.json-language-features"
-  }
+  },
+  "typescript.autoClosingTags": false
 }

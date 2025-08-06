@@ -124,7 +124,7 @@ describe("useLobbyManagement", () => {
       await waitFor(() => {
         expect(mockLobbyService.subscribeToLobby).toHaveBeenCalledWith(
           "ABC12",
-          expect.any(Function)
+          expect.any(Function),
         );
       });
     });
@@ -188,7 +188,7 @@ describe("useLobbyManagement", () => {
 
       await act(async () => {
         await expect(result.current.createLobby()).rejects.toThrow(
-          "User must be authenticated to create a lobby"
+          "User must be authenticated to create a lobby",
         );
       });
     });
@@ -235,7 +235,7 @@ describe("useLobbyManagement", () => {
       });
 
       expect(result.current.error).toBe(
-        "Lobby not found. Please check the code."
+        "Lobby not found. Please check the code.",
       );
     });
   });
@@ -266,7 +266,7 @@ describe("useLobbyManagement", () => {
 
       expect(mockLobbyService.leaveLobby).toHaveBeenCalledWith(
         "ABC12",
-        "user123"
+        "user123",
       );
 
       // Wait for the state to update
@@ -316,7 +316,7 @@ describe("useLobbyManagement", () => {
       expect(mockLobbyService.updateLobbySettings).toHaveBeenCalledWith(
         "ABC12",
         newSettings,
-        "user123"
+        "user123",
       );
     });
 
@@ -334,7 +334,7 @@ describe("useLobbyManagement", () => {
 
       await act(async () => {
         await expect(
-          result.current.updateSettings({ rounds: 10 })
+          result.current.updateSettings({ rounds: 10 }),
         ).rejects.toThrow("Only the host can update lobby settings");
       });
     });
@@ -367,7 +367,7 @@ describe("useLobbyManagement", () => {
       expect(mockLobbyService.kickPlayer).toHaveBeenCalledWith(
         "ABC12",
         "player456",
-        "user123"
+        "user123",
       );
     });
 
@@ -385,7 +385,7 @@ describe("useLobbyManagement", () => {
 
       await act(async () => {
         await expect(result.current.kickPlayer("player456")).rejects.toThrow(
-          "Only the host can kick players"
+          "Only the host can kick players",
         );
       });
     });
@@ -489,7 +489,7 @@ describe("useLobbyManagement", () => {
       });
 
       expect(result.current.error).toBe(
-        "Lobby not found. Please check the code."
+        "Lobby not found. Please check the code.",
       );
 
       // Clear the error
@@ -506,7 +506,7 @@ describe("useLobbyManagement", () => {
         (code, callback, onError) => {
           setTimeout(() => onError?.(subscriptionError), 0);
           return jest.fn();
-        }
+        },
       );
 
       renderHook(() => useLobbyManagement("ABC12"));
@@ -569,7 +569,7 @@ describe("useLobbyManagement", () => {
         expect(mockLobbyService.updatePlayerStatus).toHaveBeenCalledWith(
           "ABC12",
           "user123",
-          "waiting"
+          "waiting",
         );
       });
 

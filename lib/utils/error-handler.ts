@@ -18,7 +18,7 @@ export class ErrorHandler {
       retryCondition?: (error: unknown) => boolean;
       onRetry?: (attempt: number, error: unknown) => void;
       operationName?: string;
-    } = {},
+    } = {}
   ): Promise<T> {
     const {
       maxRetries = this.MAX_RETRIES,
@@ -257,7 +257,7 @@ export class ErrorHandler {
       userId?: string;
       lobbyCode?: string;
       additionalData?: Record<string, unknown>;
-    } = {},
+    } = {}
   ): void {
     const { operation, userId, lobbyCode, additionalData } = context;
 
@@ -291,7 +291,7 @@ export class ErrorHandler {
             operation,
             errorType: lobbyError?.type,
           },
-        },
+        }
       );
     } else {
       const message =
@@ -313,7 +313,7 @@ export class ErrorHandler {
    * Determine error severity for logging
    */
   private static getErrorSeverity(
-    error: unknown,
+    error: unknown
   ): "error" | "warning" | "info" {
     if (error && typeof error === "object" && "type" in error) {
       const lobbyError = error as LobbyError;
@@ -380,7 +380,7 @@ export class ErrorHandler {
    */
   static wrapServiceMethod<T extends unknown[], R>(
     method: (...args: T) => Promise<R>,
-    operationName: string,
+    operationName: string
   ) {
     return async (...args: T): Promise<R> => {
       try {

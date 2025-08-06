@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useLobbyConnection } from "../use-lobby-connection";
-import { onValue, off } from "firebase/database";
+import { onValue } from "firebase/database";
 
 // Mock Firebase client
 jest.mock("@/firebase/client", () => ({
@@ -21,7 +21,6 @@ jest.mock("@sentry/nextjs", () => ({
 }));
 
 const mockOnValue = onValue as jest.Mock;
-const mockOff = off as jest.Mock;
 
 // Mock navigator.onLine
 Object.defineProperty(navigator, "onLine", {

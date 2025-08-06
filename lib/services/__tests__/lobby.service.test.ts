@@ -62,15 +62,16 @@ describe("LobbyService - Atomic Code Generation", () => {
     });
 
     it("should retry when code already exists and succeed on second attempt", async () => {
-      // First attempt - code exists
-      mockGet.mockResolvedValueOnce({
-        exists: () => true,
-      } as DataSnapshot);
-
-      // Second attempt - code doesn't exist
-      mockGet.mockResolvedValueOnce({
-        exists: () => false,
-      } as DataSnapshot);
+      // Mock that the first code exists, but the second doesn't
+      // Since generateUniqueLobbyCode generates a new random code each time,
+      // we need to mock the behavior for each attempt
+      mockGet
+        .mockResolvedValueOnce({
+          exists: () => true, // First attempt - code exists
+        } as DataSnapshot)
+        .mockResolvedValueOnce({
+          exists: () => false, // Second attempt - code doesn't exist
+        } as DataSnapshot);
 
       mockSet.mockResolvedValueOnce(undefined);
 
@@ -86,20 +87,19 @@ describe("LobbyService - Atomic Code Generation", () => {
 
       // Mock multiple collisions - each attempt generates a new random code
       // so we need to mock exists() to return true for the first 3 attempts
-      mockGet.mockResolvedValueOnce({
-        exists: () => true,
-      } as DataSnapshot);
-      mockGet.mockResolvedValueOnce({
-        exists: () => true,
-      } as DataSnapshot);
-      mockGet.mockResolvedValueOnce({
-        exists: () => true,
-      } as DataSnapshot);
-
-      // Final success
-      mockGet.mockResolvedValueOnce({
-        exists: () => false,
-      } as DataSnapshot);
+      mockGet
+        .mockResolvedValueOnce({
+          exists: () => true,
+        } as DataSnapshot)
+        .mockResolvedValueOnce({
+          exists: () => true,
+        } as DataSnapshot)
+        .mockResolvedValueOnce({
+          exists: () => true,
+        } as DataSnapshot)
+        .mockResolvedValueOnce({
+          exists: () => false, // Final success
+        } as DataSnapshot);
 
       mockSet.mockResolvedValueOnce(undefined);
 
