@@ -3,7 +3,7 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 // import { getAnalytics } from "firebase/analytics";
 import { getAuth, signInAnonymously, User } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getDatabase } from "firebase/database";
+import { getDatabase, connectDatabaseEmulator } from "firebase/database";
 import { getStorage } from "firebase/storage";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -30,6 +30,21 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const rtdb = getDatabase(app); // Realtime Database
 export const storage = getStorage(app);
+
+// Connect to emulator in development
+if (
+  process.env.NODE_ENV === "development" &&
+  !process.env.NEXT_PUBLIC_FIREBASE_USE_PRODUCTION
+) {
+  try {
+    // Connect to Firebase Realtime Database emulator
+    connectDatabaseEmulator(rtdb, "localhost", 9000);
+    console.log("Connected to Firebase Realtime Database emulator");
+  } catch (error) {
+    // If already connected, this will throw an error which we can safely ignore
+    console.warn("Firebase emulator connection:", error);
+  }
+}
 
 // ============================================================================
 // ANONYMOUS AUTHENTICATION FUNCTIONS

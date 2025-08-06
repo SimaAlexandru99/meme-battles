@@ -1,0 +1,282 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "lobbies": {
+      ".indexOn": ["status", "createdAt", "hostUid", "updatedAt"],
+
+      "$lobbyCode": {
+        ".validate": "newData.hasChildren(['code', 'hostUid', 'hostDisplayName', 'status', 'maxPlayers', 'createdAt', 'updatedAt', 'settings', 'players'])",
+
+        ".read": "auth != null && (data.child('players').child(auth.uid).exists() || !data.exists())",
+
+        ".write": "auth != null && (!data.exists() || data.child('players').child(auth.uid).exists() || data.child('hostUid').val() == auth.uid)",
+
+        "code": {
+          ".validate": "newData.isString() && newData.val().length == 5 && newData.val().matches(/^[A-Z0-9]{5}$/)"
+        },
+
+        "hostUid": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+
+        "hostDisplayName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+        },
+
+        "status": {
+          ".validate": "newData.isString() && (newData.val() == 'waiting' || newData.val() == 'starting' || newData.val() == 'started' || newData.val() == 'ended')"
+        },
+
+        "maxPlayers": {
+          ".validate": "newData.isNumber() && newData.val() >= 3 && newData.val() <= 8"
+        },
+
+        "createdAt": {
+          ".validate": "newData.isString()"
+        },
+
+        "updatedAt": {
+          ".validate": "newData.isString()"
+        },
+
+        "settings": {
+          ".write": "auth != null && root.child('lobbies').child($lobbyCode).child('hostUid').val() == auth.uid",
+          ".validate": "newData.hasChildren(['rounds', 'timeLimit', 'categories'])",
+
+          "rounds": {
+            ".validate": "newData.isNumber() && newData.val() >= 3 && newData.val() <= 15"
+          },
+
+          "timeLimit": {
+            ".validate": "newData.isNumber() && newData.val() >= 30 && newData.val() <= 120"
+          },
+
+          "categories": {
+            ".validate": "newData.hasChildren()",
+            "$category": {
+              ".validate": "newData.isString()"
+            }
+          }
+        },
+
+        "players": {
+          ".indexOn": ["joinedAt", "isHost", "status", "lastSeen"],
+          ".validate": "newData.hasChildren()",
+
+          "$playerUid": {
+            ".validate": "newData.hasChildren(['displayName', 'avatarId', 'joinedAt', 'isHost', 'score', 'status', 'lastSeen'])",
+
+            ".write": "auth != null && ($playerUid == auth.uid || root.child('lobbies').child($lobbyCode).child('hostUid').val() == auth.uid)",
+
+            "displayName": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+            },
+
+            "avatarId": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+
+            "profileURL": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0)"
+            },
+
+            "joinedAt": {
+              ".validate": "newData.isString()"
+            },
+
+            "isHost": {
+              ".validate": "newData.isBoolean()"
+            },
+
+            "score": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+
+            "status": {
+              ".validate": "newData.isString() && (newData.val() == 'waiting' || newData.val() == 'ready' || newData.val() == 'disconnected')"
+            },
+
+            "lastSeen": {
+              ".validate": "newData.isString()"
+            }
+          }
+        },
+
+        "gameState": {
+          ".write": "auth != null && root.child('lobbies').child($lobbyCode).child('hostUid').val() == auth.uid",
+
+          "currentRound": {
+            ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 1)"
+          },
+
+          "phase": {
+            ".validate": "!newData.exists() || (newData.isString() && (newData.val() == 'submission' || newData.val() == 'voting' || newData.val() == 'results'))"
+          },
+
+          "phaseStartTime": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+
+          "currentSituation": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0)"
+          },
+
+          "submissions": {
+            "$submissionPlayerUid": {
+              ".write": "auth != null && ($submissionPlayerUid == auth.uid || root.child('lobbies').child($lobbyCode).child('hostUid').val() == auth.uid)",
+
+              "cardId": {
+                ".validate": "newData.isString() && newData.val().length > 0"
+              },
+
+              "caption": {
+                ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 200)"
+              },
+
+              "submittedAt": {
+                ".validate": "newData.isString()"
+              }
+            }
+          },
+
+          "votes": {
+            "$voterUid": {
+              ".write": "auth != null && $voterUid == auth.uid",
+              ".validate": "newData.isString() && newData.val() != $voterUid"
+            }
+          },
+
+          "roundResults": {
+            ".write": "auth != null && root.child('lobbies').child($lobbyCode).child('hostUid').val() == auth.uid",
+
+            "winner": {
+              ".validate": "!newData.exists() || newData.isString()"
+            },
+
+            "votes": {
+              ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)"
+            },
+
+            "winningSubmission": {
+              "cardId": {
+                ".validate": "!newData.exists() || newData.isString()"
+              },
+
+              "caption": {
+                ".validate": "!newData.exists() || newData.isString()"
+              }
+            }
+          }
+        },
+
+        "chat": {
+          ".indexOn": ["timestamp"],
+
+          "$messageId": {
+            ".write": "auth != null && (!data.exists() || data.child('playerId').val() == auth.uid || root.child('lobbies').child($lobbyCode).child('hostUid').val() == auth.uid)",
+            ".validate": "newData.hasChildren(['playerId', 'playerName', 'message', 'timestamp', 'type'])",
+
+            "playerId": {
+              ".validate": "newData.isString() && newData.val() == auth.uid"
+            },
+
+            "playerName": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+            },
+
+            "message": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+            },
+
+            "timestamp": {
+              ".validate": "newData.isString()"
+            },
+
+            "type": {
+              ".validate": "newData.isString() && (newData.val() == 'chat' || newData.val() == 'system' || newData.val() == 'action')"
+            }
+          }
+        }
+      }
+    },
+
+    "playerSessions": {
+      ".indexOn": ["lastActivity", "connectionStatus"],
+
+      "$playerUid": {
+        ".read": "auth != null && $playerUid == auth.uid",
+        ".write": "auth != null && $playerUid == auth.uid",
+        ".validate": "newData.hasChildren(['currentLobby', 'lastActivity', 'connectionStatus'])",
+
+        "currentLobby": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length == 5)"
+        },
+
+        "lastActivity": {
+          ".validate": "newData.isString()"
+        },
+
+        "connectionStatus": {
+          ".validate": "newData.isString() && (newData.val() == 'online' || newData.val() == 'offline' || newData.val() == 'away')"
+        }
+      }
+    },
+
+    "rateLimits": {
+      "$userId": {
+        ".read": "auth != null && $userId == auth.uid",
+        ".write": "auth != null && $userId == auth.uid",
+
+        "lobbyCreation": {
+          ".indexOn": ["lastCreated", "count"],
+
+          "count": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+
+          "lastCreated": {
+            ".validate": "newData.isNumber()"
+          },
+
+          "windowStart": {
+            ".validate": "newData.isNumber()"
+          }
+        },
+
+        "chatMessages": {
+          ".indexOn": ["lastMessage", "count"],
+
+          "count": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+
+          "lastMessage": {
+            ".validate": "newData.isNumber()"
+          },
+
+          "windowStart": {
+            ".validate": "newData.isNumber()"
+          }
+        },
+
+        "settingsUpdates": {
+          ".indexOn": ["lastUpdate", "count"],
+
+          "count": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+
+          "lastUpdate": {
+            ".validate": "newData.isNumber()"
+          },
+
+          "windowStart": {
+            ".validate": "newData.isNumber()"
+          }
+        }
+      }
+    }
+  }
+}
