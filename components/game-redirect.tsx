@@ -14,12 +14,7 @@ interface GameRedirectProps {
   children: React.ReactNode;
 }
 
-type RedirectReason =
-  | "not_found"
-  | "not_member"
-  | "game_started"
-  | "loading"
-  | null;
+type RedirectReason = "not_found" | "not_member" | "loading" | null;
 
 export function GameRedirect({ lobbyCode, children }: GameRedirectProps) {
   const router = useRouter();
@@ -55,9 +50,10 @@ export function GameRedirect({ lobbyCode, children }: GameRedirectProps) {
       return;
     }
 
-    // Check if game has already started
+    // Check if game has already started - allow access to started games
     if (lobby.status === "started") {
-      setRedirectReason("game_started");
+      // Game is started, allow access to the game
+      setRedirectReason(null);
       return;
     }
 
@@ -165,43 +161,6 @@ export function GameRedirect({ lobbyCode, children }: GameRedirectProps) {
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
                 >
                   {isRedirecting ? "Joining..." : "Join Lobby"}
-                </Button>
-                <Button
-                  onClick={() => router.push("/")}
-                  variant="outline"
-                  className="w-full border-purple-600 text-purple-400 hover:bg-purple-600/10 font-bangers text-lg"
-                >
-                  Go Home
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Game has already started
-  if (redirectReason === "game_started") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
-          <CardHeader>
-            <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
-              Game in Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="text-center">
-              <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
-                The game has already started. You can&apos;t join mid-game.
-              </p>
-              <div className="space-y-3">
-                <Button
-                  onClick={() => router.push(`/game/${lobbyCode}/play`)}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
-                >
-                  Watch Game
                 </Button>
                 <Button
                   onClick={() => router.push("/")}

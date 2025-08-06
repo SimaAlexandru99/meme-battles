@@ -2,6 +2,7 @@ import { ref, set, get, update, onValue, off, remove } from "firebase/database";
 import { rtdb, auth } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
 import { AVAILABLE_AI_PERSONALITIES } from "@/components/game-settings/types";
+import { AIBotService } from "./ai-bot.service";
 
 /**
  * Enhanced service for managing lobby operations using Firebase Realtime Database
@@ -1287,6 +1288,9 @@ export class LobbyService {
           // Distribute meme cards to all players
           const playerCards = await this.distributeMemeCards(lobby.players);
 
+          console.log("Distributed cards:", playerCards);
+          console.log("Player UIDs:", Object.keys(lobby.players));
+
           // Create game state
           const gameState: GameState = {
             currentRound: 1,
@@ -1296,12 +1300,14 @@ export class LobbyService {
             currentPrompt: currentSituation,
           };
 
-          // Prepare database updates
+          // Prepare database updates - start with transition phase
           const updates: Record<string, unknown> = {};
           updates[`lobbies/${lobbyCode}/status`] = "started";
           updates[`lobbies/${lobbyCode}/gameState`] = {
-            currentRound: 1,
-            phase: "submission",
+            roundNumber: 1,
+            totalRounds: lobby.settings.rounds,
+            timeLeft: lobby.settings.timeLimit,
+            phase: "transition",
             phaseStartTime: new Date().toISOString(),
             currentSituation,
             submissions: {},
@@ -1311,6 +1317,10 @@ export class LobbyService {
 
           // Add player cards to each player's data
           Object.entries(playerCards).forEach(([playerUid, cards]) => {
+            console.log(
+              `Saving ${cards.length} cards for player ${playerUid}:`,
+              cards
+            );
             updates[`lobbies/${lobbyCode}/players/${playerUid}/cards`] =
               cards.map((card) => ({
                 id: card.id,
@@ -1346,6 +1356,95 @@ export class LobbyService {
             "UNKNOWN_ERROR",
             `Failed to start game: ${error}`,
             "Failed to start the game. Please try again.",
+            true
+          );
+        }
+      }
+    );
+  }
+
+  /**
+   * Complete the game transition and start the actual game
+   */
+  async completeGameTransition(
+    lobbyCode: string,
+    hostUid: string
+  ): Promise<ServiceResult<void>> {
+    return Sentry.startSpan(
+      {
+        op: "db.game.complete_transition",
+        name: "Complete Game Transition",
+      },
+      async () => {
+        try {
+          // Get current lobby data for validation
+          const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+          const lobbySnapshot = await get(lobbyRef);
+
+          if (!lobbySnapshot.exists()) {
+            throw this.createLobbyError(
+              "LOBBY_NOT_FOUND",
+              `Lobby ${lobbyCode} not found`,
+              "Lobby not found. Please check the code.",
+              false
+            );
+          }
+
+          const lobby = lobbySnapshot.val() as LobbyData;
+
+          // Validate host permissions
+          if (lobby.hostUid !== hostUid) {
+            throw this.createLobbyError(
+              "PERMISSION_DENIED",
+              `User ${hostUid} is not the host of lobby ${lobbyCode}`,
+              "Only the host can complete the game transition.",
+              false
+            );
+          }
+
+          // Update game state to start the actual game
+          const updates: Record<string, unknown> = {};
+          updates[`lobbies/${lobbyCode}/gameState/phase`] = "submission";
+          updates[`lobbies/${lobbyCode}/gameState/phaseStartTime`] =
+            new Date().toISOString();
+
+          await update(ref(rtdb), updates);
+
+          // Process AI bot submissions asynchronously
+          const aiBotService = AIBotService.getInstance();
+          const situation =
+            (lobby.gameState as any)?.currentSituation ||
+            "No situation available";
+
+          // Process AI submissions in the background
+          aiBotService
+            .processAIBotSubmissions(lobbyCode, lobby.players, situation)
+            .catch((error) => {
+              console.error("Error processing AI bot submissions:", error);
+              Sentry.captureException(error, {
+                tags: { operation: "ai_bot_submissions_background" },
+                extra: { lobbyCode },
+              });
+            });
+
+          return {
+            success: true,
+            data: undefined,
+          };
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            "type" in error &&
+            (error as LobbyError).type
+          ) {
+            throw error;
+          }
+
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to complete game transition: ${error}`,
+            "Failed to complete game transition. Please try again.",
             true
           );
         }

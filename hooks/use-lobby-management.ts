@@ -18,6 +18,7 @@ interface UseLobbyManagementReturn {
   leaveLobby: () => Promise<void>;
   updateSettings: (settings: Partial<GameSettings>) => Promise<void>;
   startGame: () => Promise<void>;
+  completeGameTransition: () => Promise<void>;
   kickPlayer: (playerUid: string) => Promise<void>;
   addBot: (botConfig: {
     personalityId: string;
@@ -340,6 +341,35 @@ export function useLobbyManagement(
   }, [user, lobby, isHost, playerCount, handleError]);
 
   /**
+   * Complete the game transition and start the actual game
+   */
+  const completeGameTransition = useCallback(async (): Promise<void> => {
+    if (!user || !lobby || !isHost) {
+      throw new Error("Only the host can complete the game transition");
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await lobbyService.current.completeGameTransition(
+        lobby.code,
+        user.id
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to complete game transition");
+      }
+
+      // The real-time subscription will update the lobby state
+      setIsLoading(false);
+    } catch (error) {
+      handleError(error, "complete_game_transition");
+      throw error;
+    }
+  }, [user, lobby, isHost, handleError]);
+
+  /**
    * Kick a player from the lobby (host only)
    */
   const kickPlayer = useCallback(
@@ -480,6 +510,7 @@ export function useLobbyManagement(
     leaveLobby,
     updateSettings,
     startGame,
+    completeGameTransition,
     kickPlayer,
     addBot,
 

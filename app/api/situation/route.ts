@@ -4,7 +4,12 @@ import { NextResponse } from "next/server";
 
 export async function POST() {
   try {
-    const { text } = await generateText({
+    // Add timeout to prevent long-running requests
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Request timeout")), 10000); // 10 second timeout
+    });
+
+    const generatePromise = generateText({
       model: google("gemini-2.5-flash"),
       prompt: `Generate a funny, relatable situation that would be perfect for a meme response. The situation should be:
       - Humorous and engaging
@@ -27,12 +32,18 @@ export async function POST() {
       },
     });
 
+    // Race between timeout and generation
+    const result = (await Promise.race([generatePromise, timeoutPromise])) as {
+      text: string;
+    };
+    const { text } = result;
+
     return NextResponse.json({ situation: text.trim() });
   } catch (error) {
     console.error("Error generating situation:", error);
     return NextResponse.json(
       { error: "Failed to generate situation" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -307,6 +307,8 @@ interface PlayerData {
   score: number;
   status: PlayerStatus;
   lastSeen: string;
+  // Game-specific properties
+  cards?: MemeCard[];
   // AI-specific properties
   isAI?: boolean;
   aiPersonalityId?: string;

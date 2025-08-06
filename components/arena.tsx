@@ -12,6 +12,7 @@ import { ChatPanel } from "./chat-panel";
 import { VotingPhase } from "./voting-phase";
 import { ResultsPhase } from "./results-phase";
 import { RoundCountdown } from "./round-countdown";
+import { GameTransition } from "./game-transition";
 import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
@@ -43,7 +44,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   } = useGameState(lobbyCode);
 
   // Use lobby management for lobby-specific operations
-  const { isHost, leaveLobby } = useLobbyManagement(lobbyCode);
+  const { isHost, leaveLobby, completeGameTransition } =
+    useLobbyManagement(lobbyCode);
 
   // Card selection functionality
   const { selectedCard, selectCard, clearSelection } = useMemeCardSelection({
@@ -115,7 +117,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         Sentry.captureException(error);
       }
     },
-    [vote],
+    [vote]
   );
 
   const handleStartRound = useCallback(async () => {
@@ -252,6 +254,17 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     );
   }
 
+  if (gameState.phase === "transition") {
+    return (
+      <GameTransition
+        lobbyCode={lobbyCode}
+        currentUser={currentUser}
+        players={players}
+        onTransitionComplete={completeGameTransition}
+      />
+    );
+  }
+
   if (gameState.phase === "countdown") {
     return (
       <RoundCountdown
@@ -304,6 +317,10 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     );
   }
 
+  // Debug game state
+  console.log("Current game state:", gameState);
+  console.log("Player cards:", playerCards);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Top Bar */}
@@ -315,14 +332,15 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               <div className="flex items-center gap-2">
                 <RiGamepadLine className="w-5 h-5 text-purple-400" />
                 <span className="text-white font-bangers tracking-wide">
-                  Round {gameState.roundNumber}/{gameState.totalRounds}
+                  Round {gameState.roundNumber || 1}/
+                  {gameState.totalRounds || 8}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <RiTimeLine className="w-5 h-5 text-purple-400" />
                 <span className="text-white font-bangers tracking-wide">
-                  {gameState.timeLeft}s
+                  {gameState.timeLeft || 60}s
                 </span>
               </div>
             </div>

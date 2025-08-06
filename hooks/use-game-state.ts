@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/nextjs";
 interface GameState {
   phase:
     | "waiting"
+    | "transition"
     | "countdown"
     | "submission"
     | "voting"
@@ -102,7 +103,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode],
+    [lobbyCode]
   );
 
   /**
@@ -133,7 +134,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       (error) => {
         handleError(error, "game_state_listener");
         setConnectionStatus("disconnected");
-      },
+      }
     );
 
     // Listen to players data
@@ -152,35 +153,43 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               avatar: player.profileURL || "",
               score: player.score || 0,
               status: "waiting",
-              cards: [],
+              cards: player.cards || [],
               isCurrentPlayer: id === user.id,
-              isAI: false, // PlayerData doesn't have isAI property
-              aiPersonalityId: undefined, // PlayerData doesn't have aiPersonalityId property
-            }),
+              isAI: player.isAI || false,
+              aiPersonalityId: player.aiPersonalityId,
+            })
           );
           setPlayers(gamePlayers);
         }
       },
       (error) => {
         handleError(error, "players_listener");
-      },
+      }
     );
 
     // Listen to current player's cards
-    const playerCardsPath = `lobbies/${lobbyCode}/playerCards/${user.id}`;
+    const playerCardsPath = `lobbies/${lobbyCode}/players/${user.id}/cards`;
     const playerCardsRef = ref(rtdb, playerCardsPath);
 
     playerCardsUnsubscribeRef.current = onValue(
       playerCardsRef,
       (snapshot) => {
+        console.log(
+          "Player cards snapshot:",
+          snapshot.exists(),
+          snapshot.val()
+        );
         if (snapshot.exists()) {
           const cards = snapshot.val() as MemeCard[];
+          console.log("Setting player cards:", cards);
           setPlayerCards(cards || []);
+        } else {
+          console.log("No player cards found at path:", playerCardsPath);
         }
       },
       (error) => {
         handleError(error, "player_cards_listener");
-      },
+      }
     );
 
     return () => {
@@ -194,7 +203,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         off(
           ref(rtdb, playerCardsPath),
           "value",
-          playerCardsUnsubscribeRef.current,
+          playerCardsUnsubscribeRef.current
         );
       }
     };
@@ -233,10 +242,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "submit_card");
             throw error;
           }
-        },
+        }
       );
     },
-    [user, gameState, lobbyCode, playerCards, handleError],
+    [user, gameState, lobbyCode, playerCards, handleError]
   );
 
   /**
@@ -265,10 +274,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "vote");
             throw error;
           }
-        },
+        }
       );
     },
-    [user, gameState, lobbyCode, handleError],
+    [user, gameState, lobbyCode, handleError]
   );
 
   /**
@@ -297,7 +306,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "start_round");
           throw error;
         }
-      },
+      }
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -330,7 +339,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "next_round");
           throw error;
         }
-      },
+      }
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -358,7 +367,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "end_game");
           throw error;
         }
-      },
+      }
     );
   }, [user, lobbyCode, handleError]);
 
@@ -377,7 +386,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         gameState?.submissions?.[playerId] !== undefined
       );
     },
-    [isCurrentPlayer, gameState, hasVoted, user?.id],
+    [isCurrentPlayer, gameState, hasVoted, user?.id]
   );
 
   return {

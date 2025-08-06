@@ -56,6 +56,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
 
   // Use real lobby management hooks
   const {
+    lobby,
+    isLoading: isLobbyLoading,
     leaveLobby,
     updateSettings,
     kickPlayer,
@@ -340,9 +342,6 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     },
     [addBot]
   );
-
-  // Get real lobby data from the lobby management hook
-  const { lobby, isLoading: isLobbyLoading } = useLobbyManagement(lobbyCode);
 
   // Show loading state while fetching lobby data
   if (isLobbyLoading) {

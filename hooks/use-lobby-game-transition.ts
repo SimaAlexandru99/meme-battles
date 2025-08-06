@@ -16,7 +16,7 @@ interface UseLobbyGameTransitionReturn {
  * Manages the transition from lobby state to active game state
  */
 export function useLobbyGameTransition(
-  lobbyCode: string,
+  lobbyCode: string
 ): UseLobbyGameTransitionReturn {
   const router = useRouter();
   const {
@@ -41,10 +41,7 @@ export function useLobbyGameTransition(
           // Start the game in the lobby
           await startLobbyGame();
 
-          // Navigate to the game interface
-          router.push(`/game/${lobbyCode}/play`);
-
-          toast.success("Game started! Redirecting to game...");
+          toast.success("Game started! Preparing transition...");
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Failed to start game";
@@ -52,15 +49,17 @@ export function useLobbyGameTransition(
           Sentry.captureException(error);
           throw error;
         }
-      },
+      }
     );
-  }, [isHost, startLobbyGame, lobbyCode, router]);
+  }, [isHost, startLobbyGame]);
 
-  // Monitor lobby status changes
+  // Monitor lobby status changes and handle navigation
   useEffect(() => {
     if (lobby?.status === "started") {
-      // Game has been started, redirect to game interface
-      router.push(`/game/${lobbyCode}/play`);
+      // Use setTimeout to defer navigation to prevent React Router errors
+      setTimeout(() => {
+        router.push(`/game/${lobbyCode}/play`);
+      }, 100);
     }
   }, [lobby?.status, lobbyCode, router]);
 
