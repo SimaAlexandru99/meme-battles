@@ -33,7 +33,10 @@ import { toast } from "sonner";
 import { signOut } from "@/lib/actions/auth.action";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { generateGuestDisplayName } from "@/firebase/client";
+import * as Sentry from "@sentry/nextjs";
+import { useRouter } from "next/navigation";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;
@@ -50,7 +53,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
   const currentUser = user || initialUserData;
   const [nickname, setNickname] = useState(currentUser?.name || "MemeLord");
   const [currentAvatar, setCurrentAvatar] = useState(
-    currentUser?.avatarId || "evil-doge",
+    currentUser?.avatarId || "evil-doge"
   );
   const [profileURL] = useState(currentUser?.profileURL || "");
 
@@ -86,7 +89,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setNickname(e.target.value);
     },
-    [],
+    []
   );
 
   const handleNicknameBlur = useCallback(async () => {
@@ -120,7 +123,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
         setCurrentAvatar(currentUser?.avatarId || "evil-doge");
       }
     },
-    [updateAvatar, currentUser?.avatarId, refresh],
+    [updateAvatar, currentUser?.avatarId, refresh]
   );
 
   return (
@@ -390,9 +393,11 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ initialUserData }: HeroSectionProps) {
+  const router = useRouter();
+
   // State management for view transitions
   const [currentView, setCurrentView] = useState<"main" | "private-lobby">(
-    "main",
+    "main"
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -409,19 +414,26 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
     }
   }, [isIdle, currentView]);
 
+  const { user } = useCurrentUser(initialUserData);
+  const {
+    createLobby,
+    joinLobby,
+    isLoading: isLobbyLoading,
+    error: lobbyError,
+  } = useLobbyManagement();
+
   // Handle private war click with animation transition
   const handlePrivateWarClick = useCallback(() => {
+    setCurrentView("private-lobby");
     setIsTransitioning(true);
-    // Small delay to allow exit animations to complete
-    setTimeout(() => {
-      setCurrentView("private-lobby");
-      setIsTransitioning(false);
-    }, 600); // Match the duration of cardExitVariants
+    setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
   // Handle back to main view
   const handleBackToMain = useCallback(() => {
     setCurrentView("main");
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
   const handleBrowseLobbies = useCallback(() => {
@@ -534,16 +546,48 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
             >
               <PrivateLobbySection
                 onBackToMain={handleBackToMain}
-                onJoinLobby={async () => {
-                  toast.success("Joining lobby...");
-                  return Promise.resolve();
+                onJoinLobby={async (code: string) => {
+                  if (!user) {
+                    toast.error("Please sign in to join a lobby");
+                    return;
+                  }
+                  try {
+                    await joinLobby(code);
+                    toast.success(
+                      "Joined lobby successfully! Redirecting to lobby..."
+                    );
+
+                    // Redirect to the lobby
+                    router.push(`/game/${code}`);
+                  } catch (error) {
+                    Sentry.captureException(error);
+                    toast.error("Failed to join lobby");
+                  }
                 }}
                 onCreateLobby={async () => {
-                  toast.success("Creating lobby...");
-                  return Promise.resolve("");
+                  if (!user) {
+                    toast.error("Please sign in to create a lobby");
+                    throw new Error(
+                      "User must be authenticated to create a lobby"
+                    );
+                  }
+                  try {
+                    const code = await createLobby();
+                    toast.success(
+                      "Lobby created successfully! Redirecting to lobby..."
+                    );
+
+                    // Redirect to the lobby
+                    router.push(`/game/${code}`);
+
+                    return code;
+                  } catch (error) {
+                    toast.error("Failed to create lobby");
+                    throw error;
+                  }
                 }}
-                isLoading={false}
-                error={null}
+                isLoading={isLobbyLoading}
+                error={lobbyError}
                 createdLobbyCode=""
                 joinSuccess={false}
                 className="w-full h-full flex flex-col items-center justify-start"

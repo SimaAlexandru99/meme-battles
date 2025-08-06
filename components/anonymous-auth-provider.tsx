@@ -33,6 +33,12 @@ export default function AnonymousAuthProvider({
         currentUser ||
         hasAttemptedAuth.current
       ) {
+        console.log("Anonymous auth skipped:", {
+          needsAuth,
+          isAuthenticating,
+          hasCurrentUser: !!currentUser,
+          hasAttemptedAuth: hasAttemptedAuth.current,
+        });
         return;
       }
 
@@ -46,9 +52,15 @@ export default function AnonymousAuthProvider({
 
         // Sign in anonymously with Firebase
         const { user, displayName } = await signInAsGuest();
+        console.log("Anonymous sign-in successful:", {
+          user: !!user,
+          displayName,
+        });
 
         // Get ID token and create server session
         const idToken = await user.getIdToken();
+        console.log("Got ID token:", !!idToken);
+
         const result = await signInAsGuestAction({
           idToken,
           displayName,
@@ -66,7 +78,7 @@ export default function AnonymousAuthProvider({
       } catch (error) {
         console.error("Failed to authenticate as guest:", error);
         setAuthError(
-          error instanceof Error ? error.message : "Authentication failed",
+          error instanceof Error ? error.message : "Authentication failed"
         );
         // Reset the attempt flag on error so user can retry
         hasAttemptedAuth.current = false;

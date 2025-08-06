@@ -7,11 +7,11 @@
       ".indexOn": ["status", "createdAt", "hostUid", "updatedAt"],
 
       "$lobbyCode": {
-        ".validate": "newData.hasChildren(['code', 'hostUid', 'hostDisplayName', 'status', 'maxPlayers', 'createdAt', 'updatedAt', 'settings', 'players'])",
+        ".validate": "newData.hasChildren(['code', 'hostUid', 'hostDisplayName', 'status', 'maxPlayers', 'createdAt', 'updatedAt', 'settings', 'players']) || newData.hasChildren(['reserved', 'reservedAt', 'reservedBy'])",
 
-        ".read": "auth != null && (data.child('players').child(auth.uid).exists() || !data.exists())",
+        ".read": "auth != null",
 
-        ".write": "auth != null && (!data.exists() || data.child('players').child(auth.uid).exists() || data.child('hostUid').val() == auth.uid)",
+        ".write": "auth != null && (!data.exists() || data.child('players').child(auth.uid).exists() || data.child('hostUid').val() == auth.uid || data.child('reserved').val() == true)",
 
         "code": {
           ".validate": "newData.isString() && newData.val().length == 5 && newData.val().matches(/^[A-Z0-9]{5}$/)"
