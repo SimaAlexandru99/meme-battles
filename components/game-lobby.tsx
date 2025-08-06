@@ -38,6 +38,8 @@ import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
 import { useEventListener, useClipboard, useNetwork } from "react-haiku";
 import { LobbyService } from "@/lib/services/lobby.service";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
+import { useLobbyConnection } from "@/hooks/use-lobby-connection";
 
 import { GameRedirect } from "@/components/game-redirect";
 import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
@@ -52,6 +54,32 @@ import {
 
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
+
+  // Use real lobby management hooks
+  const {
+    lobby,
+    players,
+    isLoading,
+    error: lobbyError,
+    connectionStatus,
+    leaveLobby,
+    updateSettings,
+    startGame,
+    kickPlayer,
+    isHost,
+    canStartGame,
+    playerCount,
+    clearError,
+    retry,
+  } = useLobbyManagement(lobbyCode);
+
+  const {
+    connectionStatus: networkStatus,
+    isOnline,
+    reconnect,
+  } = useLobbyConnection(lobbyCode);
+
+  // Local UI state
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
   const [settingsError, setSettingsError] = React.useState<string | null>(null);
@@ -71,18 +99,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         },
         async () => {
           try {
-            const lobbyService = LobbyService.getInstance();
-            const result = await lobbyService.kickPlayer(
-              lobbyCode,
-              playerId,
-              currentUser.id
-            );
-
-            if (result.success) {
-              toast.success("Player kicked successfully!");
-            } else {
-              toast.error(result.error || "Failed to kick player");
-            }
+            await kickPlayer(playerId);
+            toast.success("Player kicked successfully!");
           } catch (error) {
             const errorMessage =
               error instanceof Error ? error.message : "Failed to kick player";
@@ -93,11 +111,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         }
       );
     },
-    [lobbyCode, currentUser.id]
+    [kickPlayer]
   );
 
   // Network status monitoring
-  const isOnline = useNetwork();
   const prevOnlineRef = React.useRef(isOnline);
 
   // Network status effect
@@ -111,6 +128,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       prevOnlineRef.current = isOnline;
     }
   }, [isOnline]);
+
+  // Handle lobby errors
+  React.useEffect(() => {
+    if (lobbyError) {
+      toast.error(lobbyError);
+    }
+  }, [lobbyError]);
 
   // Use Haiku's useClipboard for copy operations
   const { copy: copyToClipboard } = useClipboard();
@@ -199,8 +223,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const handleStartGame = React.useCallback(async () => {
     setIsStarting(true);
     try {
-      // Mock start game
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await startGame();
       toast.success("Game started!");
 
       // Redirect to game page
@@ -213,7 +236,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     } finally {
       setIsStarting(false);
     }
-  }, [lobbyCode, router]);
+  }, [startGame, lobbyCode, router]);
 
   // Handle back navigation with confirmation
   const handleBackToMain = React.useCallback(() => {
@@ -224,8 +247,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const handleLeaveLobby = React.useCallback(async () => {
     setIsLeaving(true);
     try {
-      // Mock leave lobby
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await leaveLobby();
       toast.success("Successfully left the lobby");
       router.push("/");
     } catch (err) {
@@ -237,7 +259,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       setIsLeaving(false);
       setShowExitDialog(false);
     }
-  }, [router]);
+  }, [leaveLobby, router]);
 
   // Handle canceling exit
   const handleCancelExit = React.useCallback(() => {
@@ -265,38 +287,40 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   }, []);
 
   // Handle saving settings
-  const handleSaveSettings = React.useCallback(async () => {
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Save Game Settings",
-      },
-      async () => {
-        setIsSavingSettings(true);
-        setSettingsError(null);
+  const handleSaveSettings = React.useCallback(
+    async (newSettings: Partial<GameSettings>) => {
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Save Game Settings",
+        },
+        async () => {
+          setIsSavingSettings(true);
+          setSettingsError(null);
 
-        try {
-          // Mock implementation
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          try {
+            await updateSettings(newSettings);
 
-          // Show success notification
-          toast.success("Game settings updated successfully!");
+            // Show success notification
+            toast.success("Game settings updated successfully!");
 
-          // Close modal
-          setIsSettingsModalOpen(false);
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to update settings";
-          setSettingsError(errorMessage);
-          toast.error(errorMessage);
-          Sentry.captureException(err);
-          throw err; // Re-throw to let the form handle it
-        } finally {
-          setIsSavingSettings(false);
+            // Close modal
+            setIsSettingsModalOpen(false);
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : "Failed to update settings";
+            setSettingsError(errorMessage);
+            toast.error(errorMessage);
+            Sentry.captureException(err);
+            throw err; // Re-throw to let the form handle it
+          } finally {
+            setIsSavingSettings(false);
+          }
         }
-      }
-    );
-  }, []);
+      );
+    },
+    [updateSettings]
+  );
 
   // Handle adding AI player
   const handleAddBot = React.useCallback(async () => {

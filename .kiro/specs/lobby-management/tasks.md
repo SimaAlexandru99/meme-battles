@@ -232,7 +232,7 @@
   - Test AI prompt generation fallback scenarios and timeout handling
   - _Requirements: All requirements need E2E coverage_
 
-- [ ] 9. Integrate lobby system with existing game components
+- [-] 9. Integrate lobby system with existing game components
   - Connect lobby system to existing game interface components
   - Update routing to handle lobby URLs and deep linking
   - Integrate with existing authentication and user management
