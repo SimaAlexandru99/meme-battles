@@ -313,9 +313,14 @@ export function useLobbyManagement(
     setError(null);
 
     try {
-      // TODO: Implement game start logic in LobbyService
-      // This will be implemented in a later task
-      throw new Error("Game start functionality not yet implemented");
+      const result = await lobbyService.current.startGame(lobby.code, user.id);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to start game");
+      }
+
+      // The real-time subscription will update the lobby state
+      setIsLoading(false);
     } catch (error) {
       handleError(error, "start_game");
       throw error;

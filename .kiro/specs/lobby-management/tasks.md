@@ -122,13 +122,13 @@
   - Create offline mode indicator with appropriate messaging
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [-] 5. Enhance existing lobby creation and joining components
+- [x] 5. Enhance existing lobby creation and joining components
   - Improve `CreateLobbySection` with better error handling and loading states
   - Enhance `JoinLobbySection` with real-time validation and improved UX
   - Update `InvitationCodeInput` with better accessibility and validation
   - _Requirements: 1.1, 1.7, 2.1, 2.7, 2.8, 2.9_
 
-- [ ] 5.1 Enhance CreateLobbySection component
+- [x] 5.1 Enhance CreateLobbySection component
   - Integrate with new atomic lobby code generation system
   - Add loading states during lobby creation process
   - Implement better error handling with specific error messages
@@ -136,7 +136,7 @@
   - Create shareable lobby code display with copy functionality
   - _Requirements: 1.1, 1.4, 1.7_
 
-- [ ] 5.2 Improve JoinLobbySection component
+- [x] 5.2 Improve JoinLobbySection component
   - Add real-time validation of lobby codes as user types
   - Implement better error states for different failure scenarios
   - Add lobby preview information before joining (player count, settings)
@@ -144,13 +144,13 @@
   - Add accessibility improvements for screen readers
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.7, 2.8, 2.9_
 
-- [ ] 6. Implement lobby actions and game transition functionality
+- [x] 6. Implement lobby actions and game transition functionality
   - Create lobby action buttons (Start Game, Leave Lobby, Kick Player)
   - Add game start validation and transition logic
   - Implement proper cleanup when players leave lobbies
   - _Requirements: 5.1, 5.2, 5.7, 6.1, 6.2, 6.6_
 
-- [ ] 6.1 Create lobby action components
+- [x] 6.1 Create lobby action components
   - Build `StartGameButton` component with host-only permissions and validation
   - Create `LeaveLobbyButton` with confirmation dialog and proper cleanup
   - Implement `KickPlayerButton` for host-only player management
@@ -158,7 +158,7 @@
   - Create confirmation dialogs for destructive actions
   - _Requirements: 5.1, 5.2, 6.1, 6.2_
 
-- [ ] 6.2 Implement game start transition logic
+- [x] 6.2 Implement game start transition logic
   - Add validation for minimum player count (3 players) before game start
   - Create game state initialization with proper data structure
   - Implement meme card distribution using existing MemeCardPool utility

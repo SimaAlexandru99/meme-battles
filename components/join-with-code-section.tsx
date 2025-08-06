@@ -2,10 +2,18 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RiMailLine } from "react-icons/ri";
+import {
+  RiMailLine,
+  RiAlertLine,
+  RiCheckLine,
+  RiUserLine,
+  RiSettingsLine,
+} from "react-icons/ri";
 import { InvitationCodeInput } from "@/components/invitation-code-input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   buttonVariants,
   errorVariants,
@@ -13,9 +21,19 @@ import {
   microInteractionVariants,
   successVariants,
 } from "@/lib/animations/private-lobby-variants";
+import type { GameSettings, LobbyError } from "@/types";
 
 interface JoinWithCodeSectionProps {
   onJoinLobby: (code: string) => Promise<void>;
+  onValidateCode?: (code: string) => Promise<{
+    isValid: boolean;
+    lobbyInfo?: {
+      playerCount: number;
+      maxPlayers: number;
+      hostName: string;
+      settings: GameSettings;
+    };
+  }>;
   isLoading: boolean;
   error?: string | null;
   success?: boolean;
@@ -24,6 +42,7 @@ interface JoinWithCodeSectionProps {
 
 export function JoinWithCodeSection({
   onJoinLobby,
+  onValidateCode,
   isLoading,
   error,
   success = false,
@@ -31,30 +50,116 @@ export function JoinWithCodeSection({
 }: JoinWithCodeSectionProps) {
   const [invitationCode, setInvitationCode] = React.useState("");
   const [isJoining, setIsJoining] = React.useState(false);
+  const [isValidating, setIsValidating] = React.useState(false);
+  const [validationError, setValidationError] = React.useState<string | null>(
+    null
+  );
+  const [lobbyPreview, setLobbyPreview] = React.useState<{
+    playerCount: number;
+    maxPlayers: number;
+    hostName: string;
+    settings: GameSettings;
+  } | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   // Focus management refs
   const joinButtonRef = React.useRef<HTMLButtonElement>(null);
   const inputRef = React.useRef<HTMLDivElement>(null);
 
-  const handleCodeChange = React.useCallback((code: string) => {
-    setInvitationCode(code);
-  }, []);
+  // Debounced validation
+  const validateCodeDebounced = React.useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (code: string) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        if (code.length === 5 && onValidateCode) {
+          setIsValidating(true);
+          setValidationError(null);
+          setLobbyPreview(null);
+
+          try {
+            const result = await onValidateCode(code);
+            if (result.isValid && result.lobbyInfo) {
+              setLobbyPreview(result.lobbyInfo);
+              setValidationError(null);
+            } else {
+              setValidationError("Lobby not found or invalid code");
+              setLobbyPreview(null);
+            }
+          } catch {
+            setValidationError("Unable to validate code. Please try again.");
+            setLobbyPreview(null);
+          } finally {
+            setIsValidating(false);
+          }
+        } else if (code.length === 5) {
+          // Basic format validation without server check
+          setValidationError(null);
+          setLobbyPreview(null);
+        } else {
+          setValidationError(null);
+          setLobbyPreview(null);
+        }
+      }, 500);
+    };
+  }, [onValidateCode]);
+
+  const handleCodeChange = React.useCallback(
+    (code: string) => {
+      setInvitationCode(code);
+      validateCodeDebounced(code);
+    },
+    [validateCodeDebounced]
+  );
 
   const handleCodeComplete = React.useCallback(
     async (code: string) => {
-      if (code.length === 5 && !isLoading && !isJoining) {
+      if (code.length === 5 && !isLoading && !isJoining && !validationError) {
         setIsJoining(true);
         try {
           await onJoinLobby(code);
+          setRetryCount(0); // Reset retry count on success
         } catch (err) {
-          // Error handling is managed by a parent component
-          console.error("Failed to join lobby:", err);
+          const lobbyError = err as LobbyError;
+
+          // Handle specific error types with user-friendly messages
+          if (lobbyError.type === "LOBBY_NOT_FOUND") {
+            toast.error("Lobby not found", {
+              description: "Please check the invitation code and try again.",
+            });
+          } else if (lobbyError.type === "LOBBY_FULL") {
+            toast.error("Lobby is full", {
+              description: "This lobby has reached its maximum capacity.",
+            });
+          } else if (lobbyError.type === "LOBBY_ALREADY_STARTED") {
+            toast.error("Game already started", {
+              description: "You cannot join a game that has already begun.",
+            });
+          } else if (lobbyError.type === "NETWORK_ERROR") {
+            toast.error("Network connection issue", {
+              description: "Please check your connection and try again.",
+              action: {
+                label: "Retry",
+                onClick: () => handleCodeComplete(code),
+              },
+            });
+          } else {
+            toast.error("Failed to join lobby", {
+              description: lobbyError.userMessage || "Please try again.",
+              action: {
+                label: "Retry",
+                onClick: () => handleCodeComplete(code),
+              },
+            });
+          }
+
+          setRetryCount((prev) => prev + 1);
         } finally {
           setIsJoining(false);
         }
       }
     },
-    [onJoinLobby, isLoading, isJoining],
+    [onJoinLobby, isLoading, isJoining, validationError]
   );
 
   const handleJoinClick = React.useCallback(async () => {
@@ -76,10 +181,12 @@ export function JoinWithCodeSection({
         handleJoinClick().then((r) => console.log(r));
       }
     },
-    [invitationCode, isLoading, isJoining, handleJoinClick],
+    [invitationCode, isLoading, isJoining, handleJoinClick]
   );
 
   const isOperationInProgress = isLoading || isJoining;
+  // const hasError = !!error; // Currently unused but kept for future error handling
+  // const canRetry = hasError && retryCount < 3; // Currently unused but kept for future retry functionality
 
   // Announce status changes to screen readers
   React.useEffect(() => {
@@ -120,7 +227,7 @@ export function JoinWithCodeSection({
         "bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50",
         "shadow-2xl shadow-purple-500/10",
         "h-full justify-between",
-        className,
+        className
       )}
       role="region"
       aria-label="Join existing lobby with invitation code"
@@ -140,7 +247,7 @@ export function JoinWithCodeSection({
             "w-16 h-16 sm:w-20 sm:h-20 rounded-full",
             "bg-gradient-to-br from-yellow-400 to-yellow-600",
             "flex items-center justify-center shadow-lg shadow-yellow-500/30",
-            "transition-all duration-300",
+            "transition-all duration-300"
           )}
           animate={isOperationInProgress ? "animate" : "initial"}
           variants={
@@ -150,7 +257,7 @@ export function JoinWithCodeSection({
           <RiMailLine
             className={cn(
               "w-8 h-8 sm:w-10 sm:h-10 text-white",
-              isOperationInProgress && "animate-bounce",
+              isOperationInProgress && "animate-bounce"
             )}
             aria-hidden="true"
           />
@@ -165,7 +272,7 @@ export function JoinWithCodeSection({
             "absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7",
             "bg-gradient-to-br from-red-500 to-red-600",
             "rounded-full flex items-center justify-center",
-            "shadow-lg shadow-red-500/30 border-2 border-slate-800",
+            "shadow-lg shadow-red-500/30 border-2 border-slate-800"
           )}
           role="img"
           aria-label="Notification indicator"
@@ -205,10 +312,132 @@ export function JoinWithCodeSection({
           onChange={handleCodeChange}
           onComplete={handleCodeComplete}
           disabled={isOperationInProgress}
-          error={!!error}
+          error={!!error || !!validationError}
           className="w-full"
         />
+
+        {/* Real-time validation indicator */}
+        <AnimatePresence mode="wait">
+          {isValidating && invitationCode.length === 5 && (
+            <motion.div
+              variants={microInteractionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="flex items-center justify-center gap-2 mt-2"
+            >
+              <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+              <span className="text-purple-300 text-xs font-bangers">
+                Validating code...
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
+
+      {/* Lobby Preview */}
+      <AnimatePresence mode="wait">
+        {lobbyPreview && !error && (
+          <motion.div
+            variants={successVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className={cn(
+              "w-full max-w-md p-4 rounded-lg",
+              "bg-blue-500/10 border border-blue-500/30",
+              "text-center"
+            )}
+            role="region"
+            aria-label="Lobby preview information"
+          >
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <RiCheckLine className="w-4 h-4 text-green-400" />
+              <p className="text-green-400 text-sm font-bangers tracking-wide">
+                Lobby Found!
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs sm:text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-blue-200/70 flex items-center gap-1">
+                  <RiUserLine className="w-3 h-3" />
+                  Players:
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-500/20 text-blue-300"
+                >
+                  {lobbyPreview.playerCount}/{lobbyPreview.maxPlayers}
+                </Badge>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-blue-200/70">Host:</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-500/20 text-blue-300"
+                >
+                  {lobbyPreview.hostName}
+                </Badge>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-blue-200/70 flex items-center gap-1">
+                  <RiSettingsLine className="w-3 h-3" />
+                  Rounds:
+                </span>
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-500/20 text-blue-300"
+                >
+                  {lobbyPreview.settings.rounds}
+                </Badge>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-blue-200/70">Time Limit:</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-500/20 text-blue-300"
+                >
+                  {lobbyPreview.settings.timeLimit}s
+                </Badge>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Validation Error Display */}
+      <AnimatePresence mode="wait">
+        {validationError && (
+          <motion.div
+            variants={errorVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className={cn(
+              "w-full max-w-md p-3 rounded-lg",
+              "bg-red-500/10 border border-red-500/30",
+              "text-center"
+            )}
+            role="alert"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <RiAlertLine className="w-4 h-4 text-red-400" />
+              <p className="text-red-400 text-sm font-bangers tracking-wide">
+                Invalid Code
+              </p>
+            </div>
+            <p className="text-red-400/70 text-xs sm:text-sm font-bangers tracking-wide">
+              {validationError}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error Display */}
       <AnimatePresence mode="wait">
@@ -221,7 +450,7 @@ export function JoinWithCodeSection({
             className={cn(
               "w-full max-w-md p-3 rounded-lg",
               "bg-red-500/10 border border-red-500/30",
-              "text-red-400 text-sm text-center font-bangers tracking-wide",
+              "text-red-400 text-sm text-center font-bangers tracking-wide"
             )}
             role="alert"
             aria-live="polite"
@@ -243,7 +472,7 @@ export function JoinWithCodeSection({
             className={cn(
               "w-full max-w-md p-3 rounded-lg",
               "bg-green-500/10 border border-green-500/30",
-              "text-green-400 text-sm text-center font-bangers tracking-wide",
+              "text-green-400 text-sm text-center font-bangers tracking-wide"
             )}
             role="alert"
             aria-live="polite"
@@ -264,7 +493,13 @@ export function JoinWithCodeSection({
         <Button
           ref={joinButtonRef}
           onClick={handleJoinClick}
-          disabled={invitationCode.length !== 5 || isOperationInProgress}
+          disabled={
+            invitationCode.length !== 5 ||
+            isOperationInProgress ||
+            isValidating ||
+            !!validationError ||
+            (retryCount >= 3 && !!error)
+          }
           className={cn(
             "w-full h-12 sm:h-14",
             "bg-gradient-to-r from-purple-600 to-purple-700",
@@ -276,34 +511,119 @@ export function JoinWithCodeSection({
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "focus-visible:ring-2 focus-visible:ring-purple-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+            lobbyPreview && "ring-2 ring-green-500/30 shadow-green-500/20",
+            validationError && "ring-2 ring-red-500/30 shadow-red-500/20"
           )}
           aria-label={
             isOperationInProgress
               ? "Joining lobby..."
-              : "Join lobby with invitation code"
+              : isValidating
+                ? "Validating code..."
+                : validationError
+                  ? "Invalid code - cannot join"
+                  : lobbyPreview
+                    ? `Join ${lobbyPreview.hostName}'s lobby`
+                    : "Join lobby with invitation code"
           }
           aria-describedby="join-button-description"
         >
-          {isOperationInProgress ? (
-            <motion.div
-              className="flex items-center gap-2"
-              variants={successVariants}
-              animate="animate"
-            >
-              <div
-                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
-                aria-hidden="true"
-              />
-              <span>Se alătură...</span>
-            </motion.div>
-          ) : (
-            "JOIN NOW"
-          )}
+          <AnimatePresence mode="wait">
+            {isOperationInProgress ? (
+              <motion.div
+                key="joining"
+                className="flex items-center gap-2"
+                variants={successVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <div
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                  aria-hidden="true"
+                />
+                <span>
+                  {retryCount > 0
+                    ? `Retrying... (${retryCount}/3)`
+                    : "Joining..."}
+                </span>
+              </motion.div>
+            ) : isValidating ? (
+              <motion.div
+                key="validating"
+                className="flex items-center gap-2"
+                variants={microInteractionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <div
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                  aria-hidden="true"
+                />
+                <span>Validating...</span>
+              </motion.div>
+            ) : validationError ? (
+              <motion.div
+                key="error"
+                className="flex items-center gap-2"
+                variants={errorVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <RiAlertLine className="w-5 h-5" />
+                <span>INVALID CODE</span>
+              </motion.div>
+            ) : lobbyPreview ? (
+              <motion.div
+                key="ready"
+                className="flex items-center gap-2"
+                variants={successVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <RiCheckLine className="w-5 h-5" />
+                <span>JOIN LOBBY</span>
+              </motion.div>
+            ) : success ? (
+              <motion.div
+                key="success"
+                className="flex items-center gap-2"
+                variants={successVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <RiCheckLine className="w-5 h-5" />
+                <span>JOINED!</span>
+              </motion.div>
+            ) : (
+              <motion.span
+                key="default"
+                variants={microInteractionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                JOIN NOW
+              </motion.span>
+            )}
+          </AnimatePresence>
         </Button>
+
         <div id="join-button-description" className="sr-only">
-          {invitationCode.length === 5
-            ? "Join the lobby using the entered invitation code"
-            : "Enter a 5-character invitation code to enable this button"}
+          {isOperationInProgress
+            ? "Joining lobby, please wait"
+            : isValidating
+              ? "Validating invitation code"
+              : validationError
+                ? "Cannot join - invalid invitation code"
+                : lobbyPreview
+                  ? `Ready to join ${lobbyPreview.hostName}'s lobby with ${lobbyPreview.playerCount}/${lobbyPreview.maxPlayers} players`
+                  : invitationCode.length === 5
+                    ? "Join the lobby using the entered invitation code"
+                    : "Enter a 5-character invitation code to enable this button"}
         </div>
       </motion.div>
 

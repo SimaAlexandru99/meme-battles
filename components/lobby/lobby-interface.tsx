@@ -39,6 +39,8 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
     playerCount,
     clearError,
     retry,
+    startGame,
+    leaveLobby,
   } = useLobbyManagement(lobbyCode);
 
   const {
@@ -304,11 +306,12 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
             {lobby && (
               <LobbyActions
                 lobbyCode={lobbyCode}
-                lobbyData={lobby}
-                isHost={isHost}
-                canStartGame={canStartGame}
+                lobbyStatus={lobby.status}
                 playerCount={playerCount}
-                disabled={isLoading || connectionStatus !== "connected"}
+                isHost={isHost}
+                isLoading={isLoading || connectionStatus !== "connected"}
+                onStartGame={startGame}
+                onLeaveLobby={leaveLobby}
               />
             )}
           </motion.div>

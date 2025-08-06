@@ -2,6 +2,7 @@ import { ref, set, get, update, onValue, off, remove } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
 
+
 /**
  * Enhanced service for managing lobby operations using Firebase Realtime Database
  * with atomic operations, comprehensive error handling, and retry mechanisms
@@ -1064,11 +1065,17 @@ export class LobbyService {
   }
 
   /**
-   * Start a game
+   * Start a game with validation, meme card distribution, and AI situation generation
    */
   async startGame(
-    lobbyCode: string
-  ): Promise<{ success: boolean; error?: string }> {
+    lobbyCode: string,
+    hostUid: string
+  ): Promise<
+    ServiceResult<{
+      gameState: GameState;
+      playerCards: Record<string, MemeCard[]>;
+    }>
+  > {
     return Sentry.startSpan(
       {
         op: "db.game.start",
@@ -1076,31 +1083,235 @@ export class LobbyService {
       },
       async () => {
         try {
+          // Get current lobby data for validation
+          const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+          const lobbySnapshot = await get(lobbyRef);
+
+          if (!lobbySnapshot.exists()) {
+            throw this.createLobbyError(
+              "LOBBY_NOT_FOUND",
+              `Lobby ${lobbyCode} not found`,
+              "Lobby not found. Please check the code.",
+              false
+            );
+          }
+
+          const lobby = lobbySnapshot.val() as LobbyData;
+
+          // Validate host permissions
+          if (lobby.hostUid !== hostUid) {
+            throw this.createLobbyError(
+              "PERMISSION_DENIED",
+              `User ${hostUid} is not the host of lobby ${lobbyCode}`,
+              "Only the host can start the game.",
+              false
+            );
+          }
+
+          // Validate lobby status
+          if (lobby.status !== "waiting") {
+            throw this.createLobbyError(
+              "LOBBY_ALREADY_STARTED",
+              `Lobby ${lobbyCode} has status ${lobby.status}`,
+              "Game has already started or ended.",
+              false
+            );
+          }
+
+          // Validate minimum player count
+          const players = Object.values(lobby.players);
+          if (players.length < 3) {
+            throw this.createLobbyError(
+              "VALIDATION_ERROR",
+              `Not enough players to start game. Need 3, have ${players.length}`,
+              "Need at least 3 players to start the game.",
+              false
+            );
+          }
+
+          // Generate AI situation with fallback
+          let currentSituation: string;
+          try {
+            const situationResponse = await this.generateSituation();
+            currentSituation = situationResponse || this.getFallbackSituation();
+          } catch (error) {
+            console.warn(
+              "AI situation generation failed, using fallback:",
+              error
+            );
+            currentSituation = this.getFallbackSituation();
+          }
+
+          // Distribute meme cards to all players
+          const playerCards = await this.distributeMemeCards(lobby.players);
+
+          // Create game state
+          const gameState: GameState = {
+            currentRound: 1,
+            totalRounds: lobby.settings.rounds,
+            timeLeft: lobby.settings.timeLimit,
+            phase: "playing",
+            currentPrompt: currentSituation,
+          };
+
+          // Prepare database updates
           const updates: Record<string, unknown> = {};
           updates[`lobbies/${lobbyCode}/status`] = "started";
           updates[`lobbies/${lobbyCode}/gameState`] = {
             currentRound: 1,
             phase: "submission",
             phaseStartTime: new Date().toISOString(),
-            currentSituation:
-              "When your friend says 'I have a great idea' at 3 AM",
+            currentSituation,
             submissions: {},
             votes: {},
+            roundResults: null,
           };
+
+          // Add player cards to each player's data
+          Object.entries(playerCards).forEach(([playerUid, cards]) => {
+            updates[`lobbies/${lobbyCode}/players/${playerUid}/cards`] =
+              cards.map((card) => ({
+                id: card.id,
+                filename: card.filename,
+                url: card.url,
+                alt: card.alt,
+              }));
+          });
+
           updates[`lobbies/${lobbyCode}/updatedAt`] = new Date().toISOString();
 
+          // Apply all updates atomically
           await update(ref(rtdb), updates);
-          return { success: true };
-        } catch (error) {
-          Sentry.captureException(error);
+
           return {
-            success: false,
-            error:
-              error instanceof Error ? error.message : "Failed to start game",
+            success: true,
+            data: {
+              gameState,
+              playerCards,
+            },
           };
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            "type" in error &&
+            (error as LobbyError).type
+          ) {
+            throw error;
+          }
+
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to start game: ${error}`,
+            "Failed to start the game. Please try again.",
+            true
+          );
         }
       }
     );
+  }
+
+  /**
+   * Generate AI situation with timeout handling
+   */
+  private async generateSituation(): Promise<string | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    try {
+      const response = await fetch("/api/situation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      return data.situation;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        console.warn("AI situation generation timed out");
+      } else {
+        console.warn("AI situation generation failed:", error);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Get a fallback situation when AI generation fails
+   */
+  private getFallbackSituation(): string {
+    const fallbackPrompts = [
+      "When you realize it's Monday tomorrow",
+      "Trying to explain cryptocurrency to your parents",
+      "When the wifi goes down during an important meeting",
+      "Your reaction when someone spoils a movie",
+      "When you find out pineapple pizza is actually good",
+      "When your friend says 'I have a great idea' at 3 AM",
+      "Trying to look busy when your boss walks by",
+      "When you accidentally like someone's old photo on social media",
+      "Your face when you see your bank balance",
+      "When someone asks if you've been working out",
+      "Trying to remember where you put your keys",
+      "When you realize you've been talking to yourself",
+      "Your reaction to finding money in old clothes",
+      "When someone says 'we need to talk'",
+      "Trying to act natural when you see your ex",
+    ];
+
+    return fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
+  }
+
+  /**
+   * Distribute meme cards to all players ensuring no duplicates
+   */
+  private async distributeMemeCards(
+    players: Record<string, PlayerData>
+  ): Promise<Record<string, MemeCard[]>> {
+    // Import the MemeCardPool class dynamically to avoid circular dependencies
+    const { MemeCardPool } = await import("@/lib/utils/meme-card-pool");
+
+    const cardPool = new MemeCardPool();
+    const playerUids = Object.keys(players);
+    const cardsPerPlayer = 7;
+
+    try {
+      const distribution = cardPool.distributeCards(
+        playerUids.length,
+        cardsPerPlayer
+      );
+      const playerCards: Record<string, MemeCard[]> = {};
+
+      // Map player indices to UIDs
+      playerUids.forEach((uid, index) => {
+        const cards = distribution.get(index);
+        if (cards) {
+          playerCards[uid] = cards;
+        }
+      });
+
+      return playerCards;
+    } catch (error) {
+      throw this.createLobbyError(
+        "UNKNOWN_ERROR",
+        `Failed to distribute meme cards: ${error}`,
+        "Failed to distribute cards to players. Please try again.",
+        true
+      );
+    }
   }
 
   /**

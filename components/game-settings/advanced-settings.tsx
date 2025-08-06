@@ -178,8 +178,8 @@ export function AdvancedSettings({
           <Info className="h-4 w-4" />
           <AlertDescription>
             {comingSoonCount} feature{comingSoonCount !== 1 ? "s" : ""} marked
-            as "Coming Soon" will be available in future updates. Settings can
-            be configured now but won't affect gameplay yet.
+            as &ldquo;Coming Soon&rdquo; will be available in future updates.
+            Settings can be configured now but won&apos;t affect gameplay yet.
           </AlertDescription>
         </Alert>
       )}

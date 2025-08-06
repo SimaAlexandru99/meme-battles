@@ -23,12 +23,37 @@ interface InvitationCodeInputProps {
   className?: string;
 }
 
-// Simple normalization function for UI demonstration
+// Enhanced normalization function with better validation
 const normalizeInvitationCode = (value: string): string => {
   return value
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, 5);
+};
+
+// Validate invitation code format
+const validateInvitationCodeFormat = (
+  value: string
+): { isValid: boolean; error?: string } => {
+  if (value.length === 0) {
+    return { isValid: true }; // Empty is valid (not complete)
+  }
+
+  if (value.length < 5) {
+    return { isValid: true }; // Partial input is valid
+  }
+
+  if (value.length === 5) {
+    if (!/^[A-Z0-9]{5}$/.test(value)) {
+      return {
+        isValid: false,
+        error: "Code must contain only letters and numbers",
+      };
+    }
+    return { isValid: true };
+  }
+
+  return { isValid: false, error: "Code must be exactly 5 characters" };
 };
 
 export function InvitationCodeInput({
@@ -39,17 +64,25 @@ export function InvitationCodeInput({
   error = false,
   className,
 }: InvitationCodeInputProps) {
+  const [localError, setLocalError] = React.useState<string | null>(null);
+  const [isFocused, setIsFocused] = React.useState(false);
+
   const handleChange = React.useCallback(
     (newValue: string) => {
       const normalizedValue = normalizeInvitationCode(newValue);
+      const validation = validateInvitationCodeFormat(normalizedValue);
+
+      // Update local error state
+      setLocalError(validation.error || null);
+
       onChange(normalizedValue);
 
-      // Auto-complete when 5 characters are entered
-      if (normalizedValue.length === 5) {
+      // Auto-complete when 5 characters are entered and valid
+      if (normalizedValue.length === 5 && validation.isValid) {
         onComplete(normalizedValue);
       }
     },
-    [onChange, onComplete],
+    [onChange, onComplete]
   );
 
   const handlePaste = React.useCallback(
@@ -57,16 +90,26 @@ export function InvitationCodeInput({
       e.preventDefault();
       const pastedText = e.clipboardData.getData("text");
       const normalizedText = normalizeInvitationCode(pastedText).slice(0, 5);
+      const validation = validateInvitationCodeFormat(normalizedText);
 
       if (normalizedText.length > 0) {
+        setLocalError(validation.error || null);
         onChange(normalizedText);
-        if (normalizedText.length === 5) {
+        if (normalizedText.length === 5 && validation.isValid) {
           onComplete(normalizedText);
         }
       }
     },
-    [onChange, onComplete],
+    [onChange, onComplete]
   );
+
+  const handleFocus = React.useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const handleBlur = React.useCallback(() => {
+    setIsFocused(false);
+  }, []);
 
   return (
     <motion.div
@@ -100,9 +143,17 @@ export function InvitationCodeInput({
           onChange={handleChange}
           disabled={disabled}
           onPaste={handlePaste}
-          className={cn("gap-2 sm:gap-3", error && "aria-invalid:true")}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          className={cn(
+            "gap-2 sm:gap-3",
+            (error || localError) && "aria-invalid:true"
+          )}
           containerClassName="flex items-center justify-center"
           aria-label="Enter 5-character invitation code"
+          aria-describedby={
+            error || localError ? "otp-error-message" : "otp-input-description"
+          }
         >
           <InputOTPGroup className="gap-2 sm:gap-3">
             {Array.from({ length: 5 }, (_, index) => (
@@ -129,10 +180,16 @@ export function InvitationCodeInput({
                     "data-[active=true]:shadow-lg data-[active=true]:shadow-purple-500/20",
 
                     // Error state
-                    error && [
+                    (error || localError) && [
                       "border-red-500 bg-red-500/10",
                       "data-[active=true]:border-red-400 data-[active=true]:ring-red-400/50",
                       "hover:border-red-400",
+                    ],
+
+                    // Focus state enhancement
+                    isFocused && [
+                      "ring-2 ring-purple-500/30",
+                      "shadow-lg shadow-purple-500/20",
                     ],
 
                     // Disabled state
@@ -143,7 +200,7 @@ export function InvitationCodeInput({
 
                     // Animation for filled slots
                     value[index] &&
-                      "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10",
+                      "scale-105 border-purple-400 bg-slate-600/70 shadow-md shadow-purple-500/10"
                   )}
                   aria-label={`Character ${index + 1} of invitation code`}
                   aria-describedby={`slot-${index}-description`}
@@ -177,23 +234,27 @@ export function InvitationCodeInput({
       {/* Helper text */}
       <AnimatePresence mode="wait">
         <motion.p
-          key={error ? "error" : "normal"}
+          key={error || localError ? "error" : "normal"}
           variants={errorVariants}
           initial="initial"
           animate="animate"
           exit="exit"
           className={cn(
             "text-xs sm:text-sm font-bangers tracking-wide transition-colors duration-200",
-            error ? "text-red-400" : "text-purple-200/70",
-            disabled && "opacity-50",
+            error || localError ? "text-red-400" : "text-purple-200/70",
+            disabled && "opacity-50"
           )}
-          id={error ? "otp-error-message" : undefined}
+          id={error || localError ? "otp-error-message" : undefined}
           role="status"
           aria-live="polite"
         >
           {error
             ? "Invalid invitation code"
-            : "Enter 5-character invitation code"}
+            : localError
+              ? localError
+              : value.length === 5
+                ? "Code complete - ready to join!"
+                : "Enter 5-character invitation code"}
         </motion.p>
       </AnimatePresence>
 
