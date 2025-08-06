@@ -147,7 +147,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string,
+      div: string
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;
@@ -307,6 +307,10 @@ interface PlayerData {
   score: number;
   status: PlayerStatus;
   lastSeen: string;
+  // AI-specific properties
+  isAI?: boolean;
+  aiPersonalityId?: string;
+  aiDifficulty?: "easy" | "medium" | "hard";
 }
 
 // Game settings interface with validation constraints

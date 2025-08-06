@@ -19,6 +19,10 @@ interface UseLobbyManagementReturn {
   updateSettings: (settings: Partial<GameSettings>) => Promise<void>;
   startGame: () => Promise<void>;
   kickPlayer: (playerUid: string) => Promise<void>;
+  addBot: (botConfig: {
+    personalityId: string;
+    difficulty: "easy" | "medium" | "hard";
+  }) => Promise<void>;
 
   // Utilities
   isHost: boolean;
@@ -369,6 +373,51 @@ export function useLobbyManagement(
   );
 
   /**
+   * Add an AI bot to the lobby (host only)
+   */
+  const addBot = useCallback(
+    async (botConfig: {
+      personalityId: string;
+      difficulty: "easy" | "medium" | "hard";
+    }): Promise<void> => {
+      if (!user || !lobby || !isHost) {
+        throw new Error("Only the host can add AI players");
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        console.log("Hook: Adding bot with config:", botConfig);
+        console.log("Hook: Lobby code:", lobby.code);
+        console.log("Hook: User ID:", user.id);
+        console.log("Hook: User object:", user);
+        console.log("Hook: Is user anonymous:", user.isAnonymous);
+
+        const result = await lobbyService.current.addBot(
+          lobby.code,
+          user.id,
+          botConfig
+        );
+
+        console.log("Hook: Add bot result:", result);
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to add AI player");
+        }
+
+        // The real-time subscription will update the lobby state
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Hook: Add bot error:", error);
+        handleError(error, "add_bot");
+        throw error;
+      }
+    },
+    [user, lobby, isHost, handleError]
+  );
+
+  /**
    * Retry the last failed operation
    */
   const retry = useCallback(async (): Promise<void> => {
@@ -432,6 +481,7 @@ export function useLobbyManagement(
     updateSettings,
     startGame,
     kickPlayer,
+    addBot,
 
     // Utilities
     isHost,

@@ -59,6 +59,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     leaveLobby,
     updateSettings,
     kickPlayer,
+    addBot,
     isHost,
     error: lobbyError,
   } = useLobbyManagement(lobbyCode);
@@ -96,10 +97,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(error);
             throw error;
           }
-        },
+        }
       );
     },
-    [kickPlayer],
+    [kickPlayer]
   );
 
   // Network status monitoring
@@ -166,7 +167,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           toast.error("Failed to copy invitation code");
           Sentry.captureException(err);
         }
-      },
+      }
     );
   }, [lobbyCode, copyToClipboard]);
 
@@ -203,7 +204,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(err);
           }
         }
-      },
+      }
     );
   }, [lobbyCode, copyToClipboard]);
 
@@ -298,98 +299,145 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           } finally {
             setIsSavingSettings(false);
           }
-        },
+        }
       );
     },
-    [updateSettings],
+    [updateSettings]
   );
 
   // Handle adding AI player
-  const handleAddBot = React.useCallback(async () => {
-    return Sentry.startSpan(
-      {
-        op: "ui.action",
-        name: "Add AI Player",
-      },
-      async () => {
-        setIsAddingBot(true);
-        setBotError(null);
+  const handleAddBot = React.useCallback(
+    async (botConfig: {
+      personalityId: string;
+      difficulty: "easy" | "medium" | "hard";
+    }) => {
+      return Sentry.startSpan(
+        {
+          op: "ui.action",
+          name: "Add AI Player",
+        },
+        async () => {
+          setIsAddingBot(true);
+          setBotError(null);
 
-        try {
-          // Mock implementation
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          try {
+            await addBot(botConfig);
 
-          // Show success notification
-          toast.success("AI player added successfully!");
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : "Failed to add AI player";
-          setBotError(errorMessage);
-          toast.error(errorMessage);
-          Sentry.captureException(err);
-          throw err; // Re-throw to let the dialog handle it
-        } finally {
-          setIsAddingBot(false);
+            // Show success notification
+            toast.success("AI player added successfully!");
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : "Failed to add AI player";
+            setBotError(errorMessage);
+            toast.error(errorMessage);
+            Sentry.captureException(err);
+            throw err; // Re-throw to let the dialog handle it
+          } finally {
+            setIsAddingBot(false);
+          }
         }
-      },
-    );
-  }, []);
-
-  // Mock data for UI demonstration
-  const lobbyData = {
-    code: lobbyCode,
-    hostUid: currentUser.id,
-    status: "waiting" as "waiting" | "started" | "finished",
-    maxPlayers: 8,
-    players: [
-      {
-        uid: currentUser.id,
-        id: currentUser.id,
-        name: currentUser.name,
-        displayName: currentUser.name,
-        avatar: currentUser.profileURL || "",
-        profileURL: currentUser.profileURL || "",
-        joinedAt: new Date().toISOString(),
-        isHost: true,
-        score: 0,
-        isAI: false,
-        aiPersonalityId: undefined,
-      },
-      {
-        uid: "player2",
-        id: "player2",
-        name: "Alice",
-        displayName: "Alice",
-        avatar: "",
-        profileURL: "",
-        joinedAt: new Date(Date.now() - 5000).toISOString(),
-        isHost: false,
-        score: 0,
-        isAI: false,
-        aiPersonalityId: undefined,
-      },
-      {
-        uid: "player3",
-        id: "player3",
-        name: "Bob",
-        displayName: "Bob",
-        avatar: "",
-        profileURL: "",
-        joinedAt: new Date(Date.now() - 10000).toISOString(),
-        isHost: false,
-        score: 0,
-        isAI: false,
-        aiPersonalityId: undefined,
-      },
-    ],
-    settings: {
-      rounds: 5,
-      timeLimit: 30,
-      categories: ["funny", "reaction"],
+      );
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+    [addBot]
+  );
+
+  // Get real lobby data from the lobby management hook
+  const { lobby, isLoading: isLobbyLoading } = useLobbyManagement(lobbyCode);
+
+  // Show loading state while fetching lobby data
+  if (isLobbyLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <motion.div
+          className="w-full max-w-md p-6 sm:p-8"
+          variants={microInteractionVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+            <CardContent className="p-6">
+              <div className="text-center space-y-6">
+                <motion.div
+                  className="flex justify-center"
+                  variants={microInteractionVariants}
+                >
+                  <motion.div
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center bg-purple-500/20 shadow-purple-500/30"
+                    variants={microInteractionVariants}
+                    animate="initial"
+                  >
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                  </motion.div>
+                </motion.div>
+
+                <motion.div variants={microInteractionVariants}>
+                  <h2 className="text-xl sm:text-2xl font-bangers text-white mb-2">
+                    Loading Lobby...
+                  </h2>
+                  <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
+                    Please wait while we fetch the lobby data.
+                  </p>
+                </motion.div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Show error state if lobby data is not available
+  if (!lobby) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <motion.div
+          className="w-full max-w-md p-6 sm:p-8"
+          variants={microInteractionVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-red-500/10">
+            <CardContent className="p-6">
+              <div className="text-center space-y-6">
+                <motion.div
+                  className="flex justify-center"
+                  variants={microInteractionVariants}
+                >
+                  <motion.div
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center bg-red-500/20 shadow-red-500/30"
+                    variants={microInteractionVariants}
+                    animate="initial"
+                  >
+                    <RiAlertLine className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
+                  </motion.div>
+                </motion.div>
+
+                <motion.div variants={microInteractionVariants}>
+                  <h2 className="text-xl sm:text-2xl font-bangers text-white mb-2">
+                    Lobby Not Found
+                  </h2>
+                  <p className="text-purple-200/70 text-sm sm:text-base font-bangers tracking-wide">
+                    The lobby you&apos;re looking for doesn&apos;t exist or you
+                    don&apos;t have permission to access it.
+                  </p>
+                </motion.div>
+
+                <motion.div variants={buttonVariants}>
+                  <Button
+                    onClick={() => router.push("/")}
+                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bangers text-lg tracking-wide"
+                  >
+                    <RiArrowLeftLine className="w-5 h-5 mr-2" />
+                    Back to Home
+                  </Button>
+                </motion.div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   const isCurrentUserHost = isHost;
 
@@ -436,12 +484,12 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   }
 
   // Handle game state redirects
-  if (lobbyData.status === "started") {
+  if (lobby.status === "started") {
     router.push(`/game/${lobbyCode}/play`);
     return null;
   }
 
-  if (lobbyData.status === "finished") {
+  if (lobby.status === "ended") {
     router.push("/");
     return null;
   }
@@ -487,7 +535,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   variant="secondary"
                   className="bg-green-500/20 text-green-400 border-green-500/30 font-bangers tracking-wide text-xs sm:text-sm"
                 >
-                  {lobbyData.players.length}/{lobbyData.maxPlayers}
+                  {Object.keys(lobby.players).length}/{lobby.maxPlayers}
                 </Badge>
               </motion.div>
 
@@ -499,13 +547,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
                     isOnline
                       ? "bg-green-500/20 text-green-400 border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border-red-500/30",
+                      : "bg-red-500/20 text-red-400 border-red-500/30"
                   )}
                 >
                   <motion.div
                     className={cn(
                       "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-                      isOnline ? "bg-green-400" : "bg-red-400",
+                      isOnline ? "bg-green-400" : "bg-red-400"
                     )}
                     animate={isOnline ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
@@ -579,7 +627,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg tracking-wide",
                       "shadow-lg shadow-purple-500/30",
                       "focus-visible:ring-2 focus-visible:ring-purple-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
                     )}
                   >
                     <RiShareLine className="w-5 h-5 mr-2" />
@@ -598,18 +646,18 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   <div className="space-y-2 text-sm text-purple-200/70 font-bangers tracking-wide">
                     <div className="flex items-center gap-2">
                       <RiTimeLine className="w-4 h-4" />
-                      <span>Rounds: {lobbyData.settings.rounds}</span>
+                      <span>Rounds: {lobby.settings.rounds}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <RiTimeLine className="w-4 h-4" />
                       <span>
-                        Time Limit: {lobbyData.settings.timeLimit}s per round
+                        Time Limit: {lobby.settings.timeLimit}s per round
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <RiGamepadLine className="w-4 h-4" />
                       <span>
-                        Categories: {lobbyData.settings.categories.join(", ")}
+                        Categories: {lobby.settings.categories.join(", ")}
                       </span>
                     </div>
                   </div>
@@ -645,7 +693,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       <motion.div variants={buttonVariants}>
                         <Button
                           onClick={handleStartGame}
-                          disabled={lobbyData.players.length < 2 || isStarting}
+                          disabled={
+                            Object.keys(lobby.players).length < 2 || isStarting
+                          }
                           className={cn(
                             "w-full h-14 sm:h-12",
                             "bg-gradient-to-r from-green-600 to-green-700",
@@ -659,7 +709,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             "focus-visible:ring-2 focus-visible:ring-green-500/50",
                             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                             // Mobile-specific enhancements
-                            "sm:ring-1 sm:hover:ring-2",
+                            "sm:ring-1 sm:hover:ring-2"
                           )}
                         >
                           {isStarting ? (
@@ -699,7 +749,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           error={botError}
                           maxBots={6}
                           currentBotCount={
-                            lobbyData.players.filter((p) => p.isAI).length
+                            Object.values(lobby.players).filter(
+                              (p: PlayerData) => p.isAI
+                            ).length
                           }
                           disabled={!isCurrentUserHost}
                         />
@@ -720,122 +772,129 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
               <CardHeader>
                 <CardTitle className="text-white font-bangers text-xl tracking-wide">
-                  Players ({lobbyData.players.length}/{lobbyData.maxPlayers})
+                  Players ({Object.keys(lobby.players).length}/
+                  {lobby.maxPlayers})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <AnimatePresence>
-                    {lobbyData.players.map((player, index) => (
-                      <motion.div
-                        key={player.uid}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={cn(
-                          "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg",
-                          "bg-slate-700/30 border border-slate-600/30",
-                          "hover:bg-slate-700/50 transition-colors duration-200",
-                        )}
-                        variants={microInteractionVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                      >
-                        <motion.div variants={microInteractionVariants}>
-                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
-                            <AvatarImage src={player.profileURL || undefined} />
-                            <AvatarFallback
-                              className={cn(
-                                "font-bangers text-sm sm:text-base",
-                                player.isAI
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-purple-600 text-white",
-                              )}
-                            >
-                              {player.isAI ? (
-                                <RiRobotLine className="w-5 h-5 sm:w-6 sm:h-6" />
-                              ) : (
-                                (player.displayName || "A")
-                                  .charAt(0)
-                                  .toUpperCase()
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
-                        </motion.div>
+                    {Object.entries(lobby.players).map(
+                      (
+                        [playerId, player]: [string, PlayerData],
+                        index: number
+                      ) => (
+                        <motion.div
+                          key={playerId}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ delay: index * 0.1 }}
+                          className={cn(
+                            "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg",
+                            "bg-slate-700/30 border border-slate-600/30",
+                            "hover:bg-slate-700/50 transition-colors duration-200"
+                          )}
+                          variants={microInteractionVariants}
+                          whileHover="hover"
+                          whileTap="tap"
+                        >
+                          <motion.div variants={microInteractionVariants}>
+                            <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
+                              <AvatarImage
+                                src={player.profileURL || undefined}
+                              />
+                              <AvatarFallback
+                                className={cn(
+                                  "font-bangers text-sm sm:text-base",
+                                  player.isAI
+                                    ? "bg-purple-600 text-white"
+                                    : "bg-purple-600 text-white"
+                                )}
+                              >
+                                {player.isAI ? (
+                                  <RiRobotLine className="w-5 h-5 sm:w-6 sm:h-6" />
+                                ) : (
+                                  (player.displayName || "A")
+                                    .charAt(0)
+                                    .toUpperCase()
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                          </motion.div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                            <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
-                              {player.isAI && player.aiPersonalityId
-                                ? `${player.displayName} (${(player.aiPersonalityId as string).replace("-", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())})`
-                                : player.displayName || "Anonymous Player"}
-                            </span>
-                            <div className="flex flex-wrap gap-1 sm:gap-2">
-                              {player.isHost && (
-                                <motion.div variants={badgeVariants}>
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bangers tracking-wide text-xs"
-                                  >
-                                    Host
-                                  </Badge>
-                                </motion.div>
-                              )}
-                              {player.isAI && (
-                                <motion.div variants={badgeVariants}>
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide text-xs"
-                                  >
-                                    AI
-                                  </Badge>
-                                </motion.div>
-                              )}
-                              {player.uid === currentUser.id && (
-                                <motion.div variants={badgeVariants}>
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide text-xs"
-                                  >
-                                    You
-                                  </Badge>
-                                </motion.div>
-                              )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                              <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
+                                {player.displayName || "Anonymous Player"}
+                              </span>
+                              <div className="flex flex-wrap gap-1 sm:gap-2">
+                                {player.isHost && (
+                                  <motion.div variants={badgeVariants}>
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bangers tracking-wide text-xs"
+                                    >
+                                      Host
+                                    </Badge>
+                                  </motion.div>
+                                )}
+                                {playerId === currentUser.id && (
+                                  <motion.div variants={badgeVariants}>
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-blue-500/20 text-blue-400 border-blue-500/30 font-bangers tracking-wide text-xs"
+                                    >
+                                      You
+                                    </Badge>
+                                  </motion.div>
+                                )}
+                                {player.isAI && (
+                                  <motion.div variants={badgeVariants}>
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-purple-500/20 text-purple-400 border-purple-500/30 font-bangers tracking-wide text-xs"
+                                    >
+                                      AI
+                                    </Badge>
+                                  </motion.div>
+                                )}
+                              </div>
                             </div>
+                            <p className="text-xs sm:text-sm text-purple-200/70 font-bangers tracking-wide mt-1">
+                              Joined {formatJoinTime(player.joinedAt)}
+                            </p>
                           </div>
-                          <p className="text-xs sm:text-sm text-purple-200/70 font-bangers tracking-wide mt-1">
-                            Joined {formatJoinTime(player.joinedAt)}
-                          </p>
-                        </div>
 
-                        {/* Kick Player Button */}
-                        <motion.div variants={microInteractionVariants}>
-                          <KickPlayerButton
-                            lobbyCode={lobbyCode}
-                            playerId={player.uid}
-                            playerName={
-                              player.displayName || "Anonymous Player"
-                            }
-                            isHost={isCurrentUserHost}
-                            isCurrentUser={player.uid === currentUser.id}
-                            isAI={player.isAI || false}
-                            disabled={
-                              isStarting || isSavingSettings || isAddingBot
-                            }
-                            onKickPlayer={handleKickPlayer}
-                            onKickSuccess={() =>
-                              toast.success("Player kicked successfully!")
-                            }
-                          />
+                          {/* Kick Player Button */}
+                          <motion.div variants={microInteractionVariants}>
+                            <KickPlayerButton
+                              lobbyCode={lobbyCode}
+                              playerId={playerId}
+                              playerName={
+                                player.displayName || "Anonymous Player"
+                              }
+                              isHost={isCurrentUserHost}
+                              isCurrentUser={playerId === currentUser.id}
+                              isAI={false}
+                              disabled={
+                                isStarting || isSavingSettings || isAddingBot
+                              }
+                              onKickPlayer={handleKickPlayer}
+                              onKickSuccess={() =>
+                                toast.success("Player kicked successfully!")
+                              }
+                            />
+                          </motion.div>
                         </motion.div>
-                      </motion.div>
-                    ))}
+                      )
+                    )}
                   </AnimatePresence>
 
                   {/* Empty slots */}
                   {Array.from({
-                    length: lobbyData.maxPlayers - lobbyData.players.length,
+                    length:
+                      lobby.maxPlayers - Object.keys(lobby.players).length,
                   }).map((_, index) => (
                     <motion.div
                       key={`empty-${index}`}
@@ -862,11 +921,11 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
       </div>
 
       {/* Game Settings Modal */}
-      {lobbyData && (
+      {lobby && (
         <GameSettingsModal
           isOpen={isSettingsModalOpen}
           onClose={handleCloseSettings}
-          currentSettings={lobbyData.settings}
+          currentSettings={lobby.settings}
           onSave={handleSaveSettings}
           isLoading={isSavingSettings}
           error={settingsError}

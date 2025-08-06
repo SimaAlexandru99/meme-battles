@@ -1,6 +1,7 @@
 import { ref, set, get, update, onValue, off, remove } from "firebase/database";
-import { rtdb } from "@/firebase/client";
+import { rtdb, auth } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
+import { AVAILABLE_AI_PERSONALITIES } from "@/components/game-settings/types";
 
 /**
  * Enhanced service for managing lobby operations using Firebase Realtime Database
@@ -562,6 +563,141 @@ export class LobbyService {
   /**
    * Kick a player from the lobby (host-only)
    */
+  async addBot(
+    code: string,
+    hostUid: string,
+    botConfig: {
+      personalityId: string;
+      difficulty: "easy" | "medium" | "hard";
+    }
+  ): Promise<ServiceResult<LobbyData>> {
+    return Sentry.startSpan(
+      {
+        op: "db.lobby.add_bot",
+        name: "Add AI Bot to Lobby",
+      },
+      async () => {
+        try {
+          const lobbyRef = ref(rtdb, `lobbies/${code}`);
+          const snapshot = await get(lobbyRef);
+
+          if (!snapshot.exists()) {
+            throw this.createLobbyError(
+              "LOBBY_NOT_FOUND",
+              `Lobby ${code} not found`,
+              "Lobby not found. It may have been deleted or the code is incorrect.",
+              false
+            );
+          }
+
+          const lobbyData = snapshot.val() as LobbyData;
+
+          // Validate host permissions
+          if (lobbyData.hostUid !== hostUid) {
+            throw this.createLobbyError(
+              "PERMISSION_DENIED",
+              `User ${hostUid} is not the host of lobby ${code}`,
+              "Only the lobby host can add AI players.",
+              false
+            );
+          }
+
+          // Check if lobby is full
+          const currentPlayerCount = Object.keys(lobbyData.players).length;
+          if (currentPlayerCount >= lobbyData.maxPlayers) {
+            throw this.createLobbyError(
+              "LOBBY_FULL",
+              `Lobby ${code} is full (${currentPlayerCount}/${lobbyData.maxPlayers})`,
+              "Lobby is full. Cannot add more players.",
+              false
+            );
+          }
+
+          // Check if game has already started
+          if (lobbyData.status !== "waiting") {
+            throw this.createLobbyError(
+              "LOBBY_ALREADY_STARTED",
+              `Cannot add bot to lobby ${code} - game already ${lobbyData.status}`,
+              "Cannot add AI players after the game has started.",
+              false
+            );
+          }
+
+          // Generate unique bot ID
+          const botId = `bot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+          // Get personality name from available personalities
+          const personality = AVAILABLE_AI_PERSONALITIES.find(
+            (p) => p.id === botConfig.personalityId
+          );
+          const botDisplayName = personality ? personality.name : "AI Player";
+
+          // Create bot player data
+          const botPlayer: PlayerData = {
+            displayName: botDisplayName,
+            avatarId: "ai-avatar",
+            profileURL: "",
+            joinedAt: new Date().toISOString(),
+            isHost: false,
+            score: 0,
+            status: "waiting",
+            lastSeen: new Date().toISOString(),
+            isAI: true,
+            aiPersonalityId: botConfig.personalityId,
+            aiDifficulty: botConfig.difficulty,
+          };
+
+          // Add bot to players
+          const updatedPlayers = {
+            ...lobbyData.players,
+            [botId]: botPlayer,
+          };
+
+          // Update lobby with new bot
+          const updates: Record<string, unknown> = {
+            [`lobbies/${code}/players/${botId}`]: botPlayer,
+            [`lobbies/${code}/updatedAt`]: new Date().toISOString(),
+          };
+
+          console.log("Adding bot with updates:", updates);
+          console.log("Bot ID:", botId);
+          console.log("Bot player data:", botPlayer);
+          console.log("Current auth user:", auth.currentUser);
+          console.log("Auth user UID:", auth.currentUser?.uid);
+          console.log("Is user anonymous:", auth.currentUser?.isAnonymous);
+
+          await update(ref(rtdb), updates);
+
+          // Return updated lobby data
+          const updatedLobbyData: LobbyData = {
+            ...lobbyData,
+            players: updatedPlayers,
+            updatedAt: new Date().toISOString(),
+          };
+
+          return {
+            success: true,
+            data: updatedLobbyData,
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          Sentry.captureException(error);
+
+          if (error instanceof Error && "type" in error) {
+            throw error; // Re-throw LobbyError
+          }
+
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to add bot to lobby ${code}: ${error}`,
+            "Failed to add AI player. Please try again.",
+            true
+          );
+        }
+      }
+    );
+  }
+
   async kickPlayer(
     code: string,
     targetUid: string,
