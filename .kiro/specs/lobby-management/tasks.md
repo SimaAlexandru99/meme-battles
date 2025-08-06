@@ -57,7 +57,7 @@
   - Add `useLobbySettings` hook for host-only settings management
   - _Requirements: 4.1, 4.4, 4.7, 8.1, 8.2, 8.3_
 
-- [ ] 3.1 Create useLobbyManagement hook
+- [x] 3.1 Create useLobbyManagement hook
   - Implement state management for lobby data, players list, and loading states
   - Add methods for creating, joining, and leaving lobbies with proper error handling
   - Create real-time subscription management with automatic cleanup
@@ -65,7 +65,7 @@
   - Write comprehensive tests for all hook functionality
   - _Requirements: 1.1, 2.1, 4.1, 4.2, 6.1, 6.6_
 
-- [ ] 3.2 Build useLobbyConnection hook for network resilience
+- [x] 3.2 Build useLobbyConnection hook for network resilience
   - Implement connection status tracking with real-time updates
   - Add automatic reconnection logic with exponential backoff
   - Create manual reconnect functionality for user-initiated recovery

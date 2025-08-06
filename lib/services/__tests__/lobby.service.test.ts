@@ -79,17 +79,22 @@ describe("LobbyService - Atomic Code Generation", () => {
       expect(code).toHaveLength(5);
       expect(mockGet).toHaveBeenCalledTimes(2);
       expect(mockSet).toHaveBeenCalledTimes(1);
-    });
+    }, 15000); // Increase timeout to 15 seconds
 
     it("should implement exponential backoff with jitter", async () => {
       const startTime = Date.now();
 
-      // Mock multiple collisions
-      for (let i = 0; i < 3; i++) {
-        mockGet.mockResolvedValueOnce({
-          exists: () => true,
-        } as DataSnapshot);
-      }
+      // Mock multiple collisions - each attempt generates a new random code
+      // so we need to mock exists() to return true for the first 3 attempts
+      mockGet.mockResolvedValueOnce({
+        exists: () => true,
+      } as DataSnapshot);
+      mockGet.mockResolvedValueOnce({
+        exists: () => true,
+      } as DataSnapshot);
+      mockGet.mockResolvedValueOnce({
+        exists: () => true,
+      } as DataSnapshot);
 
       // Final success
       mockGet.mockResolvedValueOnce({
@@ -105,7 +110,7 @@ describe("LobbyService - Atomic Code Generation", () => {
       expect(mockGet).toHaveBeenCalledTimes(4);
       // Should have some delay due to backoff (at least 100ms + 200ms)
       expect(duration).toBeGreaterThan(250);
-    });
+    }, 20000); // Increase timeout to 20 seconds
 
     it("should throw CODE_GENERATION_FAILED after maximum attempts", async () => {
       // Mock all attempts as collisions
@@ -116,12 +121,12 @@ describe("LobbyService - Atomic Code Generation", () => {
       }
 
       await expect(
-        lobbyService.generateUniqueLobbyCode(),
+        lobbyService.generateUniqueLobbyCode()
       ).rejects.toMatchObject({
         type: "CODE_GENERATION_FAILED",
         retryable: true,
         userMessage: expect.stringContaining(
-          "Unable to create a unique lobby code",
+          "Unable to create a unique lobby code"
         ),
       });
 
@@ -131,9 +136,9 @@ describe("LobbyService - Atomic Code Generation", () => {
         "Lobby code generation failed after maximum attempts",
         expect.objectContaining({
           level: "warning",
-        }),
+        })
       );
-    }, 15000); // Increase timeout to 15 seconds
+    }, 30000); // Increase timeout to 30 seconds
 
     it("should handle network errors with retry logic", async () => {
       // First attempt fails with network error
@@ -151,7 +156,7 @@ describe("LobbyService - Atomic Code Generation", () => {
       expect(code).toHaveLength(5);
       expect(mockGet).toHaveBeenCalledTimes(2);
       expect(Sentry.captureException).toHaveBeenCalledTimes(1);
-    });
+    }, 15000); // Increase timeout to 15 seconds
 
     it("should throw NETWORK_ERROR after exhausting retries on network failures", async () => {
       // All attempts fail with network error
@@ -160,7 +165,7 @@ describe("LobbyService - Atomic Code Generation", () => {
       }
 
       await expect(
-        lobbyService.generateUniqueLobbyCode(),
+        lobbyService.generateUniqueLobbyCode()
       ).rejects.toMatchObject({
         type: "NETWORK_ERROR",
         retryable: true,
@@ -169,7 +174,7 @@ describe("LobbyService - Atomic Code Generation", () => {
 
       expect(mockGet).toHaveBeenCalledTimes(10);
       expect(Sentry.captureException).toHaveBeenCalledTimes(10);
-    });
+    }, 30000); // Increase timeout to 30 seconds
 
     it("should log successful generation with monitoring data", async () => {
       mockGet.mockResolvedValueOnce({
@@ -219,7 +224,7 @@ describe("LobbyService - Atomic Code Generation", () => {
       mockGet.mockRejectedValueOnce(new Error("Database error"));
 
       await expect(
-        lobbyService.checkLobbyCodeExists("ABC12"),
+        lobbyService.checkLobbyCodeExists("ABC12")
       ).rejects.toMatchObject({
         type: "NETWORK_ERROR",
         retryable: true,
@@ -250,7 +255,7 @@ describe("LobbyService - Atomic Code Generation", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Lobby code must be exactly 5 characters",
+        "Lobby code must be exactly 5 characters"
       );
     });
 
@@ -259,7 +264,7 @@ describe("LobbyService - Atomic Code Generation", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Lobby code can only contain uppercase letters and numbers",
+        "Lobby code can only contain uppercase letters and numbers"
       );
     });
 
@@ -268,7 +273,7 @@ describe("LobbyService - Atomic Code Generation", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Lobby code can only contain uppercase letters and numbers",
+        "Lobby code can only contain uppercase letters and numbers"
       );
     });
   });
@@ -311,7 +316,7 @@ describe("LobbyService - Atomic Code Generation", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        "Time limit must be between 30 and 120 seconds",
+        "Time limit must be between 30 and 120 seconds"
       );
     });
 

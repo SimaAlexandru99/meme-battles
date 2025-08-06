@@ -75,6 +75,14 @@ jest.mock("firebase/storage", () => ({
 beforeEach(() => {
   // Clear all mocks before each test
   jest.clearAllMocks();
+
+  // Enable fake timers globally
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  // Restore real timers after each test
+  jest.useRealTimers();
 });
 
 // Suppress console errors during tests unless explicitly needed
@@ -87,7 +95,7 @@ beforeAll(() => {
       (args[0].includes("Warning: ReactDOM.render is deprecated") ||
         args[0].includes("Warning: An update to") ||
         args[0].includes(
-          "Not implemented: HTMLFormElement.prototype.requestSubmit",
+          "Not implemented: HTMLFormElement.prototype.requestSubmit"
         ) ||
         args[0].includes("Warning: React does not recognize the") ||
         args[0].includes("Warning: Invalid DOM property") ||
@@ -168,4 +176,27 @@ const sessionStorageMock = {
 };
 Object.defineProperty(window, "sessionStorage", {
   value: sessionStorageMock,
+});
+
+// Mock global timers
+const mockSetInterval = jest.fn();
+const mockClearInterval = jest.fn();
+const mockSetTimeout = jest.fn();
+const mockClearTimeout = jest.fn();
+
+Object.defineProperty(global, "setInterval", {
+  value: mockSetInterval,
+  writable: true,
+});
+Object.defineProperty(global, "clearInterval", {
+  value: mockClearInterval,
+  writable: true,
+});
+Object.defineProperty(global, "setTimeout", {
+  value: mockSetTimeout,
+  writable: true,
+});
+Object.defineProperty(global, "clearTimeout", {
+  value: mockClearTimeout,
+  writable: true,
 });
