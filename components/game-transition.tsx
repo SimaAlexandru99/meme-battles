@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RiGamepadLine, RiTimeLine, RiUserLine } from "react-icons/ri";
+import { RiGamepadLine, RiUserLine } from "react-icons/ri";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
 
@@ -24,7 +23,6 @@ type TransitionStep =
 
 export function GameTransition({
   lobbyCode,
-  currentUser,
   players,
   onTransitionComplete,
 }: GameTransitionProps) {
@@ -245,7 +243,7 @@ export function GameTransition({
                 transition={{ delay: 1 }}
               >
                 <p className="text-white font-bangers text-lg tracking-wide text-center">
-                  "{situation}"
+                  &quot;{situation}&quot;
                 </p>
               </motion.div>
             )}

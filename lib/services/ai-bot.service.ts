@@ -64,7 +64,7 @@ export class AIBotService {
               id: personality.id,
               name: personality.name,
               description: personality.description,
-              style: personality.style,
+              //   style: personality.style,
             },
             difficulty,
           };
@@ -154,7 +154,7 @@ export class AIBotService {
       },
       async () => {
         const aiPlayers = Object.entries(players).filter(
-          ([_, player]) => player.isAI
+          ([, player]) => player.isAI
         );
 
         // Process each AI player
