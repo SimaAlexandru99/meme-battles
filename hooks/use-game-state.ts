@@ -61,6 +61,7 @@ interface UseGameStateReturn {
   hasVoted: boolean;
   canVote: (playerId: string) => boolean;
   clearError: () => void;
+  isHost: boolean;
 }
 
 /**
@@ -77,6 +78,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected" | "reconnecting"
   >("disconnected");
+
+  // --- Add state for hostUid and isHost ---
+  const [hostUid, setHostUid] = useState<string | null>(null);
+  const isHost = user && hostUid && user.id === hostUid;
 
   const gameStateUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
   const playersUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
@@ -192,6 +197,21 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       }
     );
 
+    // --- Listen to lobby data for hostUid ---
+    useEffect(() => {
+      if (!lobbyCode) return;
+      const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+      const unsubscribe = onValue(lobbyRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const lobby = snapshot.val();
+          setHostUid(lobby.hostUid || null);
+        } else {
+          setHostUid(null);
+        }
+      });
+      return () => off(lobbyRef, "value", unsubscribe);
+    }, [lobbyCode]);
+
     return () => {
       if (gameStateUnsubscribeRef.current) {
         off(ref(rtdb, gameStatePath), "value", gameStateUnsubscribeRef.current);
@@ -208,6 +228,64 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       }
     };
   }, [lobbyCode, user, handleError]);
+
+  // --- Helper: handle phase/round transition when timer expires ---
+  const handleTimerExpire = useCallback(async () => {
+    if (!isHost || !gameState) return;
+    try {
+      if (gameState.phase === "submission") {
+        // Move to voting phase
+        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
+          phase: "voting",
+          timeLeft: 30, // e.g., 30 seconds for voting
+        });
+      } else if (gameState.phase === "voting") {
+        // Move to results phase
+        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
+          phase: "results",
+          timeLeft: 10, // e.g., 10 seconds for results
+        });
+      } else if (gameState.phase === "results") {
+        // Move to next round or end game
+        if (gameState.roundNumber < gameState.totalRounds) {
+          await nextRound();
+        } else {
+          await endGame();
+        }
+      } else if (gameState.phase === "countdown") {
+        // Start the round after countdown
+        await startRound();
+      }
+    } catch (err) {
+      Sentry.captureException(err, { tags: { operation: "phase_transition", lobbyCode } });
+    }
+  }, [isHost, gameState, lobbyCode, nextRound, endGame, startRound]);
+
+  // --- Timer decrement logic for host ---
+  useEffect(() => {
+    if (!isHost || !gameState || typeof gameState.timeLeft !== "number") return;
+    const timedPhases = ["submission", "voting", "countdown", "results"];
+    if (!timedPhases.includes(gameState.phase)) return;
+    if (gameState.timeLeft <= 0) {
+      handleTimerExpire();
+      return;
+    }
+    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+    const timer = setInterval(async () => {
+      try {
+        const current = gameState.timeLeft;
+        if (current > 0) {
+          await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
+        } else {
+          clearInterval(timer);
+          handleTimerExpire();
+        }
+      } catch (err) {
+        Sentry.captureException(err, { tags: { operation: "timer_decrement", lobbyCode } });
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isHost, gameState, lobbyCode, handleTimerExpire]);
 
   /**
    * Submit a card for the current round
@@ -411,5 +489,6 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     hasVoted,
     canVote,
     clearError,
+    isHost,
   };
 }
