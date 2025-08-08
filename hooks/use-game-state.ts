@@ -61,6 +61,7 @@ interface UseGameStateReturn {
   hasVoted: boolean;
   canVote: (playerId: string) => boolean;
   clearError: () => void;
+  isHost: boolean;
 }
 
 /**
@@ -77,6 +78,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected" | "reconnecting"
   >("disconnected");
+
+  // --- Add state for hostUid and isHost ---
+  const [hostUid, setHostUid] = useState<string | null>(null);
+  const isHost = user && hostUid && user.id === hostUid;
 
   const gameStateUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
   const playersUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
@@ -192,6 +197,21 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       }
     );
 
+    // --- Listen to lobby data for hostUid ---
+    useEffect(() => {
+      if (!lobbyCode) return;
+      const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+      const unsubscribe = onValue(lobbyRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const lobby = snapshot.val();
+          setHostUid(lobby.hostUid || null);
+        } else {
+          setHostUid(null);
+        }
+      });
+      return () => off(lobbyRef, "value", unsubscribe);
+    }, [lobbyCode]);
+
     return () => {
       if (gameStateUnsubscribeRef.current) {
         off(ref(rtdb, gameStatePath), "value", gameStateUnsubscribeRef.current);
@@ -208,6 +228,32 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       }
     };
   }, [lobbyCode, user, handleError]);
+
+  // --- Timer decrement logic for host ---
+  useEffect(() => {
+    if (!isHost || !gameState || typeof gameState.timeLeft !== "number") return;
+    // Only run timer for active phases
+    const timedPhases = ["submission", "voting", "countdown"];
+    if (!timedPhases.includes(gameState.phase)) return;
+    if (gameState.timeLeft <= 0) return;
+
+    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+    const timer = setInterval(async () => {
+      try {
+        // Double-check latest timeLeft to avoid race conditions
+        const current = gameState.timeLeft;
+        if (current > 0) {
+          await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
+        } else {
+          clearInterval(timer);
+          // Optionally: trigger phase/round transition here if not handled elsewhere
+        }
+      } catch (err) {
+        Sentry.captureException(err, { tags: { operation: "timer_decrement", lobbyCode } });
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isHost, gameState, lobbyCode]);
 
   /**
    * Submit a card for the current round
@@ -411,5 +457,6 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     hasVoted,
     canVote,
     clearError,
+    isHost,
   };
 }
