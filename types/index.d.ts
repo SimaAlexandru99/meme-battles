@@ -467,3 +467,16 @@ interface LobbyStats {
   totalPlayers: number;
   averagePlayersPerLobby: number;
 }
+
+export interface PlayerGameData {
+  id: string;
+  name: string;
+  avatar: string;
+  score: number;
+  status: "waiting" | "playing" | "submitted" | "winner";
+  cards: MemeCard[];
+  selectedCard?: MemeCard;
+  isCurrentPlayer?: boolean;
+  isAI?: boolean;
+  aiPersonalityId?: string;
+}

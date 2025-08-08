@@ -150,7 +150,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       playersRef,
       (snapshot) => {
         if (snapshot.exists()) {
-          const playersData = snapshot.val() as Record<string, PlayerData>;
+          const playersData = snapshot.val() as Record<string, any>;
           const gamePlayers: PlayerGameData[] = Object.entries(playersData).map(
             ([id, player]) => ({
               id,

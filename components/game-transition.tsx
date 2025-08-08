@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { RiGamepadLine, RiUserLine } from "react-icons/ri";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
+import { PlayerGameData } from "@/types/index";
 
 interface GameTransitionProps {
   lobbyCode: string;
   currentUser: User;
-  players: PlayerData[];
+  players: PlayerGameData[];
   onTransitionComplete: () => void;
 }
 
