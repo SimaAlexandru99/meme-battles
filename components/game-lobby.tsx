@@ -50,6 +50,7 @@ import {
   successVariants,
 } from "@/lib/animations/private-lobby-variants";
 import { useLobbyGameTransition } from "@/hooks/use-lobby-game-transition";
+import type { GameLobbyProps, GameSettings, PlayerGameData, LobbyData, PlayerData } from "@/types/index";
 
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
@@ -748,8 +749,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           error={botError}
                           maxBots={6}
                           currentBotCount={
-                            Object.values(lobby.players).filter(
-                              (p: PlayerGameData) => p.isAI
+                            (Object.values(lobby.players) as PlayerData[]).filter(
+                              (p) => p.isAI
                             ).length
                           }
                           disabled={!isCurrentUserHost}
@@ -778,11 +779,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
               <CardContent>
                 <div className="space-y-3">
                   <AnimatePresence>
-                    {Object.entries(lobby.players).map(
-                      (
-                        [playerId, player]: [string, PlayerGameData],
-                        index: number
-                      ) => (
+                    {(Object.entries(lobby.players) as [string, PlayerData][]).map(
+                      ([playerId, player], index) => (
                         <motion.div
                           key={playerId}
                           initial={{ opacity: 0, y: 20 }}

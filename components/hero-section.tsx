@@ -37,6 +37,7 @@ import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { generateGuestDisplayName } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
 import { useRouter } from "next/navigation";
+import type { User } from "@/types/index";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;

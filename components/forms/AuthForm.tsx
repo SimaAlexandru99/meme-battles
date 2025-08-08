@@ -33,6 +33,7 @@ import {
   signInWithGitHub,
 } from "@/lib/actions/auth.action";
 import { Google } from "@/components/logos";
+import type { FormType } from "@/types/index";
 
 const authFormSchema = (type: FormType) => {
   return z.object({

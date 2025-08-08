@@ -8,6 +8,7 @@ import { RiGamepadLine, RiUserLine } from "react-icons/ri";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
 import { PlayerGameData } from "@/types/index";
+import type { User } from "@/types/index";
 
 interface GameTransitionProps {
   lobbyCode: string;

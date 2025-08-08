@@ -18,6 +18,7 @@ import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
+import type { User, ChatMessage, Player } from "@/types/index";
 
 interface ArenaProps {
   lobbyCode: string;
@@ -270,7 +271,10 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <RoundCountdown
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players}
+        players={players.map(player => ({
+          ...player,
+          status: player.status as Player['status']
+        }))}
         onRoundStart={handleStartRound}
       />
     );
@@ -281,7 +285,10 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <ResultsPhase
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players}
+        players={players.map(player => ({
+          ...player,
+          status: player.status as Player['status']
+        }))}
         submissions={gameState.submissions}
         votes={gameState.votes}
         roundNumber={gameState.roundNumber}
@@ -386,7 +393,10 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               hasVoted={hasVoted}
             />
           ) : (
-            <PlayersList players={players} />
+            <PlayersList players={players.map(player => ({
+              ...player,
+              status: player.status as Player['status']
+            }))} />
           )}
         </div>
 

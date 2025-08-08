@@ -25,6 +25,8 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
+import type { FormFieldProps, FormSelectProps, FormSliderProps, FormSwitchProps, FormRadioGroupProps } from "@/types/index";
+
 const allowedInputModes = [
   "none",
   "text",

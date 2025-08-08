@@ -6,6 +6,7 @@ import { StartGameButton } from "./start-game-button";
 import { LeaveLobbyButton } from "./leave-lobby-button";
 import { cn } from "@/lib/utils";
 import { staggerContainerVariants } from "@/lib/animations/private-lobby-variants";
+import type { LobbyStatus } from "@/types/index";
 
 interface LobbyActionsProps {
   // Lobby data

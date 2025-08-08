@@ -19,6 +19,7 @@ import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { markUserSetupComplete } from "@/lib/actions/auth.action";
 import ProfilePicker from "./profile-picker";
 import * as Sentry from "@sentry/nextjs";
+import type { User } from "@/types/index";
 
 interface FirstTimeSetupDialogProps {
   isOpen: boolean;

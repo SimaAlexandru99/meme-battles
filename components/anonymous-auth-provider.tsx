@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useState, useRef } from "react";
 import { signInAsGuest } from "@/firebase/client";
 import { signInAsGuest as signInAsGuestAction } from "@/lib/actions/auth.action";
+import type { User } from "@/types/index";
 
 interface AnonymousAuthProviderProps {
   children: ReactNode;

@@ -7,6 +7,7 @@ import { isFirstTimeUser } from "@/lib/actions/auth.action";
 import { useCurrentUser, useIsAnonymous } from "@/hooks/useCurrentUser";
 import FirstTimeSetupDialog from "./first-time-setup-dialog";
 import * as Sentry from "@sentry/nextjs";
+import type { User } from "@/types/index";
 
 interface FirstTimeSetupProviderProps {
   children: React.ReactNode;
