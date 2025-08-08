@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { useAdLocalization } from "@/lib/use-ad-localization";
 import React from "react";
+import type { AdBannerProps, AdLoadingState, AdSlotData, GoogleAdsWindow, PokiWindow } from "@/types/index";
 
 // AdBannerProps interface is defined in types/index.d.ts
 

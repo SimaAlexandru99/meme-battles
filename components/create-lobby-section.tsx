@@ -19,6 +19,7 @@ import {
   badgeVariants,
   errorVariants,
 } from "@/lib/animations/private-lobby-variants";
+import type { GameSettings, LobbyError } from "@/types/index";
 
 interface CreateLobbySectionProps {
   onCreateLobby: (settings?: Partial<GameSettings>) => Promise<string>;

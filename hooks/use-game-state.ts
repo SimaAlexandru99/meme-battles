@@ -3,6 +3,7 @@ import { ref, onValue, off, set, update } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import * as Sentry from "@sentry/nextjs";
+import type { PlayerGameData } from "@/types/index";
 
 interface GameState {
   phase:
@@ -24,19 +25,6 @@ interface GameState {
   totalRounds: number;
   winner?: string;
   scores: Record<string, number>;
-}
-
-interface PlayerGameData {
-  id: string;
-  name: string;
-  avatar: string;
-  score: number;
-  status: "waiting" | "playing" | "submitted" | "winner";
-  cards: MemeCard[];
-  selectedCard?: MemeCard;
-  isCurrentPlayer?: boolean;
-  isAI?: boolean;
-  aiPersonalityId?: string;
 }
 
 interface UseGameStateReturn {

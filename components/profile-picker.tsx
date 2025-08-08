@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { RiEditLine, RiCheckLine } from "react-icons/ri";
 import { AVATAR_OPTIONS } from "@/lib/utils";
+import type { ProfilePickerProps } from "@/types/index";
 
 // Use the shared avatar options
 const ICON_AVATARS = AVATAR_OPTIONS;

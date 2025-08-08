@@ -5,6 +5,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { MemeCard as MemeCardType } from "@/types/index";
 
 export type CardTheme =
   | "classic"
@@ -15,9 +16,9 @@ export type CardTheme =
   | "poker";
 
 interface MemeCardProps {
-  card: MemeCard;
+  card: MemeCardType;
   isSelected?: boolean;
-  onSelect?: (card: MemeCard) => void;
+  onSelect?: (card: MemeCardType) => void;
   disabled?: boolean;
   className?: string;
   size?: "xs" | "sm" | "md" | "lg";

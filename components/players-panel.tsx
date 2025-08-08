@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { RiFireLine } from "react-icons/ri";
+import type { Player } from "@/types/index";
 
 interface PlayersListProps {
   players: Player[];

@@ -21,6 +21,7 @@ import {
   microInteractionVariants,
   successVariants,
 } from "@/lib/animations/private-lobby-variants";
+import type { GameSettings, LobbyError } from "@/types/index";
 
 interface JoinWithCodeSectionProps {
   onJoinLobby: (code: string) => Promise<void>;

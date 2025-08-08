@@ -21,6 +21,7 @@ import {
   successVariants,
   errorVariants,
 } from "@/lib/animations/private-lobby-variants";
+import type { LobbyStatus } from "@/types/index";
 
 interface StartGameButtonProps {
   lobbyCode: string;

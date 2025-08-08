@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { MemeCard as MemeCardType } from "@/types/index";
 import { MemeCard, CardTheme } from "@/components/meme-card";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { RiSendPlaneFill } from "react-icons/ri";
 
 interface MemeCardHandProps {
-  cards: MemeCard[];
-  selectedCard: MemeCard | null;
-  onSelectCard: (card: MemeCard) => void;
+  cards: MemeCardType[];
+  selectedCard: MemeCardType | null;
+  onSelectCard: (card: MemeCardType) => void;
   onSubmitCard: () => void;
   isSubmitting: boolean;
   hasSubmitted: boolean;
@@ -52,7 +53,7 @@ export function MemeCardHand({
   );
 
   const handleCardSelect = useCallback(
-    (card: MemeCard) => {
+    (card: MemeCardType) => {
       if (hasSubmitted) return;
       onSelectCard(card);
     },

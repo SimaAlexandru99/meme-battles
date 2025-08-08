@@ -27,9 +27,10 @@ import { cn, formatJoinTime } from "@/lib/utils";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
+import type { PlayerData } from "@/types/index";
 
 interface PlayerListProps {
-  players: PlayerGameData[];
+  players: PlayerData[];
   currentUserId: string;
   isHost: boolean;
   lobbyCode: string;
@@ -53,7 +54,7 @@ export function PlayerList({
   const { kickPlayer } = useLobbyManagement(lobbyCode);
 
   // Kick player dialog state
-  const [playerToKick, setPlayerToKick] = React.useState<PlayerGameData | null>(
+  const [playerToKick, setPlayerToKick] = React.useState<PlayerData | null>(
     null,
   );
   const [isKicking, setIsKicking] = React.useState(false);
@@ -62,19 +63,19 @@ export function PlayerList({
    * Handle kick player action
    */
   const handleKickPlayer = React.useCallback(
-    async (player: PlayerGameData) => {
+    async (player: PlayerData) => {
       if (!isHost || disabled) return;
 
       setIsKicking(true);
       try {
-        await kickPlayer(player.name); // Assuming name is used as UID
-        toast.success(`${player.name} has been removed from the lobby`);
+        await kickPlayer(player.displayName); // Assuming name is used as UID
+        toast.success(`${player.displayName} has been removed from the lobby`);
 
         Sentry.addBreadcrumb({
           message: "Player kicked from lobby",
           data: {
             lobbyCode,
-            kickedPlayer: player.name,
+            kickedPlayer: player.displayName,
             hostId: currentUserId,
           },
           level: "info",
@@ -94,7 +95,7 @@ export function PlayerList({
   /**
    * Open kick confirmation dialog
    */
-  const openKickDialog = React.useCallback((player: PlayerGameData) => {
+  const openKickDialog = React.useCallback((player: PlayerData) => {
     setPlayerToKick(player);
   }, []);
 
@@ -108,7 +109,7 @@ export function PlayerList({
   /**
    * Get player status indicator
    */
-  const getPlayerStatusIndicator = React.useCallback((player: PlayerGameData) => {
+  const getPlayerStatusIndicator = React.useCallback((player: PlayerData) => {
     switch (player.status) {
       case "waiting":
         return {
@@ -136,7 +137,7 @@ export function PlayerList({
   /**
    * Check if player is currently online (last seen within 2 minutes)
    */
-  const isPlayerOnline = React.useCallback((player: PlayerGameData) => {
+  const isPlayerOnline = React.useCallback((player: PlayerData) => {
     const lastSeen = new Date(player.lastSeen);
     const now = new Date();
     const timeDiff = now.getTime() - lastSeen.getTime();
@@ -171,7 +172,7 @@ export function PlayerList({
           <div className="space-y-3">
             <AnimatePresence mode="popLayout">
               {players.map((player, index) => {
-                const isCurrentUser = player.name === currentUserId; // Assuming name is used as identifier
+                const isCurrentUser = player.displayName === currentUserId; // Use displayName for comparison
                 const canKickPlayer =
                   isHost && !isCurrentUser && !player.isHost && !disabled;
                 const statusProps = getPlayerStatusIndicator(player);
@@ -179,7 +180,7 @@ export function PlayerList({
 
                 return (
                   <motion.div
-                    key={player.name}
+                    key={player.displayName}
                     layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -197,7 +198,7 @@ export function PlayerList({
                     )}
                     whileHover={{ scale: 1.01 }}
                     role="listitem"
-                    aria-label={`Player ${player.name}${player.isHost ? " (host)" : ""}${isCurrentUser ? " (you)" : ""}`}
+                    aria-label={`Player ${player.displayName}${player.isHost ? " (host)" : ""}${isCurrentUser ? " (you)" : ""}`}
                   >
                     {/* Avatar */}
                     <motion.div
@@ -209,7 +210,7 @@ export function PlayerList({
                         <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                           <AvatarImage
                             src={player.profileURL || undefined}
-                            alt={`${player.name}'s avatar`}
+                            alt={`${player.displayName}'s avatar`}
                           />
                           <AvatarFallback
                             className={cn(
@@ -217,7 +218,7 @@ export function PlayerList({
                               "bg-purple-600 text-white",
                             )}
                           >
-                            {player.name.charAt(0).toUpperCase()}
+                            {player.displayName.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
 
@@ -238,7 +239,7 @@ export function PlayerList({
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                         <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
-                          {player.name}
+                          {player.displayName}
                         </span>
 
                         {/* Badges */}
@@ -296,7 +297,7 @@ export function PlayerList({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-600/50"
-                              aria-label={`Actions for ${player.name}`}
+                              aria-label={`Actions for ${player.displayName}`}
                             >
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
@@ -358,7 +359,7 @@ export function PlayerList({
             <AlertDialogDescription className="text-slate-300 font-bangers tracking-wide">
               Are you sure you want to remove{" "}
               <span className="text-white font-semibold">
-                {playerToKick?.name}
+                {playerToKick?.displayName}
               </span>{" "}
               from the lobby? They will need a new invitation to rejoin.
             </AlertDialogDescription>

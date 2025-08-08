@@ -1,4 +1,4 @@
-type FormType =
+export type FormType =
   | "sign-in"
   | "sign-up"
   | "forgot-password"
@@ -18,7 +18,7 @@ interface SignUpParams {
   password: string;
 }
 
-interface User {
+export interface User {
   name: string;
   email: string | null;
   id: string;
@@ -50,7 +50,7 @@ interface RadioOption {
   id?: string;
 }
 
-interface FormSelectProps<T extends FieldValues> {
+export interface FormSelectProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -61,7 +61,7 @@ interface FormSelectProps<T extends FieldValues> {
   disabled?: boolean;
 }
 
-interface FormSliderProps<T extends FieldValues> {
+export interface FormSliderProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -73,7 +73,7 @@ interface FormSliderProps<T extends FieldValues> {
   formatValue?: (value: number) => string;
 }
 
-interface FormFieldProps<T extends FieldValues> {
+export interface FormFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -85,7 +85,7 @@ interface FormFieldProps<T extends FieldValues> {
   rows?: number;
 }
 
-interface FormSwitchProps<T extends FieldValues> {
+export interface FormSwitchProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -93,7 +93,7 @@ interface FormSwitchProps<T extends FieldValues> {
   className?: string;
 }
 
-interface FormRadioGroupProps<T extends FieldValues> {
+export interface FormRadioGroupProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label: string;
@@ -103,7 +103,7 @@ interface FormRadioGroupProps<T extends FieldValues> {
 }
 
 // Advertisement types
-interface AdSlotData {
+export interface AdSlotData {
   slotId: string;
   containerId: string;
   googleAdId?: string;
@@ -112,7 +112,7 @@ interface AdSlotData {
 
 type AdNetwork = "google" | "poki";
 
-type AdLoadingState = "idle" | "loading" | "loaded" | "error";
+export type AdLoadingState = "idle" | "loading" | "loaded" | "error";
 
 interface AdNetworkConfig {
   network: AdNetwork;
@@ -141,7 +141,7 @@ interface GooglePubAds {
 }
 
 // Window interface extensions for ad networks
-interface GoogleAdsWindow extends Window {
+export interface GoogleAdsWindow extends Window {
   googletag?: {
     cmd: Array<() => void>;
     defineSlot: (
@@ -155,7 +155,7 @@ interface GoogleAdsWindow extends Window {
   };
 }
 
-interface PokiWindow extends Window {
+export interface PokiWindow extends Window {
   PokiSDK?: {
     displayAd: (containerId: string) => Promise<void>;
   };
@@ -190,7 +190,7 @@ interface SWRProviderProps {
   children: React.ReactNode;
 }
 // Component prop interfaces (non-UI components)
-interface GameLobbyProps {
+export interface GameLobbyProps {
   lobbyCode: string;
   currentUser: User;
 }
@@ -204,7 +204,7 @@ interface ProfilePickerProps {
   className?: string;
   isUpdating?: boolean;
 }
-interface AdBannerProps {
+export interface AdBannerProps {
   position: "left" | "right";
   adId: string;
   upgradeUrl?: string;
@@ -255,7 +255,7 @@ interface Player {
   aiPersonalityId?: string;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   playerId: string;
   playerName: string;
@@ -274,7 +274,7 @@ interface GameState {
 }
 
 // Lobby Management Types - Core Data Interfaces
-type LobbyStatus = "waiting" | "starting" | "started" | "ended";
+export type LobbyStatus = "waiting" | "starting" | "started" | "ended";
 type PlayerStatus = "waiting" | "ready" | "disconnected";
 type ConnectionStatus =
   | "connected"
@@ -283,7 +283,7 @@ type ConnectionStatus =
   | "reconnecting";
 
 // Core lobby data interface matching Firebase Realtime Database schema
-interface LobbyData {
+export interface LobbyData {
   code: string;
   hostUid: string;
   hostDisplayName: string;
@@ -298,7 +298,7 @@ interface LobbyData {
 }
 
 // Player data interface with all properties and status fields
-interface PlayerData {
+export interface PlayerData {
   displayName: string;
   avatarId: string;
   profileURL?: string;
@@ -315,8 +315,7 @@ interface PlayerData {
   aiDifficulty?: "easy" | "medium" | "hard";
 }
 
-// Game settings interface with validation constraints
-interface GameSettings {
+export interface GameSettings {
   rounds: number; // 3-15 rounds constraint
   timeLimit: number; // 30-120 seconds constraint
   categories: string[]; // enabled meme categories array
@@ -427,7 +426,7 @@ type LobbyErrorType =
   | "CODE_GENERATION_FAILED"
   | "UNKNOWN_ERROR";
 
-interface LobbyError extends Error {
+export interface LobbyError extends Error {
   type: LobbyErrorType;
   retryable: boolean;
   userMessage: string;
@@ -473,7 +472,7 @@ export interface PlayerGameData {
   name: string;
   avatar: string;
   score: number;
-  status: "waiting" | "playing" | "submitted" | "winner";
+  status: PlayerStatus;
   cards: MemeCard[];
   selectedCard?: MemeCard;
   isCurrentPlayer?: boolean;

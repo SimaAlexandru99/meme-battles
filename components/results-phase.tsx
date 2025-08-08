@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import type { User, Player } from "@/types/index";
 
 interface ResultsPhaseProps {
   lobbyCode: string;

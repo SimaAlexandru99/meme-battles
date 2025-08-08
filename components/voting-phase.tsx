@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Image from "next/image";
+import type { User } from "@/types/index";
 
 interface VotingPhaseProps {
   lobbyCode: string;

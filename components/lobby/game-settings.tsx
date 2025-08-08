@@ -19,6 +19,7 @@ import {
   RoundsSelector,
   AdvancedSettings,
 } from "@/components/game-settings";
+import type { LobbyData, GameSettings } from "@/types/index";
 
 // Form validation schema - only include properties that are part of GameSettings
 const gameSettingsSchema = z.object({

@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { RiChat1Line, RiSendPlaneLine } from "react-icons/ri";
+import type { ChatMessage, User } from "@/types/index";
 
 interface ChatPanelProps {
   messages: ChatMessage[];
