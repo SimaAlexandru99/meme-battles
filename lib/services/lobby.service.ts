@@ -1413,7 +1413,7 @@ export class LobbyService {
           // Process AI bot submissions asynchronously
           const aiBotService = AIBotService.getInstance();
           const situation =
-            (lobby.gameState as any)?.currentSituation ||
+            (lobby.gameState as Partial<GameState & { currentSituation?: string }>)?.currentSituation ||
             "No situation available";
 
           // Process AI submissions in the background
