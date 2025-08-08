@@ -322,7 +322,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   console.log("Player cards:", playerCards);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
       {/* Top Bar */}
       <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
@@ -332,11 +332,9 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               <div className="flex items-center gap-2">
                 <RiGamepadLine className="w-5 h-5 text-purple-400" />
                 <span className="text-white font-bangers tracking-wide">
-                  Round {gameState.roundNumber || 1}/
-                  {gameState.totalRounds || 8}
+                  Round {gameState.roundNumber || 1}/{gameState.totalRounds || 8}
                 </span>
               </div>
-
               <div className="flex items-center gap-2">
                 <RiTimeLine className="w-5 h-5 text-purple-400" />
                 <span className="text-white font-bangers tracking-wide">
@@ -344,65 +342,40 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                 </span>
               </div>
             </div>
-
             {/* Lobby Code */}
             <div className="flex items-center gap-2">
-              <span className="text-purple-200/70 font-bangers tracking-wide">
-                Code:
-              </span>
-              <Badge className="bg-purple-600 text-white font-bangers">
-                {lobbyCode}
-              </Badge>
+              <span className="text-purple-200/70 font-bangers tracking-wide">Code:</span>
+              <Badge className="bg-purple-600 text-white font-bangers">{lobbyCode}</Badge>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Game Area */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)]">
-        {/* Left Panel - Cards and Chat */}
-        <div className="flex-1 flex flex-col lg:flex-row">
-          {/* Meme Cards */}
-          <div className="flex-1 p-4 lg:p-6">
-            <div className="h-full flex flex-col">
-              {/* Current Situation */}
-              <div className="mb-6">
-                <h2 className="text-white font-bangers text-xl lg:text-2xl mb-2">
-                  Current Situation:
-                </h2>
-                <p className="text-purple-200 font-bangers text-lg lg:text-xl">
-                  {gameState.currentSituation}
-                </p>
-              </div>
+      <div className="flex-1 grid grid-cols-[300px_1fr_300px] grid-rows-[1fr_auto] h-full min-h-0">
+        {/* Chat Panel (Left) */}
+        <div className="col-start-1 row-span-2 flex flex-col min-h-0 bg-slate-800/30 border-r border-slate-700/40">
+          <ChatPanel
+            messages={messages}
+            newMessage={newMessage}
+            onNewMessageChange={setNewMessage}
+            onSendMessage={handleSendMessage}
+            currentUser={currentUser}
+          />
+        </div>
 
-              {/* Card Hand */}
-              <div className="flex-1">
-                <MemeCardHand
-                  cards={playerCards}
-                  selectedCard={selectedCard}
-                  onSelectCard={selectCard}
-                  onSubmitCard={handleSubmitCard}
-                  isSubmitting={false}
-                  hasSubmitted={hasSubmitted}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Chat Panel */}
-          <div className="w-full lg:w-80 p-4 lg:p-6">
-            <ChatPanel
-              messages={messages}
-              newMessage={newMessage}
-              onNewMessageChange={setNewMessage}
-              onSendMessage={handleSendMessage}
-              currentUser={currentUser}
-            />
+        {/* Situation (Center, Vertically and Horizontally Centered) */}
+        <div className="col-start-2 row-start-1 flex items-center justify-center min-h-0">
+          <div className="flex flex-col items-center justify-center">
+            <h2 className="text-white font-bangers text-2xl mb-2 text-center">Current Situation:</h2>
+            <p className="text-purple-200 font-bangers text-xl text-center max-w-2xl break-words">
+              {gameState.currentSituation}
+            </p>
           </div>
         </div>
 
-        {/* Right Panel - Players and Voting */}
-        <div className="w-full lg:w-80 p-4 lg:p-6">
+        {/* Players List (Right) */}
+        <div className="col-start-3 row-span-2 flex flex-col min-h-0 bg-slate-800/30 border-l border-slate-700/40">
           {gameState.phase === "voting" ? (
             <VotingPhase
               lobbyCode={lobbyCode}
@@ -415,6 +388,18 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
           ) : (
             <PlayersList players={players} />
           )}
+        </div>
+
+        {/* Cards (Bottom Center) */}
+        <div className="col-start-2 row-start-2 flex justify-center items-end pb-4">
+          <MemeCardHand
+            cards={playerCards}
+            selectedCard={selectedCard}
+            onSelectCard={selectCard}
+            onSubmitCard={handleSubmitCard}
+            isSubmitting={false}
+            hasSubmitted={hasSubmitted}
+          />
         </div>
       </div>
     </div>
