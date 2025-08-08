@@ -229,31 +229,63 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     };
   }, [lobbyCode, user, handleError]);
 
+  // --- Helper: handle phase/round transition when timer expires ---
+  const handleTimerExpire = useCallback(async () => {
+    if (!isHost || !gameState) return;
+    try {
+      if (gameState.phase === "submission") {
+        // Move to voting phase
+        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
+          phase: "voting",
+          timeLeft: 30, // e.g., 30 seconds for voting
+        });
+      } else if (gameState.phase === "voting") {
+        // Move to results phase
+        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
+          phase: "results",
+          timeLeft: 10, // e.g., 10 seconds for results
+        });
+      } else if (gameState.phase === "results") {
+        // Move to next round or end game
+        if (gameState.roundNumber < gameState.totalRounds) {
+          await nextRound();
+        } else {
+          await endGame();
+        }
+      } else if (gameState.phase === "countdown") {
+        // Start the round after countdown
+        await startRound();
+      }
+    } catch (err) {
+      Sentry.captureException(err, { tags: { operation: "phase_transition", lobbyCode } });
+    }
+  }, [isHost, gameState, lobbyCode, nextRound, endGame, startRound]);
+
   // --- Timer decrement logic for host ---
   useEffect(() => {
     if (!isHost || !gameState || typeof gameState.timeLeft !== "number") return;
-    // Only run timer for active phases
-    const timedPhases = ["submission", "voting", "countdown"];
+    const timedPhases = ["submission", "voting", "countdown", "results"];
     if (!timedPhases.includes(gameState.phase)) return;
-    if (gameState.timeLeft <= 0) return;
-
+    if (gameState.timeLeft <= 0) {
+      handleTimerExpire();
+      return;
+    }
     const gameStatePath = `lobbies/${lobbyCode}/gameState`;
     const timer = setInterval(async () => {
       try {
-        // Double-check latest timeLeft to avoid race conditions
         const current = gameState.timeLeft;
         if (current > 0) {
           await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
         } else {
           clearInterval(timer);
-          // Optionally: trigger phase/round transition here if not handled elsewhere
+          handleTimerExpire();
         }
       } catch (err) {
         Sentry.captureException(err, { tags: { operation: "timer_decrement", lobbyCode } });
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [isHost, gameState, lobbyCode]);
+  }, [isHost, gameState, lobbyCode, handleTimerExpire]);
 
   /**
    * Submit a card for the current round
