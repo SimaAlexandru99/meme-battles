@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ref, onValue, off, set, update } from "firebase/database";
+import {
+  ref,
+  onValue,
+  off,
+  set,
+  update,
+  serverTimestamp,
+} from "firebase/database";
 import { rtdb } from "@/firebase/client";
+import { lobbyService } from "@/lib/services/lobby.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import * as Sentry from "@sentry/nextjs";
 
@@ -68,6 +76,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
 
   // --- Add state for hostUid and isHost ---
   const [hostUid, setHostUid] = useState<string | null>(null);
+  // Duration for submission phase (derived from lobby settings.timeLimit)
+  const [submissionDuration, setSubmissionDuration] = useState<number | null>(
+    null
+  );
   const isHost = Boolean(user && hostUid && user.id === hostUid);
 
   const gameStateUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
@@ -95,7 +107,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode],
+    [lobbyCode]
   );
 
   /**
@@ -118,23 +130,19 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               cardId,
               cardName:
                 playerCards.find((card) => card.id === cardId)?.filename || "",
-              submittedAt: new Date().toISOString(),
+              submittedAt: serverTimestamp(),
             };
 
             const submissionPath = `lobbies/${lobbyCode}/gameState/submissions/${user.id}`;
             await set(ref(rtdb, submissionPath), submission);
-
-            // Update player status
-            const playerStatusPath = `lobbies/${lobbyCode}/players/${user.id}/status`;
-            await set(ref(rtdb, playerStatusPath), "submitted");
           } catch (error) {
             handleError(error, "submit_card");
             throw error;
           }
-        },
+        }
       );
     },
-    [user, gameState, lobbyCode, playerCards, handleError],
+    [user, gameState, lobbyCode, playerCards, handleError]
   );
 
   /**
@@ -163,10 +171,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "vote");
             throw error;
           }
-        },
+        }
       );
     },
-    [user, gameState, lobbyCode, handleError],
+    [user, gameState, lobbyCode, handleError]
   );
 
   /**
@@ -187,7 +195,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           const gameStatePath = `lobbies/${lobbyCode}/gameState`;
           await update(ref(rtdb, gameStatePath), {
             phase: "submission",
-            timeLeft: 60, // 60 seconds for submission
+            timeLeft: submissionDuration ?? 60,
             submissions: {},
             votes: {},
           });
@@ -195,9 +203,9 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "start_round");
           throw error;
         }
-      },
+      }
     );
-  }, [user, gameState, lobbyCode, handleError]);
+  }, [user, gameState, lobbyCode, handleError, submissionDuration]);
 
   /**
    * Move to next round (host only)
@@ -228,7 +236,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "next_round");
           throw error;
         }
-      },
+      }
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -256,7 +264,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "end_game");
           throw error;
         }
-      },
+      }
     );
   }, [user, lobbyCode, handleError]);
 
@@ -294,6 +302,46 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     }
   }, [isHost, gameState, lobbyCode, nextRound, endGame, startRound]);
 
+  // --- Early transition to voting when all submissions are in (host only) ---
+  useEffect(() => {
+    if (!isHost) return;
+    if (!gameState || gameState.phase !== "submission") return;
+    const totalPlayers = players.length;
+    const submittedCount = Object.keys(gameState.submissions || {}).length;
+    if (totalPlayers > 0 && submittedCount >= totalPlayers) {
+      const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+      update(ref(rtdb, gameStatePath), {
+        phase: "voting",
+        timeLeft: 30,
+      }).catch((err) => {
+        Sentry.captureException(err, {
+          tags: { operation: "early_transition_voting", lobbyCode },
+          extra: { submittedCount, totalPlayers },
+        });
+      });
+    }
+  }, [isHost, gameState, players.length, lobbyCode]);
+
+  // --- Early transition to results when all votes are in (host only) ---
+  useEffect(() => {
+    if (!isHost) return;
+    if (!gameState || gameState.phase !== "voting") return;
+    const totalPlayers = players.length;
+    const votesCount = Object.keys(gameState.votes || {}).length;
+    if (totalPlayers > 0 && votesCount >= totalPlayers) {
+      const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+      update(ref(rtdb, gameStatePath), {
+        phase: "results",
+        timeLeft: 10,
+      }).catch((err) => {
+        Sentry.captureException(err, {
+          tags: { operation: "early_transition_results", lobbyCode },
+          extra: { votesCount, totalPlayers },
+        });
+      });
+    }
+  }, [isHost, gameState, players.length, lobbyCode]);
+
   /**
    * Set up real-time listeners for game state
    */
@@ -322,7 +370,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       (error) => {
         handleError(error, "game_state_listener");
         setConnectionStatus("disconnected");
-      },
+      }
     );
 
     // Listen to players data
@@ -337,25 +385,39 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             string,
             PlayerData
           >;
+          const nowMs = Date.now();
+          const ONLINE_WINDOW_MS = 30_000; // 30 seconds window considered online
           const gamePlayers: Player[] = Object.entries(playersData).map(
-            ([id, player]) => ({
-              id,
-              name: player.displayName,
-              avatar: player.profileURL || "",
-              score: player.score || 0,
-              status: "waiting",
-              cards: player.cards || [],
-              isCurrentPlayer: id === user.id,
-              isAI: player.isAI || false,
-              aiPersonalityId: player.aiPersonalityId,
-            }),
+            ([id, player]: [string, PlayerData]) => {
+              const lastSeenIso = player.lastSeen;
+              const lastSeenMs = lastSeenIso
+                ? new Date(lastSeenIso).getTime()
+                : 0;
+              const isOnline = nowMs - lastSeenMs < ONLINE_WINDOW_MS;
+              return {
+                id,
+                name: player.displayName,
+                avatar: player.profileURL || "",
+                score: player.score || 0,
+                status: (player.status as Player["status"]) || "waiting",
+                cards: player.cards || [],
+                isCurrentPlayer: id === user.id,
+                // Presence and metadata for UI
+                lastSeen: lastSeenIso,
+                isOnline,
+                // Extended optional flags used by UI components
+                isAI: player.isAI || false,
+                aiPersonalityId: player.aiPersonalityId,
+                isHost: Boolean(player.isHost),
+              };
+            }
           );
           setPlayers(gamePlayers);
         }
       },
       (error) => {
         handleError(error, "players_listener");
-      },
+      }
     );
 
     // Listen to current player's cards
@@ -368,7 +430,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         console.log(
           "Player cards snapshot:",
           snapshot.exists(),
-          snapshot.val(),
+          snapshot.val()
         );
         if (snapshot.exists()) {
           const cards = snapshot.val() as MemeCard[];
@@ -380,7 +442,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       },
       (error) => {
         handleError(error, "player_cards_listener");
-      },
+      }
     );
 
     return () => {
@@ -394,13 +456,32 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         off(
           ref(rtdb, playerCardsPath),
           "value",
-          playerCardsUnsubscribeRef.current,
+          playerCardsUnsubscribeRef.current
         );
       }
     };
   }, [user, handleError, lobbyCode]);
 
-  // --- Listen to lobby data for hostUid ---
+  // --- Initialize presence with onDisconnect handler ---
+  useEffect(() => {
+    if (!user || !lobbyCode) return;
+    const unsubscribePresence = lobbyService.initializePresence(
+      lobbyCode,
+      user.id
+    );
+    return () => {
+      try {
+        unsubscribePresence();
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { operation: "presence_unsubscribe", lobbyCode },
+          extra: { userId: user.id },
+        });
+      }
+    };
+  }, [user, lobbyCode]);
+
+  // --- Listen to lobby data for hostUid and time limit; maintain heartbeat ---
   useEffect(() => {
     if (!lobbyCode) return;
     const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
@@ -408,12 +489,31 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       if (snapshot.exists()) {
         const lobby = snapshot.val();
         setHostUid(lobby.hostUid || null);
+        const limit = Number(lobby?.settings?.timeLimit);
+        setSubmissionDuration(Number.isFinite(limit) && limit > 0 ? limit : 60);
       } else {
         setHostUid(null);
+        setSubmissionDuration(null);
       }
     });
     return () => off(lobbyRef, "value", unsubscribe);
   }, [lobbyCode]);
+
+  // --- Heartbeat: periodically bump current player's lastSeen ---
+  useEffect(() => {
+    if (!user || !lobbyCode) return;
+    const interval = setInterval(() => {
+      const now = new Date().toISOString();
+      const playerRef = ref(rtdb, `lobbies/${lobbyCode}/players/${user.id}`);
+      update(playerRef, { lastSeen: now }).catch((err) =>
+        Sentry.captureException(err, {
+          tags: { operation: "presence_heartbeat", lobbyCode },
+          extra: { userId: user.id },
+        })
+      );
+    }, 15000); // 15s heartbeat
+    return () => clearInterval(interval);
+  }, [user, lobbyCode]);
 
   // --- Timer decrement logic for host ---
   useEffect(() => {
@@ -458,7 +558,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         gameState?.submissions?.[playerId] !== undefined
       );
     },
-    [isCurrentPlayer, gameState, hasVoted, user?.id],
+    [isCurrentPlayer, gameState, hasVoted, user?.id]
   );
 
   return {

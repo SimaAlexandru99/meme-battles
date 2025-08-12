@@ -68,7 +68,7 @@ export function PlayersList({ players }: PlayersListProps) {
         variant="default"
         className={cn(
           "text-xs font-bold px-2 py-0.5 flex items-center gap-1",
-          getScoreColor(score, index),
+          getScoreColor(score, index)
         )}
       >
         <RiFireLine className="w-3 h-3" />
@@ -98,8 +98,7 @@ export function PlayersList({ players }: PlayersListProps) {
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
                     "bg-slate-700/30 border border-slate-600/50",
-                    isCurrentPlayer &&
-                      "ring-2 ring-purple-500 bg-purple-600/20",
+                    isCurrentPlayer && "ring-2 ring-purple-500 bg-purple-600/20"
                   )}
                 >
                   {/* Avatar */}
@@ -113,13 +112,22 @@ export function PlayersList({ players }: PlayersListProps) {
                   {/* Player Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={cn(
-                          "font-bangers text-sm tracking-wide truncate",
-                          isCurrentPlayer ? "text-purple-300" : "text-white",
-                        )}
-                      >
-                        {player.name}
+                      <span className="relative inline-flex items-center gap-2 min-w-0">
+                        <span
+                          className={cn(
+                            "font-bangers text-sm tracking-wide truncate",
+                            isCurrentPlayer ? "text-purple-300" : "text-white"
+                          )}
+                        >
+                          {player.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            player.isOnline ? "bg-green-400" : "bg-slate-500"
+                          )}
+                          title={player.isOnline ? "Online" : "Offline"}
+                        />
                       </span>
                       {isCurrentPlayer && (
                         <Badge className="text-xs bg-purple-600 text-white">

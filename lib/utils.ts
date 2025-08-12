@@ -68,13 +68,54 @@ export function formatJoinTime(dateValue: unknown): string {
     console.warn(
       "formatJoinTime: Unsupported date type:",
       typeof dateValue,
-      dateValue,
+      dateValue
     );
     return "Unknown";
   } catch (error) {
     console.error("Error formatting date:", error, "Value:", dateValue);
     return "Unknown";
   }
+}
+
+/**
+ * Converts Firestore data to serializable format by converting Firestore Timestamps to ISO strings
+ * This is necessary when passing data from Server Components to Client Components in Next.js
+ * @param data - The data object that may contain Firestore Timestamps
+ * @returns The data with all Firestore Timestamps converted to ISO strings
+ */
+export function convertFirestoreData<T>(data: T): T {
+  if (!data || typeof data !== "object") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => convertFirestoreData(item)) as T;
+  }
+
+  const converted: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (value && typeof value === "object") {
+      // Check if it's a Firestore Timestamp
+      if (
+        "toDate" in value &&
+        typeof (value as { toDate: () => Date }).toDate === "function"
+      ) {
+        converted[key] = (value as { toDate: () => Date })
+          .toDate()
+          .toISOString();
+      } else if (value instanceof Date) {
+        converted[key] = value.toISOString();
+      } else {
+        // Recursively convert nested objects
+        converted[key] = convertFirestoreData(value);
+      }
+    } else {
+      converted[key] = value;
+    }
+  }
+
+  return converted as T;
 }
 
 // Avatar options for new users

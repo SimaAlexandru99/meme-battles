@@ -253,6 +253,11 @@ interface Player {
   // AI-specific properties
   isAI?: boolean;
   aiPersonalityId?: string;
+  // Presence and metadata
+  isOnline?: boolean;
+  lastSeen?: string;
+  // Host flag (optional for UI)
+  isHost?: boolean;
 }
 
 interface ChatMessage {

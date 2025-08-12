@@ -1,109 +1,207 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
+    ".read": true,
+    ".write": true,
 
     "lobbies": {
       ".indexOn": ["status", "createdAt", "hostUid", "updatedAt"],
 
       "$lobbyCode": {
-        ".read": "auth != null && (root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists() || root.child('lobbies/' + $lobbyCode + '/status').val() == 'waiting')",
+        ".read": true,
+        ".write": true,
 
-        ".write": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()",
+        "code": {
+          ".read": true,
+          ".write": true
+        },
 
         "hostUid": {
           ".read": true,
-          ".validate": "newData.isString()"
+          ".write": true
+        },
+
+        "hostDisplayName": {
+          ".read": true,
+          ".write": true
         },
 
         "status": {
           ".read": true,
-          ".validate": "newData.isString() && newData.val().matches(/^(waiting|starting|started|ended)$/) && auth.uid == root.child('lobbies/' + $lobbyCode + '/hostUid').val()"
+          ".write": true
         },
 
         "maxPlayers": {
           ".read": true,
-          ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 8 && auth.uid == root.child('lobbies/' + $lobbyCode + '/hostUid').val()"
+          ".write": true
         },
 
-        "createdAt": { ".read": true, ".validate": "newData.isString()" },
-        "updatedAt": { ".read": true, ".validate": "newData.isString()" },
+        "createdAt": {
+          ".read": true,
+          ".write": true
+        },
+
+        "updatedAt": {
+          ".read": true,
+          ".write": true
+        },
 
         "settings": {
           ".read": true,
-          ".write": "auth != null && auth.uid == root.child('lobbies/' + $lobbyCode + '/hostUid').val()",
+          ".write": true,
+
           "rounds": {
-            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 10"
+            ".read": true,
+            ".write": true
           },
+
           "timeLimit": {
-            ".validate": "newData.isNumber() && newData.val() >= 30 && newData.val() <= 300 && (newData.val() % 15) == 0"
+            ".read": true,
+            ".write": true
           },
+
           "categories": {
-            ".validate": "newData.hasChildren() || newData.isString()"
+            ".read": true,
+            ".write": true,
+            "$category": {
+              ".read": true,
+              ".write": true
+            }
           }
         },
 
         "players": {
           ".indexOn": ["joinedAt", "isHost", "status", "lastSeen"],
+          ".read": true,
+          ".write": true,
+
           "$playerUid": {
-            ".read": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()",
-            ".write": "auth != null && $playerUid == auth.uid && ( !data.exists() ? (root.child('lobbies/' + $lobbyCode + '/status').val() == 'waiting' && !root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()) : root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists() )",
+            ".read": true,
+            ".write": true,
+
             "displayName": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+              ".read": true,
+              ".write": true
             },
-            "avatarId": { ".validate": "newData.isString()" },
-            "profileURL": { ".validate": "newData.isString()" },
-            "joinedAt": { ".validate": "newData.isString()" },
+
+            "avatarId": {
+              ".read": true,
+              ".write": true
+            },
+
+            "profileURL": {
+              ".read": true,
+              ".write": true
+            },
+
+            "joinedAt": {
+              ".read": true,
+              ".write": true
+            },
+
             "isHost": {
-              ".validate": "newData.isBoolean() && auth.uid == root.child('lobbies/' + $lobbyCode + '/hostUid').val()"
+              ".read": true,
+              ".write": true
             },
+
             "score": {
-              ".validate": "newData.isNumber() && newData.val() >= 0"
+              ".read": true,
+              ".write": true
             },
-            "status": { ".validate": "newData.isString()" },
-            "lastSeen": { ".validate": "newData.isString()" }
+
+            "status": {
+              ".read": true,
+              ".write": true
+            },
+
+            "lastSeen": {
+              ".read": true,
+              ".write": true
+            }
           }
         },
 
         "gameState": {
-          ".read": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()",
-          ".write": "auth != null && auth.uid == root.child('lobbies/' + $lobbyCode + '/hostUid').val()",
+          ".read": true,
+          ".write": true,
 
           "currentRound": {
-            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 10"
+            ".read": true,
+            ".write": true
           },
+
           "phase": {
-            ".validate": "newData.isString() && newData.val().matches(/^(submission|voting|results|game_over)$/)"
+            ".read": true,
+            ".write": true
           },
-          "phaseStartTime": { ".validate": "newData.isString()" },
-          "currentSituation": { ".validate": "newData.isString()" },
+
+          "phaseStartTime": {
+            ".read": true,
+            ".write": true
+          },
+
+          "currentSituation": {
+            ".read": true,
+            ".write": true
+          },
 
           "submissions": {
+            ".read": true,
+            ".write": true,
             "$submissionPlayerUid": {
-              ".write": "auth != null && auth.uid == $submissionPlayerUid && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists() && root.child('lobbies/' + $lobbyCode + '/gameState/phase').val() == 'submission' && !data.exists()",
-              "cardId": { ".validate": "newData.isString()" },
-              "caption": {
-                ".validate": "newData.isString() || newData.val() == null"
+              ".read": true,
+              ".write": true,
+
+              "cardId": {
+                ".read": true,
+                ".write": true
               },
-              "submittedAt": { ".validate": "newData.isString()" }
+
+              "caption": {
+                ".read": true,
+                ".write": true
+              },
+
+              "submittedAt": {
+                ".read": true,
+                ".write": true
+              }
             }
           },
 
           "votes": {
+            ".read": true,
+            ".write": true,
             "$voterUid": {
-              ".write": "auth != null && auth.uid == $voterUid && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists() && root.child('lobbies/' + $lobbyCode + '/gameState/phase').val() == 'voting' && !data.exists()",
-              ".validate": "newData.isString() && newData.val() != $voterUid && root.child('lobbies/' + $lobbyCode + '/gameState/submissions/' + newData.val()).exists()"
+              ".read": true,
+              ".write": true
             }
           },
 
           "roundResults": {
-            ".write": "auth != null && auth.uid == root.child('lobbies/' + $lobbyCode + '/hostUid').val()",
-            "winner": { ".validate": "newData.isString()" },
-            "votes": { ".validate": "newData.isNumber() || newData.isMap()" },
+            ".read": true,
+            ".write": true,
+
+            "winner": {
+              ".read": true,
+              ".write": true
+            },
+
+            "votes": {
+              ".read": true,
+              ".write": true
+            },
+
             "winningSubmission": {
-              "cardId": { ".validate": "newData.isString()" },
+              ".read": true,
+              ".write": true,
+              "cardId": {
+                ".read": true,
+                ".write": true
+              },
+
               "caption": {
-                ".validate": "newData.isString() || newData.val() == null"
+                ".read": true,
+                ".write": true
               }
             }
           }
@@ -111,20 +209,37 @@
 
         "chat": {
           ".indexOn": ["timestamp"],
-          ".read": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()",
+          ".read": true,
+          ".write": true,
+
           "$messageId": {
-            ".write": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists() && newData.child('playerId').val() == auth.uid",
+            ".read": true,
+            ".write": true,
+
             "playerId": {
-              ".validate": "newData.isString() && newData.val() == auth.uid"
+              ".read": true,
+              ".write": true
             },
+
             "playerName": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+              ".read": true,
+              ".write": true
             },
+
             "message": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+              ".read": true,
+              ".write": true
             },
-            "timestamp": { ".validate": "newData.isString()" },
-            "type": { ".validate": "newData.isString()" }
+
+            "timestamp": {
+              ".read": true,
+              ".write": true
+            },
+
+            "type": {
+              ".read": true,
+              ".write": true
+            }
           }
         }
       }
@@ -132,23 +247,99 @@
 
     "playerSessions": {
       ".indexOn": ["lastActivity", "connectionStatus"],
+      ".read": true,
+      ".write": true,
+
       "$playerUid": {
-        ".read": "auth != null && auth.uid == $playerUid",
-        ".write": "auth != null && auth.uid == $playerUid",
+        ".read": true,
+        ".write": true,
+
         "currentLobby": {
-          ".validate": "newData.isString() || newData.val() == null"
+          ".read": true,
+          ".write": true
         },
-        "lastActivity": { ".validate": "newData.isString()" },
+
+        "lastActivity": {
+          ".read": true,
+          ".write": true
+        },
+
         "connectionStatus": {
-          ".validate": "newData.isString() && newData.val().matches(/^(online|offline)$/)"
+          ".read": true,
+          ".write": true
         }
       }
     },
 
     "rateLimits": {
+      ".read": true,
+      ".write": true,
       "$userId": {
-        ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId"
+        ".read": true,
+        ".write": true,
+
+        "lobbyCreation": {
+          ".indexOn": ["lastCreated", "count"],
+          ".read": true,
+          ".write": true,
+
+          "count": {
+            ".read": true,
+            ".write": true
+          },
+
+          "lastCreated": {
+            ".read": true,
+            ".write": true
+          },
+
+          "windowStart": {
+            ".read": true,
+            ".write": true
+          }
+        },
+
+        "chatMessages": {
+          ".indexOn": ["lastMessage", "count"],
+          ".read": true,
+          ".write": true,
+
+          "count": {
+            ".read": true,
+            ".write": true
+          },
+
+          "lastMessage": {
+            ".read": true,
+            ".write": true
+          },
+
+          "windowStart": {
+            ".read": true,
+            ".write": true
+          }
+        },
+
+        "settingsUpdates": {
+          ".indexOn": ["lastUpdate", "count"],
+          ".read": true,
+          ".write": true,
+
+          "count": {
+            ".read": true,
+            ".write": true
+          },
+
+          "lastUpdate": {
+            ".read": true,
+            ".write": true
+          },
+
+          "windowStart": {
+            ".read": true,
+            ".write": true
+          }
+        }
       }
     }
   }

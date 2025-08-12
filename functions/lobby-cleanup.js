@@ -66,7 +66,7 @@ export const cleanupLobbies = functions.pubsub
           const playerLastSeenTimes = Object.values(lobby.players).map(
             (player) => {
               return new Date(player.lastSeen || player.joinedAt).getTime();
-            },
+            }
           );
 
           const mostRecentActivity = Math.max(...playerLastSeenTimes);
@@ -83,7 +83,7 @@ export const cleanupLobbies = functions.pubsub
       if (Object.keys(updates).length > 0) {
         await rtdb.ref().update(updates);
         console.log(
-          `Cleanup completed: ${emptyCount} empty, ${abandonedCount} abandoned lobbies removed`,
+          `Cleanup completed: ${emptyCount} empty, ${abandonedCount} abandoned lobbies removed`
         );
       } else {
         console.log("No lobbies needed cleanup");
@@ -188,7 +188,7 @@ export const onLobbyDeleted = functions.database
       if (Object.keys(updates).length > 0) {
         await rtdb.ref().update(updates);
         console.log(
-          `Cleaned up ${Object.keys(updates).length} related records for lobby ${lobbyCode}`,
+          `Cleaned up ${Object.keys(updates).length} related records for lobby ${lobbyCode}`
         );
       }
 
@@ -196,7 +196,7 @@ export const onLobbyDeleted = functions.database
     } catch (error) {
       console.error(
         `Failed to cleanup related data for lobby ${lobbyCode}:`,
-        error,
+        error
       );
       throw error;
     }
@@ -210,7 +210,7 @@ export const manualCleanup = functions.https.onCall(async (data, context) => {
   if (!context.auth || !context.auth.token.admin) {
     throw new functions.https.HttpsError(
       "permission-denied",
-      "Only admins can trigger manual cleanup",
+      "Only admins can trigger manual cleanup"
     );
   }
 
@@ -226,7 +226,7 @@ export const manualCleanup = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError(
       "internal",
       "Manual cleanup failed",
-      error.message,
+      error.message
     );
   }
 });
@@ -253,17 +253,17 @@ export const getCleanupStats = functions.https.onCall(async () => {
       totalRuns: stats.length,
       totalEmptyLobbiesRemoved: stats.reduce(
         (sum, stat) => sum + (stat.emptyLobbiesRemoved || 0),
-        0,
+        0
       ),
       totalAbandonedLobbiesRemoved: stats.reduce(
         (sum, stat) => sum + (stat.abandonedLobbiesRemoved || 0),
-        0,
+        0
       ),
       lastRunTime: Math.max(...stats.map((stat) => stat.timestamp)),
       averageLobbiesProcessed:
         stats.reduce(
           (sum, stat) => sum + (stat.totalLobbiesProcessed || 0),
-          0,
+          0
         ) / stats.length,
     };
 
@@ -273,7 +273,7 @@ export const getCleanupStats = functions.https.onCall(async () => {
     throw new functions.https.HttpsError(
       "internal",
       "Failed to get cleanup stats",
-      error.message,
+      error.message
     );
   }
 });
@@ -311,7 +311,7 @@ export const monitorLobbyCreation = functions.database
 
         if (recentLobbies.length > maxLobbiesPerHour) {
           console.warn(
-            `User ${hostUid} exceeded lobby creation limit: ${recentLobbies.length} lobbies in last hour`,
+            `User ${hostUid} exceeded lobby creation limit: ${recentLobbies.length} lobbies in last hour`
           );
 
           // Log the abuse attempt

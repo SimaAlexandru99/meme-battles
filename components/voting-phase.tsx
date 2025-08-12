@@ -4,6 +4,12 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RiThumbUpLine, RiCheckLine } from "react-icons/ri";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -32,6 +38,7 @@ export function VotingPhase({
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(
     null
   );
+  const [showIntro, setShowIntro] = useState(true);
 
   // Convert submissions to array format for display
   const submissionArray = Object.entries(submissions).map(
@@ -70,6 +77,31 @@ export function VotingPhase({
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-6xl mx-auto px-4"
     >
+      {/* Center overlay intro for voting */}
+      <AnimatePresence>
+        {showIntro && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
+          >
+            <AlertDialog open={showIntro} onOpenChange={setShowIntro}>
+              <AlertDialogContent className="bg-slate-900/90 border border-slate-700 w-[90vw] max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-white font-bangers text-2xl tracking-wide text-center">
+                    Vote for the Best Meme!
+                  </AlertDialogTitle>
+                </AlertDialogHeader>
+                <div className="p-4 text-center text-purple-200/80 font-bangers tracking-wide">
+                  Click a meme card to cast your vote.
+                </div>
+                <div className="pb-4" />
+              </AlertDialogContent>
+            </AlertDialog>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="text-center mb-8">
         <motion.h2

@@ -380,19 +380,8 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     [addBot]
   );
 
-  // Handle game state redirects
-  React.useEffect(() => {
-    if (lobby?.status !== "started") {
-      if (lobby?.status === "ended") {
-        router.push("/");
-      }
-    } else {
-      // Add a small delay to show the final transition state
-      setTimeout(() => {
-        router.push(`/game/${lobbyCode}/play`);
-      }, 1000);
-    }
-  }, [lobby?.status, lobbyCode, router]);
+  // Navigation to gameplay is handled centrally by useLobbyGameTransition
+  // Keep only local cleanup behavior here
 
   // Clean up transition state when lobby status changes
   React.useEffect(() => {
@@ -744,7 +733,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         <Button
                           onClick={handleStartGame}
                           disabled={
-                            Object.keys(lobby.players).length < 2 ||
+                            Object.keys(lobby.players).length < 3 ||
                             isStarting ||
                             showTransitionOverlay
                           }

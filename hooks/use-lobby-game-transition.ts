@@ -38,10 +38,8 @@ export function useLobbyGameTransition(
       },
       async () => {
         try {
-          // Start the game in the lobby
+          // Start the game in the lobby; visual cues are handled by the caller
           await startLobbyGame();
-
-          toast.success("Game started! Preparing transition...");
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Failed to start game";
@@ -65,7 +63,11 @@ export function useLobbyGameTransition(
 
   return {
     startGame,
-    isStarting: lobby?.status === "starting",
+    // Consider the game as "starting" during the server-side transition phase
+    isStarting:
+      (typeof (lobby as LobbyData)?.gameState === "object" &&
+        (lobby as LobbyData)?.gameState?.phase === "waiting") ||
+      false,
     error: null,
     clearError: () => {},
   };

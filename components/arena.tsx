@@ -18,6 +18,7 @@ import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
+import { cn } from "@/lib/utils";
 
 interface ArenaProps {
   lobbyCode: string;
@@ -338,9 +339,23 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               </div>
               <div className="flex items-center gap-2">
                 <RiTimeLine className="w-5 h-5 text-purple-400" />
-                <span className="text-white font-bangers tracking-wide">
-                  {gameState.timeLeft || 60}s
-                </span>
+                {(() => {
+                  const timeLeftValue =
+                    typeof gameState.timeLeft === "number"
+                      ? gameState.timeLeft
+                      : 0;
+                  const isCritical = timeLeftValue <= 15;
+                  return (
+                    <span
+                      className={cn(
+                        "font-bangers tracking-wide",
+                        isCritical ? "text-red-400 animate-pulse" : "text-white"
+                      )}
+                    >
+                      {timeLeftValue}s
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             {/* Lobby Code */}

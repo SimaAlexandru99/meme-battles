@@ -16,7 +16,6 @@ export default async function GameLobbyPage({ params }: GameLobbyPageProps) {
     redirect("/");
   }
 
-  // Await the params to get the code
   const { code } = await params;
 
   // Validate lobby code format (5 characters, alphanumeric)

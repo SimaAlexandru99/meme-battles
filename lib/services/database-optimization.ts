@@ -15,9 +15,9 @@ import {
   limitToLast,
   startAt,
   endAt,
-  DatabaseReference,
   Unsubscribe,
   DataSnapshot,
+  serverTimestamp,
 } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 
@@ -80,7 +80,7 @@ export class DatabaseOptimizationService {
       // Note: This should be called before any other database operations
       // In a real implementation, this would be configured in firebase/client.ts
       console.log(
-        "Offline persistence should be enabled in Firebase configuration",
+        "Offline persistence should be enabled in Firebase configuration"
       );
     } catch (error) {
       console.warn("Failed to enable offline persistence:", error);
@@ -95,7 +95,7 @@ export class DatabaseOptimizationService {
       () => {
         this.cleanupExpiredCache();
       },
-      5 * 60 * 1000,
+      5 * 60 * 1000
     ); // Clean up every 5 minutes
   }
 
@@ -126,7 +126,7 @@ export class DatabaseOptimizationService {
    */
   async getCachedData<T>(
     path: string,
-    ttl: number = 30000, // 30 seconds default TTL
+    ttl: number = 30000 // 30 seconds default TTL
   ): Promise<T | null> {
     const cacheKey = path;
     const cached = this.cache.get(cacheKey);
@@ -244,7 +244,7 @@ export class DatabaseOptimizationService {
    */
   private async retryFailedUpdates(
     updates: Record<string, unknown>,
-    attempt: number = 1,
+    attempt: number = 1
   ): Promise<void> {
     if (attempt > this.config.retryAttempts) {
       console.error("Max retry attempts reached for delta updates");
@@ -274,7 +274,7 @@ export class DatabaseOptimizationService {
       useCache?: boolean;
       cacheTtl?: number;
       throttleMs?: number;
-    } = {},
+    } = {}
   ): Unsubscribe {
     const { useCache = true, cacheTtl = 30000, throttleMs = 100 } = options;
 
@@ -300,7 +300,7 @@ export class DatabaseOptimizationService {
             callback(data);
             throttleTimeout = null;
           },
-          throttleMs - (now - lastCallTime),
+          throttleMs - (now - lastCallTime)
         );
       }
     };
@@ -333,7 +333,7 @@ export class DatabaseOptimizationService {
             throttledCallback(cached.data as T);
           }
         }
-      },
+      }
     );
 
     // Store listener for cleanup
@@ -358,7 +358,7 @@ export class DatabaseOptimizationService {
       limit?: number;
       startAfter?: string;
       orderBy?: "createdAt" | "updatedAt";
-    } = {},
+    } = {}
   ): Promise<unknown[]> {
     const { status, limit = 20, startAfter, orderBy = "createdAt" } = options;
 
@@ -366,7 +366,7 @@ export class DatabaseOptimizationService {
       let dbQuery = query(
         ref(rtdb, "lobbies"),
         orderByChild(orderBy),
-        limitToLast(limit),
+        limitToLast(limit)
       );
 
       // Add status filter if specified
@@ -376,7 +376,7 @@ export class DatabaseOptimizationService {
           orderByChild("status"),
           startAt(status),
           endAt(status),
-          limitToLast(limit),
+          limitToLast(limit)
         );
       }
 
@@ -470,7 +470,7 @@ export class DatabasePathOptimizer {
    */
   static createDeltaUpdatePaths(
     basePath: string,
-    updates: Record<string, unknown>,
+    updates: Record<string, unknown>
   ): Record<string, unknown> {
     const deltaPaths: Record<string, unknown> = {};
 
@@ -478,8 +478,13 @@ export class DatabasePathOptimizer {
       deltaPaths[`${basePath}/${field}`] = value;
     });
 
-    // Always update the parent's updatedAt timestamp
-    deltaPaths[`${basePath}/updatedAt`] = new Date().toISOString();
+    // Always update the parent's updatedAt timestamp (server time)
+    try {
+      deltaPaths[`${basePath}/updatedAt`] = serverTimestamp();
+    } catch {
+      // Fallback: leave as-is if serverTimestamp is unavailable in this context
+      deltaPaths[`${basePath}/updatedAt`] = Date.now();
+    }
 
     return deltaPaths;
   }

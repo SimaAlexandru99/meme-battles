@@ -215,7 +215,9 @@ export class AIBotService {
       },
       async () => {
         try {
-          const { ref, set } = await import("firebase/database");
+          const { ref, set, serverTimestamp } = await import(
+            "firebase/database"
+          );
           const { rtdb } = await import("@/firebase/client");
 
           // Save the submission to the game state
@@ -223,14 +225,10 @@ export class AIBotService {
           await set(ref(rtdb, submissionPath), {
             cardId: submission.cardId,
             cardName: `AI Bot Submission`,
-            submittedAt: submission.submittedAt,
+            submittedAt: serverTimestamp(),
             reasoning: submission.reasoning,
             confidence: submission.confidence,
           });
-
-          // Update bot player status
-          const playerStatusPath = `lobbies/${lobbyCode}/players/${botId}/status`;
-          await set(ref(rtdb, playerStatusPath), "submitted");
         } catch (error) {
           console.error(`Error saving bot submission for ${botId}:`, error);
           throw error;

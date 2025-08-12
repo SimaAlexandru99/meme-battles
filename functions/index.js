@@ -14,6 +14,11 @@ import {
   getCleanupStats,
   monitorLobbyCreation,
 } from "./lobby-cleanup.js";
+import {
+  onSubmissionCreated,
+  onVoteCreated,
+  syncGameState,
+} from "./game-progression.js";
 
 // Export all functions
 export {
@@ -23,4 +28,7 @@ export {
   manualCleanup,
   getCleanupStats,
   monitorLobbyCreation,
+  onSubmissionCreated,
+  onVoteCreated,
+  syncGameState,
 };

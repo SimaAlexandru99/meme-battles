@@ -227,7 +227,7 @@ const Header = memo(function Header({
 
   const handleSignIn = () => {
     // Navigate to sign in page or show sign in modal
-    window.location.href = "/auth/signin";
+    window.location.href = "/sign-in";
   };
 
   const isAnonymous = initialUserData?.isAnonymous ?? false;

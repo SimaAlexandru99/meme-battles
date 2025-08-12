@@ -1,11 +1,13 @@
 "use server";
 
 import { auth, db } from "@/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 // Import types from global definitions
 import * as Sentry from "@sentry/nextjs";
 import { cookies } from "next/headers";
 import { getRandomAvatar } from "@/lib/utils";
+import { convertFirestoreData } from "@/lib/utils";
 
 // ============================================================================
 // CONSTANTS & CONFIGURATION
@@ -89,7 +91,7 @@ export async function setSessionCookie(idToken: string) {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -111,7 +113,7 @@ export async function signOut() {
         Sentry.captureException(error);
         throw error;
       }
-    },
+    }
   );
 }
 
@@ -158,8 +160,8 @@ export async function signUp(params: SignUpParams) {
           profileURL: randomAvatar.src,
           avatarId: randomAvatar.id,
           setupCompleted: false,
-          createdAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
+          createdAt: FieldValue.serverTimestamp(),
+          lastLoginAt: FieldValue.serverTimestamp(),
           xp: 0,
           plan: "free",
         });
@@ -189,7 +191,7 @@ export async function signUp(params: SignUpParams) {
           message: "Failed to create account. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -221,7 +223,7 @@ export async function signIn(params: SignInParams) {
 
         // Update last login timestamp
         await db.collection("users").doc(userRecord.uid).update({
-          lastLoginAt: new Date().toISOString(),
+          lastLoginAt: FieldValue.serverTimestamp(),
         });
 
         // Set session cookie for authenticated user
@@ -241,7 +243,7 @@ export async function signIn(params: SignInParams) {
           message: "Failed to log into account. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -292,8 +294,8 @@ export async function signInWithGoogle(idToken: string) {
               profileURL: decodedToken.picture || randomAvatar.src,
               avatarId: randomAvatar.id,
               setupCompleted: false,
-              createdAt: new Date().toISOString(),
-              lastLoginAt: new Date().toISOString(),
+              createdAt: FieldValue.serverTimestamp(),
+              lastLoginAt: FieldValue.serverTimestamp(),
               xp: 0,
               plan: "free",
             });
@@ -304,7 +306,7 @@ export async function signInWithGoogle(idToken: string) {
         // Update last login timestamp for existing users
         if (userRecord.exists) {
           await db.collection("users").doc(decodedToken.uid).update({
-            lastLoginAt: new Date().toISOString(),
+            lastLoginAt: FieldValue.serverTimestamp(),
           });
         }
 
@@ -325,7 +327,7 @@ export async function signInWithGoogle(idToken: string) {
           message: "Failed to sign in with Google. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -372,8 +374,8 @@ export async function signInWithGitHub(idToken: string) {
               profileURL: decodedToken.picture || randomAvatar.src,
               avatarId: randomAvatar.id,
               setupCompleted: false,
-              createdAt: new Date().toISOString(),
-              lastLoginAt: new Date().toISOString(),
+              createdAt: FieldValue.serverTimestamp(),
+              lastLoginAt: FieldValue.serverTimestamp(),
               xp: 0,
               plan: "free",
             });
@@ -384,7 +386,7 @@ export async function signInWithGitHub(idToken: string) {
         // Update last login timestamp for existing users
         if (userRecord.exists) {
           await db.collection("users").doc(decodedToken.uid).update({
-            lastLoginAt: new Date().toISOString(),
+            lastLoginAt: FieldValue.serverTimestamp(),
           });
         }
 
@@ -405,7 +407,7 @@ export async function signInWithGitHub(idToken: string) {
           message: "Failed to sign in with GitHub. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -455,8 +457,8 @@ export async function signInAsGuest(params: {
             profileURL: randomAvatar.src,
             avatarId: randomAvatar.id,
             setupCompleted: false,
-            createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString(),
+            createdAt: FieldValue.serverTimestamp(),
+            lastLoginAt: FieldValue.serverTimestamp(),
             xp: 0,
             plan: "free",
           });
@@ -465,7 +467,7 @@ export async function signInAsGuest(params: {
         } else {
           // Update last login timestamp for existing anonymous users
           await db.collection("users").doc(decodedToken.uid).update({
-            lastLoginAt: new Date().toISOString(),
+            lastLoginAt: FieldValue.serverTimestamp(),
           });
         }
 
@@ -497,7 +499,7 @@ export async function signInAsGuest(params: {
           message: "Failed to sign in as guest. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -533,7 +535,7 @@ export async function getCurrentUser(): Promise<User | null> {
         // Verify session cookie with Firebase Admin
         const decodedClaims = await auth.verifySessionCookie(
           sessionCookie,
-          true,
+          true
         );
 
         span.setAttribute("user.uid", decodedClaims.uid);
@@ -552,12 +554,15 @@ export async function getCurrentUser(): Promise<User | null> {
           id: userRecord.id,
         } as User;
 
-        // Cache the user
-        cacheUser(sessionCookie, user);
+        // Convert Firestore data to serializable format
+        const serializedUser = convertFirestoreData(user);
 
-        span.setAttribute("user.role", user.role);
-        span.setAttribute("user.provider", user.provider);
-        return user;
+        // Cache the user
+        cacheUser(sessionCookie, serializedUser);
+
+        span.setAttribute("user.role", serializedUser.role);
+        span.setAttribute("user.provider", serializedUser.provider);
+        return serializedUser;
       } catch (error) {
         Sentry.captureException(error);
         console.log("Session verification error:", error);
@@ -565,7 +570,7 @@ export async function getCurrentUser(): Promise<User | null> {
         // Invalid or expired session - return null
         return null;
       }
-    },
+    }
   );
 }
 
@@ -584,7 +589,7 @@ export async function isAuthenticated() {
       const isAuth = !!user;
       span.setAttribute("user.authenticated", isAuth);
       return isAuth;
-    },
+    }
   );
 }
 
@@ -614,7 +619,7 @@ export async function isAnonymousUser() {
       }
 
       return isAnonymous;
-    },
+    }
   );
 }
 
@@ -658,7 +663,7 @@ export async function isFirstTimeUser() {
       span.setAttribute("user.has_custom_avatar", hasCustomAvatar);
       span.setAttribute("user.setup_completed", user.setupCompleted ?? false);
       return isFirstTime;
-    },
+    }
   );
 }
 
@@ -689,7 +694,7 @@ export async function updateUserDisplayName(displayName: string) {
         // Update user's display name in database
         await db.collection("users").doc(user.id).update({
           name: displayName,
-          lastLoginAt: new Date().toISOString(),
+          lastLoginAt: FieldValue.serverTimestamp(),
         });
 
         // Clear cache for the current session
@@ -715,7 +720,7 @@ export async function updateUserDisplayName(displayName: string) {
           message: "Failed to update display name. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -744,7 +749,7 @@ export async function markUserSetupComplete() {
         // Update user's setup completion status
         await db.collection("users").doc(user.id).update({
           setupCompleted: true,
-          lastLoginAt: new Date().toISOString(),
+          lastLoginAt: FieldValue.serverTimestamp(),
         });
 
         // Clear cache for the current session
@@ -770,7 +775,7 @@ export async function markUserSetupComplete() {
           message: "Failed to mark setup complete. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -807,9 +812,9 @@ export async function updateUserProfile(updates: {
           name?: string;
           profileURL?: string;
           avatarId?: string;
-          lastLoginAt?: string;
+          lastLoginAt?: FirebaseFirestore.FieldValue;
         } = {
-          lastLoginAt: new Date().toISOString(),
+          lastLoginAt: FieldValue.serverTimestamp(),
         };
 
         if (updates.name) {
@@ -850,7 +855,7 @@ export async function updateUserProfile(updates: {
           message: "Failed to update profile. Please try again.",
         };
       }
-    },
+    }
   );
 }
 
@@ -906,7 +911,7 @@ export async function getUserActiveLobby(uid: string) {
 
           // Check if user is in the players array
           const isPlayer = players.some(
-            (player: { uid: string }) => player.uid === uid,
+            (player: { uid: string }) => player.uid === uid
           );
 
           if (isPlayer) {
@@ -955,6 +960,6 @@ export async function getUserActiveLobby(uid: string) {
         console.error("Error checking user active lobby:", error);
         return null;
       }
-    },
+    }
   );
 }

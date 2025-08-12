@@ -1,4 +1,14 @@
-import { ref, set, get, update, onValue, off, remove } from "firebase/database";
+import {
+  ref,
+  set,
+  get,
+  update,
+  onValue,
+  off,
+  remove,
+  onDisconnect,
+  serverTimestamp,
+} from "firebase/database";
 import { rtdb } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
 import { AVAILABLE_AI_PERSONALITIES } from "@/components/game-settings/types";
@@ -323,7 +333,7 @@ export class LobbyService {
             );
           }
 
-          const now = new Date().toISOString();
+          const now = serverTimestamp();
           const lobby: LobbyData = {
             code,
             hostUid: params.hostUid,
@@ -337,20 +347,36 @@ export class LobbyService {
                 displayName: params.hostDisplayName,
                 avatarId: params.hostAvatarId,
                 profileURL: params.hostProfileURL,
-                joinedAt: now,
+                joinedAt: now as unknown as string,
                 isHost: true,
                 score: 0,
                 status: "waiting" as PlayerStatus,
-                lastSeen: now,
+                lastSeen: now as unknown as string,
               },
             },
-            createdAt: now,
-            updatedAt: now,
+            createdAt: now as unknown as string,
+            updatedAt: now as unknown as string,
           };
 
-          // Replace the reserved placeholder with actual lobby data
+          // Replace the reserved placeholder with actual lobby data (with retries)
           const lobbyRef = ref(rtdb, `lobbies/${code}`);
           await set(lobbyRef, lobby);
+
+          // Verify replacement and retry if node still marked as reserved (handles race/lag)
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const verifySnap = await get(lobbyRef);
+            const verifyData = verifySnap.val();
+            if (
+              verifyData &&
+              !verifyData.reserved &&
+              verifyData.hostUid === params.hostUid
+            ) {
+              break;
+            }
+            // Attempt overwrite using update to ensure replacement
+            await update(ref(rtdb), { [`lobbies/${code}`]: lobby });
+            await new Promise((r) => setTimeout(r, 100));
+          }
 
           // Add breadcrumb for successful lobby creation
           Sentry.addBreadcrumb({
@@ -459,7 +485,7 @@ export class LobbyService {
             };
           }
 
-          const now = new Date().toISOString();
+          const now = serverTimestamp();
 
           // Add player to lobby
           const updates: Record<string, unknown> = {};
@@ -650,7 +676,7 @@ export class LobbyService {
               try {
                 const updates: Record<string, unknown> = {};
                 updates[`lobbies/${code}/settings`] = updatedSettings;
-                updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
+                updates[`lobbies/${code}/updatedAt`] = serverTimestamp();
 
                 await update(ref(rtdb), updates);
 
@@ -840,11 +866,11 @@ export class LobbyService {
             displayName: botDisplayName,
             avatarId: "ai-avatar",
             profileURL: "",
-            joinedAt: new Date().toISOString(),
+            joinedAt: serverTimestamp() as unknown as string,
             isHost: false,
             score: 0,
             status: "waiting",
-            lastSeen: new Date().toISOString(),
+            lastSeen: serverTimestamp() as unknown as string,
             isAI: true,
             aiPersonalityId: botConfig.personalityId,
             aiDifficulty: botConfig.difficulty,
@@ -859,7 +885,7 @@ export class LobbyService {
           // Update lobby with new bot
           const updates: Record<string, unknown> = {
             [`lobbies/${code}/players/${botId}`]: botPlayer,
-            [`lobbies/${code}/updatedAt`]: new Date().toISOString(),
+            [`lobbies/${code}/updatedAt`]: serverTimestamp(),
           };
 
           await update(ref(rtdb), updates);
@@ -1022,7 +1048,7 @@ export class LobbyService {
           // Remove player from lobby
           const updates: Record<string, unknown> = {};
           updates[`lobbies/${code}/players/${targetUid}`] = null;
-          updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
+          updates[`lobbies/${code}/updatedAt`] = serverTimestamp();
 
           await update(ref(rtdb), updates);
 
@@ -1138,7 +1164,7 @@ export class LobbyService {
             lobby.players[newHostUid].displayName;
           updates[`lobbies/${code}/players/${currentHostUid}/isHost`] = false;
           updates[`lobbies/${code}/players/${newHostUid}/isHost`] = true;
-          updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
+          updates[`lobbies/${code}/updatedAt`] = serverTimestamp();
 
           await update(ref(rtdb), updates);
 
@@ -1311,8 +1337,8 @@ export class LobbyService {
           const updates: Record<string, unknown> = {};
           updates[`lobbies/${code}/players/${playerUid}/status`] = status;
           updates[`lobbies/${code}/players/${playerUid}/lastSeen`] =
-            new Date().toISOString();
-          updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
+            serverTimestamp();
+          updates[`lobbies/${code}/updatedAt`] = serverTimestamp();
 
           await update(ref(rtdb), updates);
 
@@ -1639,7 +1665,7 @@ export class LobbyService {
             totalRounds: lobby.settings.rounds,
             timeLeft: lobby.settings.timeLimit,
             phase: "transition",
-            phaseStartTime: new Date().toISOString(),
+            phaseStartTime: serverTimestamp(),
             currentSituation,
             submissions: {},
             votes: {},
@@ -1657,7 +1683,7 @@ export class LobbyService {
               }));
           });
 
-          updates[`lobbies/${lobbyCode}/updatedAt`] = new Date().toISOString();
+          updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
 
           // Apply all updates atomically
           await update(ref(rtdb), updates);
@@ -1764,7 +1790,7 @@ export class LobbyService {
           const updates: Record<string, unknown> = {};
           updates[`lobbies/${lobbyCode}/gameState/phase`] = "submission";
           updates[`lobbies/${lobbyCode}/gameState/phaseStartTime`] =
-            new Date().toISOString();
+            serverTimestamp();
 
           await update(ref(rtdb), updates);
 
@@ -1991,6 +2017,64 @@ export class LobbyService {
     return () => {
       off(lobbyRef);
     };
+  }
+
+  /**
+   * Initialize presence tracking for a player within a lobby using Realtime DB onDisconnect
+   * - Marks player as waiting and updates lastSeen while connected
+   * - On disconnect, atomically marks the player as disconnected with lastSeen
+   * Returns an unsubscribe function to stop presence monitoring
+   */
+  initializePresence(lobbyCode: string, playerUid: string): () => void {
+    const connectedRef = ref(rtdb, ".info/connected");
+    const playerRef = ref(rtdb, `lobbies/${lobbyCode}/players/${playerUid}`);
+
+    onValue(
+      connectedRef,
+      async (snapshot) => {
+        try {
+          const isConnected = snapshot.val() === true;
+          const now = new Date().toISOString();
+
+          if (isConnected) {
+            // Ensure onDisconnect handler is registered first
+            try {
+              await onDisconnect(playerRef).update({
+                status: "disconnected",
+                lastSeen: now,
+              });
+            } catch (err) {
+              Sentry.captureException(err, {
+                tags: {
+                  operation: "presence_onDisconnect_register",
+                  lobbyCode,
+                },
+                extra: { playerUid },
+              });
+            }
+
+            // Mark as connected/waiting now
+            await update(playerRef, {
+              status: "waiting",
+              lastSeen: now,
+            });
+          }
+        } catch (error) {
+          Sentry.captureException(error, {
+            tags: { operation: "presence_update", lobbyCode },
+            extra: { playerUid },
+          });
+        }
+      },
+      (error) => {
+        Sentry.captureException(error, {
+          tags: { operation: "presence_listener", lobbyCode },
+          extra: { playerUid },
+        });
+      }
+    );
+
+    return () => off(connectedRef);
   }
 
   /**
