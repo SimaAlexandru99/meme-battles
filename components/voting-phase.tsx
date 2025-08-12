@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RiThumbUpLine, RiCheckLine } from "react-icons/ri";
+import { RiThumbUpLine, RiCheckLine, RiTimeLine } from "react-icons/ri";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -26,6 +26,9 @@ interface VotingPhaseProps {
   >;
   onVote: (submissionPlayerId: string) => void;
   hasVoted: boolean;
+  timeLeft: number;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function VotingPhase({
@@ -34,11 +37,13 @@ export function VotingPhase({
   submissions,
   onVote,
   hasVoted,
+  timeLeft,
+  isOpen,
+  onClose,
 }: VotingPhaseProps) {
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(
     null
   );
-  const [showIntro, setShowIntro] = useState(true);
 
   // Convert submissions to array format for display
   const submissionArray = Object.entries(submissions).map(
@@ -53,8 +58,6 @@ export function VotingPhase({
         url: `/memes/${submission.cardId}.jpg`,
         alt: `Meme card ${submission.cardId}`,
       },
-      votes: 0,
-      submittedAt: new Date(submission.submittedAt),
     })
   );
 
@@ -63,161 +66,113 @@ export function VotingPhase({
     (submission) => submission.playerId !== currentUser.id
   );
 
-  const handleVote = useCallback(() => {
-    if (!selectedSubmission || hasVoted) return;
+  const handleVote = useCallback((playerId: string) => {
+    if (hasVoted) return;
+    onVote(playerId);
+    setSelectedSubmission(playerId);
+    toast.success("Vote submitted!");
+    setTimeout(() => onClose(), 1500);
+  }, [hasVoted, onVote, onClose]);
 
-    onVote(selectedSubmission);
-    toast.success("Vote submitted successfully!");
-  }, [selectedSubmission, hasVoted, onVote]);
+  // Format timer
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="w-full max-w-6xl mx-auto px-4"
-    >
-      {/* Center overlay intro for voting */}
-      <AnimatePresence>
-        {showIntro && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
-          >
-            <AlertDialog open={showIntro} onOpenChange={setShowIntro}>
-              <AlertDialogContent className="bg-slate-900/90 border border-slate-700 w-[90vw] max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-white font-bangers text-2xl tracking-wide text-center">
-                    Vote for the Best Meme!
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-                <div className="p-4 text-center text-purple-200/80 font-bangers tracking-wide">
-                  Click a meme card to cast your vote.
-                </div>
-                <div className="pb-4" />
-              </AlertDialogContent>
-            </AlertDialog>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {/* Header */}
-      <div className="text-center mb-8">
-        <motion.h2
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-3xl font-bangers text-white tracking-wide mb-4"
-        >
-          Vote for the Best Meme!
-        </motion.h2>
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent className="bg-slate-800/95 backdrop-blur-sm border-slate-700/50 max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white font-bangers text-2xl tracking-wide text-center flex items-center justify-center gap-4">
+            <span>Vote for the Best Meme!</span>
+            <div className="flex items-center gap-2">
+              <RiTimeLine className={cn("w-5 h-5", timeLeft <= 10 ? "text-red-400" : "text-purple-400")} />
+              <span className={cn("font-bangers text-lg", timeLeft <= 10 ? "text-red-400 animate-pulse" : "text-white")}>
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+          </AlertDialogTitle>
+        </AlertDialogHeader>
+        
+        <div className="p-6">
+          {/* Status Badge */}
+          <div className="flex justify-center mb-6">
+            {hasVoted ? (
+              <Badge className="bg-green-600 text-white font-bangers text-lg px-4 py-2">
+                ✓ Vote Submitted
+              </Badge>
+            ) : (
+              <Badge className="bg-purple-600 text-white font-bangers text-lg px-4 py-2">
+                {votableSubmissions.length} Submissions to Vote On
+              </Badge>
+            )}
+          </div>
 
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <Badge
-            variant="secondary"
-            className="text-lg font-bangers tracking-wide bg-purple-600 text-white"
-          >
-            {votableSubmissions.length} Submissions
-          </Badge>
+          {/* Submissions Grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {votableSubmissions.map((submission, index) => (
+              <motion.div
+                key={submission.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="relative"
+              >
+                <Card
+                  className={cn(
+                    "cursor-pointer transition-all duration-200 hover:scale-105",
+                    "bg-slate-700/50 border-slate-600/50",
+                    selectedSubmission === submission.id && "ring-2 ring-purple-400 border-purple-400",
+                    hasVoted && selectedSubmission === submission.id && "ring-2 ring-green-400 border-green-400",
+                    hasVoted && selectedSubmission !== submission.id && "opacity-50"
+                  )}
+                  onClick={() => !hasVoted && handleVote(submission.playerId)}
+                >
+                  <CardContent className="p-4">
+                    <div className="aspect-square relative overflow-hidden rounded-lg mb-3">
+                      <Image
+                        src={submission.memeCard.url}
+                        alt={submission.memeCard.alt}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                    <p className="text-white font-bangers text-center text-lg tracking-wide">
+                      {submission.playerName}
+                    </p>
+                    
+                    {/* Vote Indicator */}
+                    {hasVoted && selectedSubmission === submission.id && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-2">
+                        <RiCheckLine className="w-4 h-4" />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
 
+          {/* Instructions */}
+          {!hasVoted && (
+            <p className="text-center text-purple-200/70 font-bangers text-sm mt-6">
+              Click on a meme to cast your vote!
+            </p>
+          )}
+
+          {/* Already Voted Message */}
           {hasVoted && (
-            <Badge className="bg-green-600 text-white font-bangers">
-              ✓ Voted
-            </Badge>
+            <div className="text-center mt-6">
+              <p className="text-green-400 font-bangers text-lg">
+                Thanks for voting! Waiting for others...
+              </p>
+            </div>
           )}
         </div>
-      </div>
-
-      {/* Submissions Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <AnimatePresence>
-          {votableSubmissions.map((submission, index) => (
-            <motion.div
-              key={submission.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="relative"
-            >
-              <Card
-                className={cn(
-                  "cursor-pointer transition-all duration-200 hover:scale-105",
-                  "bg-slate-800/50 backdrop-blur-sm border border-slate-700/50",
-                  "shadow-2xl shadow-purple-500/10",
-                  selectedSubmission === submission.id &&
-                    "ring-2 ring-purple-500 border-purple-500",
-                  hasVoted && "opacity-75 cursor-not-allowed"
-                )}
-                onClick={() => {
-                  if (!hasVoted) {
-                    setSelectedSubmission(submission.id);
-                  }
-                }}
-              >
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white font-bangers text-lg tracking-wide text-center">
-                    {submission.playerName}
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Meme Image */}
-                  <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-700/50">
-                    <Image
-                      src={submission.memeCard.url}
-                      alt={submission.memeCard.alt}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                  </div>
-
-                  {/* Vote Button */}
-                  {!hasVoted && (
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedSubmission(submission.id);
-                        handleVote();
-                      }}
-                      className={cn(
-                        "w-full font-bangers text-lg tracking-wide",
-                        "bg-purple-600 hover:bg-purple-700 text-white",
-                        "transition-all duration-200"
-                      )}
-                    >
-                      <RiThumbUpLine className="w-5 h-5 mr-2" />
-                      Vote
-                    </Button>
-                  )}
-
-                  {/* Voted Indicator */}
-                  {hasVoted && selectedSubmission === submission.id && (
-                    <div className="flex items-center justify-center gap-2 text-green-400 font-bangers">
-                      <RiCheckLine className="w-5 h-5" />
-                      Voted
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Instructions */}
-      {!hasVoted && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center mt-8"
-        >
-          <p className="text-purple-200/70 font-bangers text-lg tracking-wide">
-            Click on a meme to vote for it!
-          </p>
-        </motion.div>
-      )}
-    </motion.div>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

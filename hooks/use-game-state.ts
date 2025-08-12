@@ -135,6 +135,13 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
 
             const submissionPath = `lobbies/${lobbyCode}/gameState/submissions/${user.id}`;
             await set(ref(rtdb, submissionPath), submission);
+
+            // Update player status to "submitted"
+            const playerStatusPath = `lobbies/${lobbyCode}/players/${user.id}`;
+            await update(ref(rtdb, playerStatusPath), {
+              status: "submitted",
+              lastSeen: new Date().toISOString(),
+            });
           } catch (error) {
             handleError(error, "submit_card");
             throw error;
@@ -193,12 +200,48 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       async () => {
         try {
           const gameStatePath = `lobbies/${lobbyCode}/gameState`;
-          await update(ref(rtdb, gameStatePath), {
+          const updates: any = {
             phase: "submission",
             timeLeft: submissionDuration ?? 60,
             submissions: {},
             votes: {},
-          });
+          };
+
+          // Generate a new situation if one doesn't exist
+          if (!gameState.currentSituation) {
+            let newSituation: string;
+            try {
+              const response = await fetch("/api/situation", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                newSituation = data.situation || "When you're trying to be productive but your bed is calling your name";
+              } else {
+                throw new Error("Situation API failed");
+              }
+            } catch (error) {
+              // Fallback to a default situation if AI generation fails
+              const fallbackSituations = [
+                "When you realize you've been pronouncing a word wrong your entire life",
+                "When your phone battery dies right before you need to show someone a funny video",
+                "When you're trying to be productive but your bed is calling your name",
+                "When you finally understand a meme that's been popular for months",
+                "When you're pretending to listen but actually thinking about something else entirely"
+              ];
+              newSituation = fallbackSituations[Math.floor(Math.random() * fallbackSituations.length)];
+              Sentry.captureException(error, {
+                tags: { operation: "situation_generation", lobbyCode },
+              });
+            }
+            updates.currentSituation = newSituation;
+          }
+
+          await update(ref(rtdb, gameStatePath), updates);
         } catch (error) {
           handleError(error, "start_round");
           throw error;
@@ -225,10 +268,42 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           const nextRoundNumber = (gameState.roundNumber || 1) + 1;
           const gameStatePath = `lobbies/${lobbyCode}/gameState`;
 
+          // Generate a new situation for the next round
+          let newSituation: string;
+          try {
+            const response = await fetch("/api/situation", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              newSituation = data.situation || "When you're trying to be productive but your bed is calling your name";
+            } else {
+              throw new Error("Situation API failed");
+            }
+          } catch (error) {
+            // Fallback to a default situation if AI generation fails
+            const fallbackSituations = [
+              "When you realize you've been pronouncing a word wrong your entire life",
+              "When your phone battery dies right before you need to show someone a funny video",
+              "When you're trying to be productive but your bed is calling your name",
+              "When you finally understand a meme that's been popular for months",
+              "When you're pretending to listen but actually thinking about something else entirely"
+            ];
+            newSituation = fallbackSituations[Math.floor(Math.random() * fallbackSituations.length)];
+            Sentry.captureException(error, {
+              tags: { operation: "situation_generation", lobbyCode },
+            });
+          }
+
           await update(ref(rtdb, gameStatePath), {
             roundNumber: nextRoundNumber,
             phase: "countdown",
             timeLeft: 5, // 5 second countdown
+            currentSituation: newSituation,
             submissions: {},
             votes: {},
           });

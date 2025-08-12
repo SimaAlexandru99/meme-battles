@@ -1,10 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RiTimeLine, RiGamepadLine } from "react-icons/ri";
+import {
+  RiTimeLine,
+  RiGamepadLine,
+  RiChat3Line,
+  RiGroupLine,
+} from "react-icons/ri";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { MemeCardHand } from "./meme-card-hand";
 import { PlayersList } from "./players-panel";
@@ -323,22 +335,83 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   console.log("Player cards:", playerCards);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
-      {/* Top Bar */}
-      <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Fixed Top Bar */}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            {/* Game Info */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <RiGamepadLine className="w-5 h-5 text-purple-400" />
-                <span className="text-white font-bangers tracking-wide">
+            {/* Mobile Menu Buttons (Left) */}
+            <div className="flex items-center gap-2 lg:hidden">
+              {/* Chat Sheet Trigger */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-slate-700/50"
+                  >
+                    <RiChat3Line className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className="w-[350px] bg-slate-800 border-slate-700"
+                >
+                  <SheetHeader>
+                    <SheetTitle className="text-white font-bangers tracking-wide">
+                      Chat
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4 h-full">
+                    <ChatPanel
+                      messages={messages}
+                      newMessage={newMessage}
+                      onNewMessageChange={setNewMessage}
+                      onSendMessage={handleSendMessage}
+                      currentUser={currentUser}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              {/* Players Sheet Trigger */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-slate-700/50"
+                  >
+                    <RiGroupLine className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="w-[350px] bg-slate-800 border-slate-700"
+                >
+                  <SheetHeader>
+                    <SheetTitle className="text-white font-bangers tracking-wide">
+                      Players
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4 h-full">
+                    <PlayersList players={players as unknown as Player[]} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Game Info (Center on mobile, Left on desktop) */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <RiGamepadLine className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+                <span className="text-white font-bangers tracking-wide text-sm sm:text-base">
                   Round {gameState.roundNumber || 1}/
                   {gameState.totalRounds || 8}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <RiTimeLine className="w-5 h-5 text-purple-400" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <RiTimeLine className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
                 {(() => {
                   const timeLeftValue =
                     typeof gameState.timeLeft === "number"
@@ -348,7 +421,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                   return (
                     <span
                       className={cn(
-                        "font-bangers tracking-wide",
+                        "font-bangers tracking-wide text-sm sm:text-base",
                         isCritical ? "text-red-400 animate-pulse" : "text-white"
                       )}
                     >
@@ -358,12 +431,13 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                 })()}
               </div>
             </div>
-            {/* Lobby Code */}
-            <div className="flex items-center gap-2">
-              <span className="text-purple-200/70 font-bangers tracking-wide">
+
+            {/* Lobby Code (Right) */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              <span className="text-purple-200/70 font-bangers tracking-wide text-sm sm:text-base">
                 Code:
               </span>
-              <Badge className="bg-purple-600 text-white font-bangers">
+              <Badge className="bg-purple-600 text-white font-bangers text-sm">
                 {lobbyCode}
               </Badge>
             </div>
@@ -371,10 +445,10 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         </div>
       </div>
 
-      {/* Main Game Area */}
-      <div className="flex-1 grid grid-cols-[300px_1fr_300px] grid-rows-[1fr_auto] h-full min-h-0">
-        {/* Chat Panel (Left) */}
-        <div className="col-start-1 row-span-2 flex flex-col min-h-0 bg-slate-800/30 border-r border-slate-700/40">
+      {/* Responsive Main Game Area */}
+      <div className="pt-20 h-screen flex gap-4 p-4 min-h-0">
+        {/* Desktop: Chat Panel (Left) - Hidden on mobile */}
+        <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4">
           <ChatPanel
             messages={messages}
             newMessage={newMessage}
@@ -384,46 +458,74 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
           />
         </div>
 
-        {/* Situation (Center, Vertically and Horizontally Centered) */}
-        <div className="col-start-2 row-start-1 flex items-center justify-center min-h-0">
-          <div className="flex flex-col items-center justify-center">
-            <h2 className="text-white font-bangers text-2xl mb-2 text-center">
-              Current Situation:
-            </h2>
-            <p className="text-purple-200 font-bangers text-xl text-center max-w-2xl break-words">
-              {gameState.currentSituation}
-            </p>
+        {/* Center Column - Situation + Cards (Full width on mobile) */}
+        <div className="flex-1 flex flex-col justify-between min-h-0">
+          {/* Situation (Top Center) - Responsive text sizes */}
+          <div className="flex-1 flex items-center justify-center text-center px-4">
+            <div>
+              <h2 className="text-white font-bangers text-xl sm:text-2xl mb-2">
+                Current Situation:
+              </h2>
+              <p className="text-purple-200 font-bangers text-lg sm:text-xl max-w-2xl break-words">
+                {gameState.currentSituation}
+              </p>
+            </div>
+          </div>
+
+          {/* Cards + Submit Button (Bottom Center) - Mobile optimized */}
+          <div className="flex flex-col items-center gap-3 sm:gap-4 pb-4 px-2 lg:px-4">
+            <div className="w-full max-w-full overflow-hidden">
+              <MemeCardHand
+                cards={playerCards}
+                selectedCard={selectedCard}
+                onSelectCard={selectCard}
+                hasSubmitted={hasSubmitted}
+              />
+            </div>
+
+            {/* Submit Button - Responsive size */}
+            {!hasSubmitted && (
+              <Button
+                onClick={handleSubmitCard}
+                disabled={!selectedCard}
+                className={cn(
+                  "bg-purple-600 hover:bg-purple-700 text-white font-bangers text-base sm:text-lg px-6 sm:px-8 py-2 sm:py-3 transition-all",
+                  !selectedCard && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {selectedCard ? "Submit Card" : "Select a Card First"}
+              </Button>
+            )}
+
+            {/* Submitted Indicator - Responsive padding */}
+            {hasSubmitted && (
+              <div className="inline-flex items-center gap-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg font-bangers text-sm sm:text-base">
+                ✓ Card Submitted
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Players List (Right) */}
-        <div className="col-start-3 row-span-2 flex flex-col min-h-0 bg-slate-800/30 border-l border-slate-700/40">
-          {gameState.phase === "voting" ? (
-            <VotingPhase
-              lobbyCode={lobbyCode}
-              currentUser={currentUser}
-              players={players}
-              submissions={gameState.submissions}
-              onVote={handleVote}
-              hasVoted={hasVoted}
-            />
-          ) : (
-            <PlayersList players={players as unknown as Player[]} />
-          )}
-        </div>
-
-        {/* Cards (Bottom Center) */}
-        <div className="col-start-2 row-start-2 flex justify-center items-end pb-4">
-          <MemeCardHand
-            cards={playerCards}
-            selectedCard={selectedCard}
-            onSelectCard={selectCard}
-            onSubmitCard={handleSubmitCard}
-            isSubmitting={false}
-            hasSubmitted={hasSubmitted}
-          />
+        {/* Desktop: Players List (Right) - Hidden on mobile */}
+        <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4">
+          <PlayersList players={players as unknown as Player[]} />
         </div>
       </div>
+
+      {/* Voting Dialog - Show when in voting phase */}
+      {gameState.phase === "voting" && (
+        <VotingPhase
+          lobbyCode={lobbyCode}
+          currentUser={currentUser}
+          players={players}
+          submissions={gameState.submissions}
+          onVote={handleVote}
+          hasVoted={hasVoted}
+          timeLeft={gameState.timeLeft}
+          isOpen={true}
+          onClose={() => {}} // Cannot close during voting
+        />
+      )}
     </div>
   );
 }

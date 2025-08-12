@@ -229,6 +229,14 @@ export class AIBotService {
             reasoning: submission.reasoning,
             confidence: submission.confidence,
           });
+
+          // Update bot player status to "submitted"
+          const { update } = await import("firebase/database");
+          const botStatusPath = `lobbies/${lobbyCode}/players/${botId}`;
+          await update(ref(rtdb, botStatusPath), {
+            status: "submitted",
+            lastSeen: new Date().toISOString(),
+          });
         } catch (error) {
           console.error(`Error saving bot submission for ${botId}:`, error);
           throw error;

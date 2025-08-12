@@ -4,15 +4,11 @@ import { useCallback, useState } from "react";
 import { MemeCard, CardTheme } from "@/components/meme-card";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { RiSendPlaneFill } from "react-icons/ri";
 
 interface MemeCardHandProps {
   cards: MemeCard[];
   selectedCard: MemeCard | null;
   onSelectCard: (card: MemeCard) => void;
-  onSubmitCard: () => void;
-  isSubmitting: boolean;
   hasSubmitted: boolean;
   className?: string;
   theme?: CardTheme;
@@ -23,8 +19,6 @@ export function MemeCardHand({
   cards,
   selectedCard,
   onSelectCard,
-  onSubmitCard,
-  isSubmitting,
   hasSubmitted,
   className,
   theme = "hearthstone",
@@ -48,7 +42,7 @@ export function MemeCardHand({
       if (randomValue < 0.35) return "rare"; // 20%
       return "common"; // 65%
     },
-    [showRarity],
+    [showRarity]
   );
 
   const handleCardSelect = useCallback(
@@ -56,7 +50,7 @@ export function MemeCardHand({
       if (hasSubmitted) return;
       onSelectCard(card);
     },
-    [hasSubmitted, onSelectCard],
+    [hasSubmitted, onSelectCard]
   );
 
   const handleCardHover = useCallback((cardId: string | null) => {
@@ -65,7 +59,7 @@ export function MemeCardHand({
 
   if (cards.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-10">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-slate-400/30 rounded border-dashed"></div>
@@ -84,7 +78,7 @@ export function MemeCardHand({
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         <ScrollArea className="w-full">
-          <div className="flex gap-3 justify-center p-6">
+          <div className="flex gap-3 justify-center p-16">
             {cards.map((card) => {
               const isSelected = selectedCard?.id === card.id;
               const isHovered = hoveredCard === card.id;
@@ -97,7 +91,7 @@ export function MemeCardHand({
                     "relative transition-all duration-300 ease-out",
                     isHovered && "scale-110 z-50",
                     isSelected && "scale-110 z-40",
-                    hasSubmitted && "opacity-50 cursor-not-allowed",
+                    hasSubmitted && "opacity-50 cursor-not-allowed"
                   )}
                   onMouseEnter={() => handleCardHover(card.id)}
                   onMouseLeave={() => handleCardHover(null)}
@@ -117,10 +111,24 @@ export function MemeCardHand({
         </ScrollArea>
       </div>
 
-      {/* Mobile Layout */}
-      <div className="lg:hidden">
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 p-4">
+      {/* Mobile Layout - Centered and visible */}
+      <div className="lg:hidden w-full">
+        {/* Mobile Cards Horizontal Scroll */}
+        <div 
+          className="w-full overflow-x-auto overflow-y-hidden" 
+          style={{ 
+            scrollbarWidth: 'none', /* Firefox */
+            msOverflowStyle: 'none', /* Internet Explorer 10+ */
+          }}
+        >
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              .overflow-x-auto::-webkit-scrollbar {
+                display: none; /* Safari and Chrome */
+              }
+            `
+          }} />
+          <div className="flex items-center justify-center gap-4 px-8 py-4 min-w-full" style={{ minWidth: `${Math.max(cards.length * 100, 320)}px` }}>
             {cards.map((card) => {
               const isSelected = selectedCard?.id === card.id;
               const rarity = getCardRarity(card.id);
@@ -129,10 +137,19 @@ export function MemeCardHand({
                 <div
                   key={card.id}
                   className={cn(
-                    "relative transition-all duration-200",
-                    isSelected && "scale-105",
-                    hasSubmitted && "opacity-50",
+                    "relative transition-all duration-300 flex-shrink-0",
+                    "w-20 h-28", // Slightly larger for better visibility
+                    isSelected && "z-10",
+                    hasSubmitted && "opacity-50 cursor-not-allowed"
                   )}
+                  style={{
+                    transform: isSelected ? 'scale(1.15) translateY(-4px)' : 'scale(1)',
+                    boxShadow: isSelected 
+                      ? '0 8px 25px rgba(168, 85, 247, 0.4), 0 0 0 3px rgb(168 85 247 / 0.8)' 
+                      : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    borderRadius: '12px',
+                    filter: isSelected ? 'brightness(1.1)' : 'brightness(1)',
+                  }}
                   onClick={() => handleCardSelect(card)}
                 >
                   <MemeCard
@@ -146,31 +163,20 @@ export function MemeCardHand({
               );
             })}
           </div>
-        </ScrollArea>
-      </div>
-
-      {/* Submit Button */}
-      {selectedCard && !hasSubmitted && (
-        <div className="text-center mt-6">
-          <Button
-            onClick={onSubmitCard}
-            disabled={isSubmitting}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg px-8 py-3"
-          >
-            <RiSendPlaneFill className="w-5 h-5 mr-2" />
-            {isSubmitting ? "Submitting..." : "Submit Card"}
-          </Button>
         </div>
-      )}
 
-      {/* Submitted Indicator */}
-      {hasSubmitted && (
-        <div className="text-center mt-6">
-          <div className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-bangers">
-            ✓ Card Submitted
+        {/* Mobile Selected Card Indicator */}
+        {selectedCard && (
+          <div className="text-center px-4 mt-2">
+            <div className="inline-flex items-center gap-2 bg-purple-600/20 border border-purple-400/30 rounded-lg px-3 py-1">
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+              <p className="text-purple-200 text-sm font-bangers">
+                Selected: {selectedCard.filename?.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '') || 'Card'}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
