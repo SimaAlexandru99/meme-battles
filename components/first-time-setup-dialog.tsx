@@ -97,7 +97,7 @@ export default function FirstTimeSetupDialog({
           span.setAttribute("user.username", username.trim());
           span.setAttribute("user.avatar", currentAvatar);
           span.setAttribute("setup.completed", true);
-        },
+        }
       );
 
       // Close dialog after successful update

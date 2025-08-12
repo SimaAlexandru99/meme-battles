@@ -119,6 +119,7 @@ describe("Lobby Validation", () => {
 
     it("should validate correct PlayerData", () => {
       const playerData: PlayerData = {
+        id: "player1",
         displayName: "Player1",
         avatarId: "doge-sunglasses",
         joinedAt: "2025-01-08T10:01:00.000Z",

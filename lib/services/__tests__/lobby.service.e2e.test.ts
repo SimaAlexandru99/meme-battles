@@ -107,6 +107,7 @@ describe("LobbyService - End-to-End Tests", () => {
         },
         players: {
           host123: {
+            id: "host123",
             displayName: "GameHost",
             avatarId: "doge-sunglasses",
             profileURL: "https://example.com/host.jpg",
@@ -136,6 +137,7 @@ describe("LobbyService - End-to-End Tests", () => {
         players: {
           ...existingLobby.players,
           player456: {
+            id: "player456",
             displayName: "NewPlayer",
             avatarId: "cat-happy",
             profileURL: "https://example.com/player.jpg",
@@ -208,6 +210,7 @@ describe("LobbyService - End-to-End Tests", () => {
         },
         players: {
           host123: {
+            id: "host123",
             displayName: "GameHost",
             avatarId: "doge-sunglasses",
             joinedAt: "2025-01-08T10:00:00.000Z",
@@ -233,6 +236,7 @@ describe("LobbyService - End-to-End Tests", () => {
                 Array.from({ length: i - 1 }, (_, j) => [
                   `player${j + 1}`,
                   {
+                    id: `player${j + 1}`,
                     displayName: `Player${j + 1}`,
                     avatarId: "default",
                     joinedAt: `2025-01-08T10:0${j + 1}:00.000Z`,
@@ -241,7 +245,7 @@ describe("LobbyService - End-to-End Tests", () => {
                     status: "waiting",
                     lastSeen: `2025-01-08T10:0${j + 1}:00.000Z`,
                   },
-                ]),
+                ])
               ),
             },
           }),
@@ -257,6 +261,7 @@ describe("LobbyService - End-to-End Tests", () => {
               Array.from({ length: i }, (_, j) => [
                 `player${j + 1}`,
                 {
+                  id: `player${j + 1}`,
                   displayName: `Player${j + 1}`,
                   avatarId: "default",
                   joinedAt: `2025-01-08T10:0${j + 1}:00.000Z`,
@@ -265,7 +270,7 @@ describe("LobbyService - End-to-End Tests", () => {
                   status: "waiting",
                   lastSeen: `2025-01-08T10:0${j + 1}:00.000Z`,
                 },
-              ]),
+              ])
             ),
           },
         };
@@ -290,6 +295,7 @@ describe("LobbyService - End-to-End Tests", () => {
         players: {
           ...baseLobby.players,
           player1: {
+            id: "player1",
             displayName: "Player1",
             avatarId: "default",
             joinedAt: "2025-01-08T10:01:00.000Z",
@@ -299,6 +305,7 @@ describe("LobbyService - End-to-End Tests", () => {
             lastSeen: "2025-01-08T10:01:00.000Z",
           },
           player2: {
+            id: "player2",
             displayName: "Player2",
             avatarId: "default",
             joinedAt: "2025-01-08T10:02:00.000Z",
@@ -308,6 +315,7 @@ describe("LobbyService - End-to-End Tests", () => {
             lastSeen: "2025-01-08T10:02:00.000Z",
           },
           player3: {
+            id: "player3",
             displayName: "Player3",
             avatarId: "default",
             joinedAt: "2025-01-08T10:03:00.000Z",
@@ -346,6 +354,7 @@ describe("LobbyService - End-to-End Tests", () => {
         },
         players: {
           host123: {
+            id: "host123",
             displayName: "GameHost",
             avatarId: "doge-sunglasses",
             joinedAt: "2025-01-08T10:00:00.000Z",
@@ -394,7 +403,7 @@ describe("LobbyService - End-to-End Tests", () => {
           timeLimit: 90,
           categories: ["general", "reaction", "wholesome"],
         },
-        "host123",
+        "host123"
       );
 
       // Fast-forward through debounce delay
@@ -425,7 +434,7 @@ describe("LobbyService - End-to-End Tests", () => {
       };
 
       await expect(
-        lobbyService.updateLobbySettings("ABC12", invalidSettings, "host123"),
+        lobbyService.updateLobbySettings("ABC12", invalidSettings, "host123")
       ).rejects.toMatchObject({
         type: "VALIDATION_ERROR",
         userMessage: expect.stringContaining("Invalid settings"),
@@ -449,7 +458,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "UNKNOWN_ERROR",
         retryable: true,
@@ -471,6 +480,7 @@ describe("LobbyService - End-to-End Tests", () => {
         },
         players: {
           host123: {
+            id: "host123",
             displayName: "Host",
             avatarId: "default",
             joinedAt: "2025-01-08T10:00:00.000Z",
@@ -496,6 +506,7 @@ describe("LobbyService - End-to-End Tests", () => {
         players: {
           ...lobbyData.players,
           player456: {
+            id: "player456",
             displayName: "Player",
             avatarId: "default",
             joinedAt: "2025-01-08T10:01:00.000Z",
@@ -531,7 +542,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "VALIDATION_ERROR",
         userMessage: expect.stringContaining("Invalid lobby code"),
@@ -550,7 +561,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "LOBBY_NOT_FOUND",
         userMessage: "Lobby not found. Please check the code.",
@@ -575,6 +586,7 @@ describe("LobbyService - End-to-End Tests", () => {
         },
         players: {
           host123: {
+            id: "host123",
             displayName: "Host",
             avatarId: "default",
             joinedAt: "2025-01-08T10:00:00.000Z",
@@ -598,7 +610,7 @@ describe("LobbyService - End-to-End Tests", () => {
 
       // Simulate 10 rapid player status updates
       const operations = Array.from({ length: 10 }, () =>
-        lobbyService.updatePlayerStatus("ABC12", "host123", "waiting"),
+        lobbyService.updatePlayerStatus("ABC12", "host123", "waiting")
       );
 
       const startTime = Date.now();
@@ -625,6 +637,7 @@ describe("LobbyService - End-to-End Tests", () => {
 
       for (let i = 0; i < maxPlayers; i++) {
         players[`player${i}`] = {
+          id: `player${i}`,
           displayName: `Player${i}`,
           avatarId: "default",
           joinedAt: `2025-01-08T10:0${i}:00.000Z`,
@@ -662,7 +675,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "newPlayer",
           displayName: "NewPlayer",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "LOBBY_FULL",
         userMessage: "This lobby is full. Try another one.",
@@ -684,7 +697,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "VALIDATION_ERROR",
         userMessage: expect.stringContaining("Lobby code is required"),
@@ -700,7 +713,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "LOBBY_NOT_FOUND",
         userMessage: "Lobby not found. Please check the code.",
@@ -720,6 +733,7 @@ describe("LobbyService - End-to-End Tests", () => {
         },
         players: {
           host123: {
+            id: "host123",
             displayName: "Host",
             avatarId: "default",
             joinedAt: "2025-01-08T10:00:00.000Z",
@@ -743,7 +757,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        }),
+        })
       ).rejects.toMatchObject({
         type: "LOBBY_ALREADY_STARTED",
         userMessage: "This game has already started. You cannot join now.",
@@ -759,17 +773,17 @@ describe("LobbyService - End-to-End Tests", () => {
       };
 
       const validation = lobbyService.isValidGameSettings(
-        invalidSettings as GameSettings,
+        invalidSettings as GameSettings
       );
 
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toHaveLength(3);
       expect(validation.errors).toContain("Rounds must be between 3 and 15");
       expect(validation.errors).toContain(
-        "Time limit must be between 30 and 120 seconds",
+        "Time limit must be between 30 and 120 seconds"
       );
       expect(validation.errors).toContain(
-        "At least one category must be selected",
+          "At least 1 category must be selected"
       );
 
       // Test boundary values

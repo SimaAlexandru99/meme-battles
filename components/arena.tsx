@@ -259,7 +259,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <GameTransition
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players}
+        players={players as unknown as PlayerData[]}
         onTransitionComplete={completeGameTransition}
       />
     );
@@ -270,7 +270,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <RoundCountdown
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players}
+        players={players as unknown as Player[]}
         onRoundStart={handleStartRound}
       />
     );
@@ -281,7 +281,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <ResultsPhase
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players}
+        players={players as unknown as Player[]}
         submissions={gameState.submissions}
         votes={gameState.votes}
         roundNumber={gameState.roundNumber}
@@ -332,7 +332,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               <div className="flex items-center gap-2">
                 <RiGamepadLine className="w-5 h-5 text-purple-400" />
                 <span className="text-white font-bangers tracking-wide">
-                  Round {gameState.roundNumber || 1}/{gameState.totalRounds || 8}
+                  Round {gameState.roundNumber || 1}/
+                  {gameState.totalRounds || 8}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -344,8 +345,12 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
             </div>
             {/* Lobby Code */}
             <div className="flex items-center gap-2">
-              <span className="text-purple-200/70 font-bangers tracking-wide">Code:</span>
-              <Badge className="bg-purple-600 text-white font-bangers">{lobbyCode}</Badge>
+              <span className="text-purple-200/70 font-bangers tracking-wide">
+                Code:
+              </span>
+              <Badge className="bg-purple-600 text-white font-bangers">
+                {lobbyCode}
+              </Badge>
             </div>
           </div>
         </div>
@@ -367,7 +372,9 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         {/* Situation (Center, Vertically and Horizontally Centered) */}
         <div className="col-start-2 row-start-1 flex items-center justify-center min-h-0">
           <div className="flex flex-col items-center justify-center">
-            <h2 className="text-white font-bangers text-2xl mb-2 text-center">Current Situation:</h2>
+            <h2 className="text-white font-bangers text-2xl mb-2 text-center">
+              Current Situation:
+            </h2>
             <p className="text-purple-200 font-bangers text-xl text-center max-w-2xl break-words">
               {gameState.currentSituation}
             </p>
@@ -386,7 +393,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               hasVoted={hasVoted}
             />
           ) : (
-            <PlayersList players={players} />
+            <PlayersList players={players as unknown as Player[]} />
           )}
         </div>
 

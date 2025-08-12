@@ -749,7 +749,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           maxBots={6}
                           currentBotCount={
                             Object.values(lobby.players).filter(
-                              (p: PlayerGameData) => p.isAI
+                              (p: PlayerData) => p.isAI
                             ).length
                           }
                           disabled={!isCurrentUserHost}
@@ -780,7 +780,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   <AnimatePresence>
                     {Object.entries(lobby.players).map(
                       (
-                        [playerId, player]: [string, PlayerGameData],
+                        [playerId, player]: [string, PlayerData],
                         index: number
                       ) => (
                         <motion.div

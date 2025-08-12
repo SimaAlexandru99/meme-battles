@@ -30,7 +30,7 @@ export function VotingPhase({
   hasVoted,
 }: VotingPhaseProps) {
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(
-    null,
+    null
   );
 
   // Convert submissions to array format for display
@@ -48,12 +48,12 @@ export function VotingPhase({
       },
       votes: 0,
       submittedAt: new Date(submission.submittedAt),
-    }),
+    })
   );
 
   // Filter out current player's submission
   const votableSubmissions = submissionArray.filter(
-    (submission) => submission.playerId !== currentUser.id,
+    (submission) => submission.playerId !== currentUser.id
   );
 
   const handleVote = useCallback(() => {
@@ -114,7 +114,7 @@ export function VotingPhase({
                   "shadow-2xl shadow-purple-500/10",
                   selectedSubmission === submission.id &&
                     "ring-2 ring-purple-500 border-purple-500",
-                  hasVoted && "opacity-75 cursor-not-allowed",
+                  hasVoted && "opacity-75 cursor-not-allowed"
                 )}
                 onClick={() => {
                   if (!hasVoted) {
@@ -151,7 +151,7 @@ export function VotingPhase({
                       className={cn(
                         "w-full font-bangers text-lg tracking-wide",
                         "bg-purple-600 hover:bg-purple-700 text-white",
-                        "transition-all duration-200",
+                        "transition-all duration-200"
                       )}
                     >
                       <RiThumbUpLine className="w-5 h-5 mr-2" />

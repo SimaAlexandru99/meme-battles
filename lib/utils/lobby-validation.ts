@@ -44,7 +44,7 @@ export function validateLobbyCode(code: string): ValidationResult {
     errors.push("Lobby code is required");
   } else if (code.length !== LOBBY_VALIDATION_RULES.code.length) {
     errors.push(
-      `Lobby code must be exactly ${LOBBY_VALIDATION_RULES.code.length} characters`,
+      `Lobby code must be exactly ${LOBBY_VALIDATION_RULES.code.length} characters`
     );
   } else if (!LOBBY_VALIDATION_RULES.code.pattern.test(code)) {
     errors.push("Lobby code must contain only uppercase letters and numbers");
@@ -60,7 +60,7 @@ export function validateLobbyCode(code: string): ValidationResult {
  * Validates game settings
  */
 export function validateGameSettings(
-  settings: Partial<GameSettings>,
+  settings: Partial<GameSettings>
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -76,11 +76,11 @@ export function validateGameSettings(
   if (settings.timeLimit !== undefined) {
     if (settings.timeLimit < GAME_SETTINGS_CONSTRAINTS.timeLimit.min) {
       errors.push(
-        `Minimum time limit is ${GAME_SETTINGS_CONSTRAINTS.timeLimit.min} seconds`,
+        `Minimum time limit is ${GAME_SETTINGS_CONSTRAINTS.timeLimit.min} seconds`
       );
     } else if (settings.timeLimit > GAME_SETTINGS_CONSTRAINTS.timeLimit.max) {
       errors.push(
-        `Maximum time limit is ${GAME_SETTINGS_CONSTRAINTS.timeLimit.max} seconds`,
+        `Maximum time limit is ${GAME_SETTINGS_CONSTRAINTS.timeLimit.max} seconds`
       );
     }
   }
@@ -91,12 +91,12 @@ export function validateGameSettings(
       GAME_SETTINGS_CONSTRAINTS.categories.minSelected
     ) {
       errors.push(
-        `At least ${GAME_SETTINGS_CONSTRAINTS.categories.minSelected} category must be selected`,
+        `At least ${GAME_SETTINGS_CONSTRAINTS.categories.minSelected} category must be selected`
       );
     }
 
     const invalidCategories = settings.categories.filter(
-      (cat) => !GAME_SETTINGS_CONSTRAINTS.categories.available.includes(cat),
+      (cat) => !GAME_SETTINGS_CONSTRAINTS.categories.available.includes(cat)
     );
     if (invalidCategories.length > 0) {
       errors.push(`Invalid categories: ${invalidCategories.join(", ")}`);
@@ -122,17 +122,17 @@ export function validateDisplayName(displayName: string): ValidationResult {
     displayName.length < LOBBY_VALIDATION_RULES.displayName.minLength
   ) {
     errors.push(
-      `Display name must be at least ${LOBBY_VALIDATION_RULES.displayName.minLength} character`,
+      `Display name must be at least ${LOBBY_VALIDATION_RULES.displayName.minLength} character`
     );
   } else if (
     displayName.length > LOBBY_VALIDATION_RULES.displayName.maxLength
   ) {
     errors.push(
-      `Display name must be no more than ${LOBBY_VALIDATION_RULES.displayName.maxLength} characters`,
+      `Display name must be no more than ${LOBBY_VALIDATION_RULES.displayName.maxLength} characters`
     );
   } else if (!LOBBY_VALIDATION_RULES.displayName.pattern.test(displayName)) {
     errors.push(
-      "Display name can only contain letters, numbers, spaces, underscores, and hyphens",
+      "Display name can only contain letters, numbers, spaces, underscores, and hyphens"
     );
   }
 

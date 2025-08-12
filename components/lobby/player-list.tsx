@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
 
 interface PlayerListProps {
-  players: PlayerGameData[];
+  players: PlayerData[];
   currentUserId: string;
   isHost: boolean;
   lobbyCode: string;
@@ -53,8 +53,8 @@ export function PlayerList({
   const { kickPlayer } = useLobbyManagement(lobbyCode);
 
   // Kick player dialog state
-  const [playerToKick, setPlayerToKick] = React.useState<PlayerGameData | null>(
-    null,
+  const [playerToKick, setPlayerToKick] = React.useState<PlayerData | null>(
+    null
   );
   const [isKicking, setIsKicking] = React.useState(false);
 
@@ -62,19 +62,19 @@ export function PlayerList({
    * Handle kick player action
    */
   const handleKickPlayer = React.useCallback(
-    async (player: PlayerGameData) => {
+    async (player: PlayerData) => {
       if (!isHost || disabled) return;
 
       setIsKicking(true);
       try {
-        await kickPlayer(player.name); // Assuming name is used as UID
-        toast.success(`${player.name} has been removed from the lobby`);
+        await kickPlayer(player.id); // Assuming id is used as UID
+        toast.success(`${player.id} has been removed from the lobby`);
 
         Sentry.addBreadcrumb({
           message: "Player kicked from lobby",
           data: {
             lobbyCode,
-            kickedPlayer: player.name,
+            kickedPlayer: player.displayName,
             hostId: currentUserId,
           },
           level: "info",
@@ -88,13 +88,13 @@ export function PlayerList({
         setPlayerToKick(null);
       }
     },
-    [isHost, disabled, kickPlayer, lobbyCode, currentUserId],
+    [isHost, disabled, kickPlayer, lobbyCode, currentUserId]
   );
 
   /**
    * Open kick confirmation dialog
    */
-  const openKickDialog = React.useCallback((player: PlayerGameData) => {
+  const openKickDialog = React.useCallback((player: PlayerData) => {
     setPlayerToKick(player);
   }, []);
 
@@ -108,7 +108,7 @@ export function PlayerList({
   /**
    * Get player status indicator
    */
-  const getPlayerStatusIndicator = React.useCallback((player: PlayerGameData) => {
+  const getPlayerStatusIndicator = React.useCallback((player: PlayerData) => {
     switch (player.status) {
       case "waiting":
         return {
@@ -136,7 +136,7 @@ export function PlayerList({
   /**
    * Check if player is currently online (last seen within 2 minutes)
    */
-  const isPlayerOnline = React.useCallback((player: PlayerGameData) => {
+  const isPlayerOnline = React.useCallback((player: PlayerData) => {
     const lastSeen = new Date(player.lastSeen);
     const now = new Date();
     const timeDiff = now.getTime() - lastSeen.getTime();
@@ -148,7 +148,7 @@ export function PlayerList({
       <Card
         className={cn(
           "bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10",
-          className,
+          className
         )}
       >
         <CardHeader>
@@ -171,7 +171,7 @@ export function PlayerList({
           <div className="space-y-3">
             <AnimatePresence mode="popLayout">
               {players.map((player, index) => {
-                const isCurrentUser = player.name === currentUserId; // Assuming name is used as identifier
+                const isCurrentUser = player.displayName === currentUserId; // Assuming name is used as identifier
                 const canKickPlayer =
                   isHost && !isCurrentUser && !player.isHost && !disabled;
                 const statusProps = getPlayerStatusIndicator(player);
@@ -179,7 +179,7 @@ export function PlayerList({
 
                 return (
                   <motion.div
-                    key={player.name}
+                    key={player.displayName}
                     layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -193,11 +193,11 @@ export function PlayerList({
                       "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all duration-200",
                       "bg-slate-700/30 border border-slate-600/30",
                       "hover:bg-slate-700/50 hover:border-slate-600/50",
-                      !isOnline && "opacity-75",
+                      !isOnline && "opacity-75"
                     )}
                     whileHover={{ scale: 1.01 }}
                     role="listitem"
-                    aria-label={`Player ${player.name}${player.isHost ? " (host)" : ""}${isCurrentUser ? " (you)" : ""}`}
+                    aria-label={`Player ${player.displayName}${player.isHost ? " (host)" : ""}${isCurrentUser ? " (you)" : ""}`}
                   >
                     {/* Avatar */}
                     <motion.div
@@ -209,15 +209,15 @@ export function PlayerList({
                         <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                           <AvatarImage
                             src={player.profileURL || undefined}
-                            alt={`${player.name}'s avatar`}
+                            alt={`${player.displayName}'s avatar`}
                           />
                           <AvatarFallback
                             className={cn(
                               "font-bangers text-sm sm:text-base",
-                              "bg-purple-600 text-white",
+                              "bg-purple-600 text-white"
                             )}
                           >
-                            {player.name.charAt(0).toUpperCase()}
+                            {player.displayName.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
 
@@ -225,7 +225,7 @@ export function PlayerList({
                         <motion.div
                           className={cn(
                             "absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-slate-700",
-                            isOnline ? "bg-green-400" : "bg-gray-400",
+                            isOnline ? "bg-green-400" : "bg-gray-400"
                           )}
                           animate={isOnline ? { scale: [1, 1.2, 1] } : {}}
                           transition={{ duration: 2, repeat: Infinity }}
@@ -238,7 +238,7 @@ export function PlayerList({
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                         <span className="font-bangers text-white tracking-wide text-sm sm:text-base truncate">
-                          {player.name}
+                          {player.displayName}
                         </span>
 
                         {/* Badges */}
@@ -265,7 +265,7 @@ export function PlayerList({
                             variant="secondary"
                             className={cn(
                               "font-bangers tracking-wide text-xs",
-                              statusProps.className,
+                              statusProps.className
                             )}
                           >
                             {statusProps.text}
@@ -296,7 +296,7 @@ export function PlayerList({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-600/50"
-                              aria-label={`Actions for ${player.name}`}
+                              aria-label={`Actions for ${player.displayName}`}
                             >
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
@@ -358,7 +358,7 @@ export function PlayerList({
             <AlertDialogDescription className="text-slate-300 font-bangers tracking-wide">
               Are you sure you want to remove{" "}
               <span className="text-white font-semibold">
-                {playerToKick?.name}
+                {playerToKick?.displayName}
               </span>{" "}
               from the lobby? They will need a new invitation to rejoin.
             </AlertDialogDescription>

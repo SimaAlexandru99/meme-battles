@@ -1,10 +1,5 @@
 import * as React from "react";
 import AdBanner from "./ad-banner";
-import type { AdBannerContainerProps } from "../types/index.d.ts";
-
-// Import types from global definitions
-
-// AdBannerContainerProps interface is defined in types/index.d.ts
 
 export default function AdBannerContainer({
   upgradeUrl = "/upgrade",

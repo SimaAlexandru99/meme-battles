@@ -285,6 +285,7 @@ export class LobbyService {
             settings,
             players: {
               [params.hostUid]: {
+                id: params.hostUid,
                 displayName: params.hostDisplayName,
                 avatarId: params.hostAvatarId,
                 profileURL: params.hostProfileURL,
@@ -635,6 +636,7 @@ export class LobbyService {
 
           // Create bot player data
           const botPlayer: PlayerData = {
+            id: botId,
             displayName: botDisplayName,
             avatarId: "ai-avatar",
             profileURL: "",
@@ -1413,8 +1415,11 @@ export class LobbyService {
           // Process AI bot submissions asynchronously
           const aiBotService = AIBotService.getInstance();
           const situation =
-            (lobby.gameState as Partial<GameState & { currentSituation?: string }>)?.currentSituation ||
-            "No situation available";
+            (
+              lobby.gameState as Partial<
+                GameState & { currentSituation?: string }
+              >
+            )?.currentSituation || "No situation available";
 
           // Process AI submissions in the background
           aiBotService

@@ -297,24 +297,6 @@ interface LobbyData {
   chat?: Record<string, ChatMessage>;
 }
 
-// Player data interface with all properties and status fields
-interface PlayerData {
-  displayName: string;
-  avatarId: string;
-  profileURL?: string;
-  joinedAt: string;
-  isHost: boolean;
-  score: number;
-  status: PlayerStatus;
-  lastSeen: string;
-  // Game-specific properties
-  cards?: MemeCard[];
-  // AI-specific properties
-  isAI?: boolean;
-  aiPersonalityId?: string;
-  aiDifficulty?: "easy" | "medium" | "hard";
-}
-
 // Game settings interface with validation constraints
 interface GameSettings {
   rounds: number; // 3-15 rounds constraint
@@ -468,15 +450,22 @@ interface LobbyStats {
   averagePlayersPerLobby: number;
 }
 
-export interface PlayerGameData {
+// Player data interface with all properties and status fields
+interface PlayerData {
   id: string;
-  name: string;
-  avatar: string;
+  displayName: string;
+  avatarId: string;
+  profileURL?: string;
+  joinedAt: string;
+  isHost: boolean;
   score: number;
-  status: "waiting" | "playing" | "submitted" | "winner";
-  cards: MemeCard[];
-  selectedCard?: MemeCard;
+  status: PlayerStatus;
+  lastSeen: string;
   isCurrentPlayer?: boolean;
+  // Game-specific properties
+  cards?: MemeCard[];
+  // AI-specific properties
   isAI?: boolean;
   aiPersonalityId?: string;
+  aiDifficulty?: "easy" | "medium" | "hard";
 }

@@ -163,14 +163,22 @@ interface LobbyData {
 }
 
 interface PlayerData {
+  id: string;
   displayName: string;
   avatarId: string;
   profileURL?: string;
   joinedAt: string;
   isHost: boolean;
   score: number;
-  status: "waiting" | "ready" | "disconnected";
+  status: PlayerStatus;
   lastSeen: string;
+  isCurrentPlayer?: boolean;
+  // Game-specific properties
+  cards?: MemeCard[];
+  // AI-specific properties
+  isAI?: boolean;
+  aiPersonalityId?: string;
+  aiDifficulty?: "easy" | "medium" | "hard";
 }
 
 interface GameSettings {
@@ -184,7 +192,7 @@ class LobbyService {
   async createLobby(lobbyData: CreateLobbyParams): Promise<ServiceResult>;
   async joinLobby(
     code: string,
-    playerData: JoinLobbyParams,
+    playerData: JoinLobbyParams
   ): Promise<ServiceResult>;
   async leaveLobby(code: string, playerUid: string): Promise<ServiceResult>;
 
@@ -192,37 +200,37 @@ class LobbyService {
   async updateLobbySettings(
     code: string,
     settings: GameSettings,
-    hostUid: string,
+    hostUid: string
   ): Promise<ServiceResult>;
   async kickPlayer(
     code: string,
     targetUid: string,
-    hostUid: string,
+    hostUid: string
   ): Promise<ServiceResult>;
   async transferHost(
     code: string,
     newHostUid: string,
-    currentHostUid: string,
+    currentHostUid: string
   ): Promise<ServiceResult>;
   async updatePlayerStatus(
     code: string,
     playerUid: string,
-    status: PlayerStatus,
+    status: PlayerStatus
   ): Promise<ServiceResult>;
   async deleteLobby(code: string, hostUid: string): Promise<ServiceResult>;
 
   // Real-time subscriptions
   subscribeToLobby(
     code: string,
-    callback: (lobby: LobbyData | null) => void,
+    callback: (lobby: LobbyData | null) => void
   ): UnsubscribeFunction;
   subscribeToPlayerList(
     code: string,
-    callback: (players: PlayerData[]) => void,
+    callback: (players: PlayerData[]) => void
   ): UnsubscribeFunction;
   subscribeToLobbySettings(
     code: string,
-    callback: (settings: GameSettings) => void,
+    callback: (settings: GameSettings) => void
   ): UnsubscribeFunction;
 
   // Utility methods
@@ -583,7 +591,7 @@ await update(ref(rtdb), {
 // Use indexed queries for faster lookups
 const playersRef = query(
   ref(rtdb, `lobbies/${code}/players`),
-  orderByChild("joinedAt"),
+  orderByChild("joinedAt")
 );
 ```
 

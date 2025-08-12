@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { LobbyService } from "@/lib/services/lobby.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import * as Sentry from "@sentry/nextjs";
-import { PlayerGameData } from "@/types/index";
 
 // Hook return interface
 interface UseLobbyManagementReturn {
   // State
   lobby: LobbyData | null;
-  players: PlayerGameData[];
+  players: PlayerData[];
   isLoading: boolean;
   error: string | null;
   connectionStatus: ConnectionStatus;
@@ -55,7 +54,9 @@ export function useLobbyManagement(
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Derived state
-  const players: PlayerGameData[] = lobby?.players ? Object.values(lobby.players) as PlayerGameData[] : [];
+  const players: PlayerData[] = lobby?.players
+    ? (Object.values(lobby.players) as unknown as PlayerData[])
+    : [];
   const isHost = !!(user && lobby && lobby.hostUid === user.id);
   const playerCount = players.length;
   const canStartGame =

@@ -26,23 +26,10 @@ interface GameState {
   scores: Record<string, number>;
 }
 
-interface PlayerGameData {
-  id: string;
-  name: string;
-  avatar: string;
-  score: number;
-  status: "waiting" | "playing" | "submitted" | "winner";
-  cards: MemeCard[];
-  selectedCard?: MemeCard;
-  isCurrentPlayer?: boolean;
-  isAI?: boolean;
-  aiPersonalityId?: string;
-}
-
 interface UseGameStateReturn {
   // State
   gameState: GameState | null;
-  players: PlayerGameData[];
+  players: Player[];
   playerCards: MemeCard[];
   isLoading: boolean;
   error: string | null;
@@ -71,7 +58,7 @@ interface UseGameStateReturn {
 export function useGameState(lobbyCode: string): UseGameStateReturn {
   const { user } = useCurrentUser();
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [players, setPlayers] = useState<PlayerGameData[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [playerCards, setPlayerCards] = useState<MemeCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +68,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
 
   // --- Add state for hostUid and isHost ---
   const [hostUid, setHostUid] = useState<string | null>(null);
-  const isHost = user && hostUid && user.id === hostUid;
+  const isHost = Boolean(user && hostUid && user.id === hostUid);
 
   const gameStateUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
   const playersUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
@@ -110,182 +97,6 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     },
     [lobbyCode]
   );
-
-  /**
-   * Set up real-time listeners for game state
-   */
-  useEffect(() => {
-    if (!lobbyCode || !user) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    // Listen to game state changes
-    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
-    const gameStateRef = ref(rtdb, gameStatePath);
-
-    gameStateUnsubscribeRef.current = onValue(
-      gameStateRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.val() as GameState;
-          setGameState(data);
-          setConnectionStatus("connected");
-        } else {
-          setGameState(null);
-        }
-        setIsLoading(false);
-      },
-      (error) => {
-        handleError(error, "game_state_listener");
-        setConnectionStatus("disconnected");
-      }
-    );
-
-    // Listen to players data
-    const playersPath = `lobbies/${lobbyCode}/players`;
-    const playersRef = ref(rtdb, playersPath);
-
-    playersUnsubscribeRef.current = onValue(
-      playersRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const playersData = snapshot.val() as Record<string, any>;
-          const gamePlayers: PlayerGameData[] = Object.entries(playersData).map(
-            ([id, player]) => ({
-              id,
-              name: player.displayName,
-              avatar: player.profileURL || "",
-              score: player.score || 0,
-              status: "waiting",
-              cards: player.cards || [],
-              isCurrentPlayer: id === user.id,
-              isAI: player.isAI || false,
-              aiPersonalityId: player.aiPersonalityId,
-            })
-          );
-          setPlayers(gamePlayers);
-        }
-      },
-      (error) => {
-        handleError(error, "players_listener");
-      }
-    );
-
-    // Listen to current player's cards
-    const playerCardsPath = `lobbies/${lobbyCode}/players/${user.id}/cards`;
-    const playerCardsRef = ref(rtdb, playerCardsPath);
-
-    playerCardsUnsubscribeRef.current = onValue(
-      playerCardsRef,
-      (snapshot) => {
-        console.log(
-          "Player cards snapshot:",
-          snapshot.exists(),
-          snapshot.val()
-        );
-        if (snapshot.exists()) {
-          const cards = snapshot.val() as MemeCard[];
-          console.log("Setting player cards:", cards);
-          setPlayerCards(cards || []);
-        } else {
-          console.log("No player cards found at path:", playerCardsPath);
-        }
-      },
-      (error) => {
-        handleError(error, "player_cards_listener");
-      }
-    );
-
-    // --- Listen to lobby data for hostUid ---
-    useEffect(() => {
-      if (!lobbyCode) return;
-      const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
-      const unsubscribe = onValue(lobbyRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const lobby = snapshot.val();
-          setHostUid(lobby.hostUid || null);
-        } else {
-          setHostUid(null);
-        }
-      });
-      return () => off(lobbyRef, "value", unsubscribe);
-    }, [lobbyCode]);
-
-    return () => {
-      if (gameStateUnsubscribeRef.current) {
-        off(ref(rtdb, gameStatePath), "value", gameStateUnsubscribeRef.current);
-      }
-      if (playersUnsubscribeRef.current) {
-        off(ref(rtdb, playersPath), "value", playersUnsubscribeRef.current);
-      }
-      if (playerCardsUnsubscribeRef.current) {
-        off(
-          ref(rtdb, playerCardsPath),
-          "value",
-          playerCardsUnsubscribeRef.current
-        );
-      }
-    };
-  }, [lobbyCode, user, handleError]);
-
-  // --- Helper: handle phase/round transition when timer expires ---
-  const handleTimerExpire = useCallback(async () => {
-    if (!isHost || !gameState) return;
-    try {
-      if (gameState.phase === "submission") {
-        // Move to voting phase
-        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
-          phase: "voting",
-          timeLeft: 30, // e.g., 30 seconds for voting
-        });
-      } else if (gameState.phase === "voting") {
-        // Move to results phase
-        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
-          phase: "results",
-          timeLeft: 10, // e.g., 10 seconds for results
-        });
-      } else if (gameState.phase === "results") {
-        // Move to next round or end game
-        if (gameState.roundNumber < gameState.totalRounds) {
-          await nextRound();
-        } else {
-          await endGame();
-        }
-      } else if (gameState.phase === "countdown") {
-        // Start the round after countdown
-        await startRound();
-      }
-    } catch (err) {
-      Sentry.captureException(err, { tags: { operation: "phase_transition", lobbyCode } });
-    }
-  }, [isHost, gameState, lobbyCode, nextRound, endGame, startRound]);
-
-  // --- Timer decrement logic for host ---
-  useEffect(() => {
-    if (!isHost || !gameState || typeof gameState.timeLeft !== "number") return;
-    const timedPhases = ["submission", "voting", "countdown", "results"];
-    if (!timedPhases.includes(gameState.phase)) return;
-    if (gameState.timeLeft <= 0) {
-      handleTimerExpire();
-      return;
-    }
-    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
-    const timer = setInterval(async () => {
-      try {
-        const current = gameState.timeLeft;
-        if (current > 0) {
-          await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
-        } else {
-          clearInterval(timer);
-          handleTimerExpire();
-        }
-      } catch (err) {
-        Sentry.captureException(err, { tags: { operation: "timer_decrement", lobbyCode } });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isHost, gameState, lobbyCode, handleTimerExpire]);
 
   /**
    * Submit a card for the current round
@@ -448,6 +259,189 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       }
     );
   }, [user, lobbyCode, handleError]);
+
+  // --- Helper: handle phase/round transition when timer expires ---
+  const handleTimerExpire = useCallback(async () => {
+    if (!isHost || !gameState) return;
+    try {
+      if (gameState.phase === "submission") {
+        // Move to voting phase
+        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
+          phase: "voting",
+          timeLeft: 30, // e.g., 30 seconds for voting
+        });
+      } else if (gameState.phase === "voting") {
+        // Move to results phase
+        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
+          phase: "results",
+          timeLeft: 10, // e.g., 10 seconds for results
+        });
+      } else if (gameState.phase === "results") {
+        // Move to next round or end game
+        if (gameState.roundNumber < gameState.totalRounds) {
+          await nextRound();
+        } else {
+          await endGame();
+        }
+      } else if (gameState.phase === "countdown") {
+        // Start the round after countdown
+        await startRound();
+      }
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { operation: "phase_transition", lobbyCode },
+      });
+    }
+  }, [isHost, gameState, lobbyCode, nextRound, endGame, startRound]);
+
+  /**
+   * Set up real-time listeners for game state
+   */
+  useEffect(() => {
+    if (!lobbyCode || !user) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    // Listen to game state changes
+    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+    const gameStateRef = ref(rtdb, gameStatePath);
+
+    gameStateUnsubscribeRef.current = onValue(
+      gameStateRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val() as GameState;
+          setGameState(data);
+          setConnectionStatus("connected");
+        } else {
+          setGameState(null);
+        }
+        setIsLoading(false);
+      },
+      (error) => {
+        handleError(error, "game_state_listener");
+        setConnectionStatus("disconnected");
+      }
+    );
+
+    // Listen to players data
+    const playersPath = `lobbies/${lobbyCode}/players`;
+    const playersRef = ref(rtdb, playersPath);
+
+    playersUnsubscribeRef.current = onValue(
+      playersRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const playersData = snapshot.val() as unknown as Record<
+            string,
+            PlayerData
+          >;
+          const gamePlayers: Player[] = Object.entries(playersData).map(
+            ([id, player]) => ({
+              id,
+              name: player.displayName,
+              avatar: player.profileURL || "",
+              score: player.score || 0,
+              status: "waiting",
+              cards: player.cards || [],
+              isCurrentPlayer: id === user.id,
+              isAI: player.isAI || false,
+              aiPersonalityId: player.aiPersonalityId,
+            })
+          );
+          setPlayers(gamePlayers);
+        }
+      },
+      (error) => {
+        handleError(error, "players_listener");
+      }
+    );
+
+    // Listen to current player's cards
+    const playerCardsPath = `lobbies/${lobbyCode}/players/${user.id}/cards`;
+    const playerCardsRef = ref(rtdb, playerCardsPath);
+
+    playerCardsUnsubscribeRef.current = onValue(
+      playerCardsRef,
+      (snapshot) => {
+        console.log(
+          "Player cards snapshot:",
+          snapshot.exists(),
+          snapshot.val()
+        );
+        if (snapshot.exists()) {
+          const cards = snapshot.val() as MemeCard[];
+          console.log("Setting player cards:", cards);
+          setPlayerCards(cards || []);
+        } else {
+          console.log("No player cards found at path:", playerCardsPath);
+        }
+      },
+      (error) => {
+        handleError(error, "player_cards_listener");
+      }
+    );
+
+    return () => {
+      if (gameStateUnsubscribeRef.current) {
+        off(ref(rtdb, gameStatePath), "value", gameStateUnsubscribeRef.current);
+      }
+      if (playersUnsubscribeRef.current) {
+        off(ref(rtdb, playersPath), "value", playersUnsubscribeRef.current);
+      }
+      if (playerCardsUnsubscribeRef.current) {
+        off(
+          ref(rtdb, playerCardsPath),
+          "value",
+          playerCardsUnsubscribeRef.current
+        );
+      }
+    };
+  }, [user, handleError, lobbyCode]);
+
+  // --- Listen to lobby data for hostUid ---
+  useEffect(() => {
+    if (!lobbyCode) return;
+    const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+    const unsubscribe = onValue(lobbyRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const lobby = snapshot.val();
+        setHostUid(lobby.hostUid || null);
+      } else {
+        setHostUid(null);
+      }
+    });
+    return () => off(lobbyRef, "value", unsubscribe);
+  }, [lobbyCode]);
+
+  // --- Timer decrement logic for host ---
+  useEffect(() => {
+    if (!isHost || !gameState || typeof gameState.timeLeft !== "number") return;
+    const timedPhases = ["submission", "voting", "countdown", "results"];
+    if (!timedPhases.includes(gameState.phase)) return;
+    if (gameState.timeLeft <= 0) {
+      handleTimerExpire();
+      return;
+    }
+    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+    const timer = setInterval(async () => {
+      try {
+        const current = gameState.timeLeft;
+        if (current > 0) {
+          await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
+        } else {
+          clearInterval(timer);
+          handleTimerExpire();
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { operation: "timer_decrement", lobbyCode },
+        });
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isHost, gameState, handleTimerExpire, lobbyCode]);
 
   // Derived state
   const isCurrentPlayer = !!user;
