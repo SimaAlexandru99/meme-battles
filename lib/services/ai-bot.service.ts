@@ -201,6 +201,173 @@ export class AIBotService {
   }
 
   /**
+   * Make a vote decision for an AI bot among submitted cards
+   */
+  async makeVoteDecision(
+    botId: string,
+    situation: string,
+    submissions: { id: string; filename: string; url: string; alt: string }[],
+    personalityId: string,
+    difficulty: "easy" | "medium" | "hard"
+  ): Promise<{
+    targetPlayerId: string;
+    reasoning: string;
+    confidence: number;
+  }> {
+    return Sentry.startSpan(
+      {
+        op: "ai.bot.vote_decision",
+        name: "AI Bot Vote Decision",
+      },
+      async () => {
+        try {
+          const personality = AVAILABLE_AI_PERSONALITIES.find(
+            (p) => p.id === personalityId
+          );
+          if (!personality) {
+            throw new Error(`Unknown personality ID: ${personalityId}`);
+          }
+
+          const requestPayload = {
+            situation,
+            cards: submissions,
+            botPersonality: {
+              id: personality.id,
+              name: personality.name,
+              description: personality.description,
+            },
+            difficulty,
+            mode: "vote",
+          };
+
+          const response = await fetch("/api/ai-bot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestPayload),
+          });
+
+          if (!response.ok) {
+            throw new Error(`AI bot API error: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          if (result.error) {
+            throw new Error(`AI bot vote failed: ${result.error}`);
+          }
+
+          // Expect API to return selectedCardId; map back to target player via submissions list
+          const selectedCardId: string = result.selectedCardId;
+          const selected = submissions.find((c) => c.id === selectedCardId);
+          if (!selected) {
+            // Fallback: pick first
+            return {
+              targetPlayerId: submissions[0]?.id || "",
+              reasoning: "Fallback vote selection",
+              confidence: 25,
+            };
+          }
+
+          return {
+            targetPlayerId: selected.id,
+            reasoning: result.reasoning,
+            confidence: result.confidence,
+          };
+        } catch (error) {
+          Sentry.captureException(error, {
+            tags: { operation: "ai_bot_vote_decision", botId },
+            extra: { botId, situation, submissionsCount: submissions.length },
+          });
+          // Fallback: random
+          const random =
+            submissions[Math.floor(Math.random() * submissions.length)];
+          return {
+            targetPlayerId: random?.id || "",
+            reasoning: "Fallback random vote due to error",
+            confidence: 20,
+          };
+        }
+      }
+    );
+  }
+
+  /**
+   * Save bot vote to Firebase
+   */
+  private async saveBotVote(
+    lobbyCode: string,
+    botId: string,
+    targetPlayerId: string
+  ): Promise<void> {
+    return Sentry.startSpan(
+      {
+        op: "ai.bot.save_vote",
+        name: "Save AI Bot Vote",
+      },
+      async () => {
+        const { ref, set } = await import("firebase/database");
+        const { rtdb } = await import("@/firebase/client");
+        await set(
+          ref(rtdb, `lobbies/${lobbyCode}/gameState/votes/${botId}`),
+          targetPlayerId
+        );
+      }
+    );
+  }
+
+  /**
+   * Process AI bot votes for all AI players in a game
+   */
+  async processAIBotVotes(
+    lobbyCode: string,
+    players: Record<string, PlayerData>,
+    submissions: Record<string, { cardId: string; cardName: string }>,
+    situation: string
+  ): Promise<void> {
+    return Sentry.startSpan(
+      {
+        op: "ai.bot.process_votes",
+        name: "Process AI Bot Votes",
+      },
+      async () => {
+        const aiPlayers = Object.entries(players).filter(([, p]) => p.isAI);
+        if (aiPlayers.length === 0) return;
+
+        // Build vote options: list of submitted cards keyed by player id
+        const options = Object.entries(submissions).map(([playerId, sub]) => ({
+          id: playerId,
+          filename: sub.cardName,
+          url: `/memes/${encodeURIComponent(sub.cardName)}`,
+          alt: `Meme: ${sub.cardId}`,
+        }));
+        if (options.length === 0) return;
+
+        for (const [botId, bot] of aiPlayers) {
+          try {
+            // AI cannot vote for itself; filter options
+            const filtered = options.filter((o) => o.id !== botId);
+            if (filtered.length === 0) continue;
+
+            const decision = await this.makeVoteDecision(
+              botId,
+              situation,
+              filtered,
+              bot.aiPersonalityId!,
+              bot.aiDifficulty!
+            );
+
+            // decision.targetPlayerId corresponds to playerId of submission
+            await this.saveBotVote(lobbyCode, botId, decision.targetPlayerId);
+          } catch (error) {
+            Sentry.captureException(error, {
+              tags: { operation: "ai_bot_process_vote", botId },
+              extra: { lobbyCode },
+            });
+          }
+        }
+      }
+    );
+  }
+  /**
    * Save bot submission to Firebase
    */
   private async saveBotSubmission(

@@ -50,9 +50,11 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     connectionStatus,
     submitCard,
     vote,
+    abstain,
     startRound,
     hasSubmitted,
     hasVoted,
+    hasAbstained,
     clearError,
   } = useGameState(lobbyCode);
 
@@ -295,6 +297,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         lobbyCode={lobbyCode}
         currentUser={currentUser}
         players={players as unknown as Player[]}
+        situation={gameState.currentSituation}
         submissions={gameState.submissions}
         votes={gameState.votes}
         roundNumber={gameState.roundNumber}
@@ -512,20 +515,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         </div>
       </div>
 
-      {/* Voting Dialog - Show when in voting phase */}
-      {gameState.phase === "voting" && (
-        <VotingPhase
-          lobbyCode={lobbyCode}
-          currentUser={currentUser}
-          players={players}
-          submissions={gameState.submissions}
-          onVote={handleVote}
-          hasVoted={hasVoted}
-          timeLeft={gameState.timeLeft}
-          isOpen={true}
-          onClose={() => {}} // Cannot close during voting
-        />
-      )}
+      {/* Voting Dialog removed: voting happens during results phase */}
     </div>
   );
 }

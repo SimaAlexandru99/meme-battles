@@ -62,7 +62,7 @@ export function PrivateLobbySection({
         setIsJoining(false);
       }
     },
-    [onJoinLobby],
+    [onJoinLobby]
   );
 
   // Handle creates a lobby with error management
@@ -90,7 +90,7 @@ export function PrivateLobbySection({
         onBackToMain();
       }
     },
-    [onBackToMain],
+    [onBackToMain]
   );
 
   // Determine if any operation is in progress
@@ -181,7 +181,8 @@ export function PrivateLobbySection({
         "w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
         "flex flex-col items-center gap-8 sm:gap-12",
         "min-h-full py-8 sm:py-12", // Add padding to ensure the button is clickable
-        className,
+        "relative", // allow absolute-positioned overlays (e.g., error banner)
+        className
       )}
       role="main"
       aria-label="Private lobby interface"
@@ -208,7 +209,7 @@ export function PrivateLobbySection({
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             "z-10 relative", // Ensure the button is above other elements
             "min-h-[48px] min-w-[160px]", // Ensure a minimum touch target size
-            "cursor-pointer", // Explicitly set cursor
+            "cursor-pointer" // Explicitly set cursor
           )}
           aria-label="Navigate back to main menu"
           aria-describedby="back-button-description"
@@ -216,7 +217,7 @@ export function PrivateLobbySection({
           <RiArrowLeftLine
             className={cn(
               "w-5 h-5 transition-transform duration-300",
-              "group-hover:-translate-x-1",
+              "group-hover:-translate-x-1"
             )}
             aria-hidden="true"
           />
@@ -227,30 +228,7 @@ export function PrivateLobbySection({
         </div>
       </motion.div>
 
-      {/* Global Error Display */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className={cn(
-            "w-full max-w-2xl p-4 rounded-lg",
-            "bg-red-500/10 border border-red-500/30",
-            "text-red-400 text-center font-bangers tracking-wide",
-            "shadow-lg shadow-red-500/10",
-          )}
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
-        >
-          <h4 className="text-lg font-bold mb-2" id="error-heading">
-            Error
-          </h4>
-          <p className="text-sm" aria-describedby="error-heading">
-            {error}
-          </p>
-        </motion.div>
-      )}
+      {/* Global error banner intentionally removed */}
 
       {/* Main Content Container */}
       <motion.div
@@ -262,7 +240,7 @@ export function PrivateLobbySection({
           // Desktop: Side by side with equal height
           "lg:grid-cols-2 lg:gap-16",
           // Ensure equal height on desktop
-          "lg:items-stretch",
+          "lg:items-stretch"
         )}
         role="region"
         aria-label="Lobby options"
@@ -322,7 +300,7 @@ export function PrivateLobbySection({
           exit={{ opacity: 0 }}
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center",
-            "bg-slate-900/80 backdrop-blur-sm",
+            "bg-slate-900/80 backdrop-blur-sm"
           )}
           role="dialog"
           aria-modal="true"

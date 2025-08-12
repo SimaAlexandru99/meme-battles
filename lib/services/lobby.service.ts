@@ -1813,6 +1813,33 @@ export class LobbyService {
               });
             });
 
+          // Also schedule AI votes once all submissions exist
+          // Lightweight poll after 1s to read current submissions and trigger votes
+          setTimeout(async () => {
+            try {
+              const { ref, get } = await import("firebase/database");
+              const { rtdb } = await import("@/firebase/client");
+              const subsSnap = await get(
+                ref(rtdb, `lobbies/${lobbyCode}/gameState/submissions`)
+              );
+              const subs = (subsSnap.exists() ? subsSnap.val() : {}) as Record<
+                string,
+                { cardId: string; cardName: string }
+              >;
+              await aiBotService.processAIBotVotes(
+                lobbyCode,
+                lobby.players,
+                subs,
+                situation
+              );
+            } catch (err) {
+              Sentry.captureException(err, {
+                tags: { operation: "ai_bot_votes_background" },
+                extra: { lobbyCode },
+              });
+            }
+          }, 1000);
+
           return {
             success: true,
             data: undefined,

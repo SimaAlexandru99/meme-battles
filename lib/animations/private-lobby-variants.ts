@@ -120,7 +120,8 @@ export const inputVariants: Variants = {
   error: {
     scale: 1.02,
     borderColor: "rgba(239, 68, 68, 0.8)", // red-500/80
-    boxShadow: "0 0 0 3px rgba(239, 68, 68, 0.2)",
+    // Remove outer box-shadow ring that visually misaligns OTP squares in error state
+    boxShadow: "none",
     x: [0, -5, 5, -5, 5, 0], // Shake animation
     transition: {
       duration: 0.4,

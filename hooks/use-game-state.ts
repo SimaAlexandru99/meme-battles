@@ -8,6 +8,8 @@ import {
   serverTimestamp,
 } from "firebase/database";
 import { rtdb } from "@/firebase/client";
+import { MemeCardPool } from "@/lib/utils/meme-card-pool";
+import { AIBotService } from "@/lib/services/ai-bot.service";
 import { lobbyService } from "@/lib/services/lobby.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import * as Sentry from "@sentry/nextjs";
@@ -28,6 +30,7 @@ interface GameState {
     { cardId: string; cardName: string; submittedAt: string }
   >;
   votes: Record<string, string>;
+  abstentions?: Record<string, boolean>;
   roundNumber: number;
   totalRounds: number;
   winner?: string;
@@ -46,6 +49,7 @@ interface UseGameStateReturn {
   // Actions
   submitCard: (cardId: string) => Promise<void>;
   vote: (submissionPlayerId: string) => Promise<void>;
+  abstain: () => Promise<void>;
   startRound: () => Promise<void>;
   nextRound: () => Promise<void>;
   endGame: () => Promise<void>;
@@ -54,6 +58,7 @@ interface UseGameStateReturn {
   isCurrentPlayer: boolean;
   hasSubmitted: boolean;
   hasVoted: boolean;
+  hasAbstained: boolean;
   canVote: (playerId: string) => boolean;
   clearError: () => void;
   isHost: boolean;
@@ -185,6 +190,31 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   );
 
   /**
+   * Abstain from voting
+   */
+  const abstain = useCallback(async (): Promise<void> => {
+    if (!user || !gameState || !lobbyCode) {
+      throw new Error("Cannot abstain: missing user or game state");
+    }
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Abstain",
+      },
+      async () => {
+        try {
+          const abstainPath = `lobbies/${lobbyCode}/gameState/abstentions/${user.id}`;
+          await set(ref(rtdb, abstainPath), true);
+        } catch (error) {
+          handleError(error, "abstain");
+          throw error;
+        }
+      }
+    );
+  }, [user, gameState, lobbyCode, handleError]);
+
+  /**
    * Start a new round (host only)
    */
   const startRound = useCallback(async (): Promise<void> => {
@@ -200,11 +230,12 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       async () => {
         try {
           const gameStatePath = `lobbies/${lobbyCode}/gameState`;
-          const updates: any = {
+          const updates: Record<string, unknown> = {
             phase: "submission",
             timeLeft: submissionDuration ?? 60,
             submissions: {},
             votes: {},
+            phaseStartTime: serverTimestamp(),
           };
 
           // Generate a new situation if one doesn't exist
@@ -217,10 +248,12 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
                   "Content-Type": "application/json",
                 },
               });
-              
+
               if (response.ok) {
                 const data = await response.json();
-                newSituation = data.situation || "When you're trying to be productive but your bed is calling your name";
+                newSituation =
+                  data.situation ||
+                  "When you're trying to be productive but your bed is calling your name";
               } else {
                 throw new Error("Situation API failed");
               }
@@ -231,9 +264,12 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
                 "When your phone battery dies right before you need to show someone a funny video",
                 "When you're trying to be productive but your bed is calling your name",
                 "When you finally understand a meme that's been popular for months",
-                "When you're pretending to listen but actually thinking about something else entirely"
+                "When you're pretending to listen but actually thinking about something else entirely",
               ];
-              newSituation = fallbackSituations[Math.floor(Math.random() * fallbackSituations.length)];
+              newSituation =
+                fallbackSituations[
+                  Math.floor(Math.random() * fallbackSituations.length)
+                ];
               Sentry.captureException(error, {
                 tags: { operation: "situation_generation", lobbyCode },
               });
@@ -268,6 +304,47 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           const nextRoundNumber = (gameState.roundNumber || 1) + 1;
           const gameStatePath = `lobbies/${lobbyCode}/gameState`;
 
+          // Refill player hands back to 7 by replacing submitted card(s)
+          // Build a pool of used cards across all players to avoid duplicates
+          const pool = new MemeCardPool();
+
+          const submissions = gameState.submissions || {};
+
+          // Collect all currently held card IDs across players (pre-removal)
+          const allHeldCardIds: string[] = [];
+          for (const p of players) {
+            const playerCardsArray = (p.cards || []) as MemeCard[];
+            for (const c of playerCardsArray) {
+              allHeldCardIds.push(c.id);
+            }
+          }
+          // Mark all currently held as used to maintain uniqueness when drawing
+          pool.markCardsAsUsed(allHeldCardIds);
+
+          // Build batched updates for each player's cards
+          const updates: Record<string, unknown> = {};
+          for (const p of players) {
+            const playerId = p.id;
+            const playerCardsArray = (p.cards || []) as MemeCard[];
+
+            // Remove submitted card for this player if present
+            const submitted = submissions[playerId];
+            const filtered = submitted
+              ? playerCardsArray.filter((c) => c.id !== submitted.cardId)
+              : playerCardsArray;
+
+            // Ensure uniqueness by marking remaining as used (already done globally),
+            // then draw additional cards to reach 7
+            let newHand = [...filtered];
+            const needed = Math.max(0, 7 - newHand.length);
+            if (needed > 0) {
+              const extra = pool.getPlayerCards(needed);
+              newHand = newHand.concat(extra);
+            }
+
+            updates[`lobbies/${lobbyCode}/players/${playerId}/cards`] = newHand;
+          }
+
           // Generate a new situation for the next round
           let newSituation: string;
           try {
@@ -277,10 +354,12 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
                 "Content-Type": "application/json",
               },
             });
-            
+
             if (response.ok) {
               const data = await response.json();
-              newSituation = data.situation || "When you're trying to be productive but your bed is calling your name";
+              newSituation =
+                data.situation ||
+                "When you're trying to be productive but your bed is calling your name";
             } else {
               throw new Error("Situation API failed");
             }
@@ -291,29 +370,34 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               "When your phone battery dies right before you need to show someone a funny video",
               "When you're trying to be productive but your bed is calling your name",
               "When you finally understand a meme that's been popular for months",
-              "When you're pretending to listen but actually thinking about something else entirely"
+              "When you're pretending to listen but actually thinking about something else entirely",
             ];
-            newSituation = fallbackSituations[Math.floor(Math.random() * fallbackSituations.length)];
+            newSituation =
+              fallbackSituations[
+                Math.floor(Math.random() * fallbackSituations.length)
+              ];
             Sentry.captureException(error, {
               tags: { operation: "situation_generation", lobbyCode },
             });
           }
 
-          await update(ref(rtdb, gameStatePath), {
-            roundNumber: nextRoundNumber,
-            phase: "countdown",
-            timeLeft: 5, // 5 second countdown
-            currentSituation: newSituation,
-            submissions: {},
-            votes: {},
-          });
+          // Add game state transition to the same batch
+          updates[`${gameStatePath}/roundNumber`] = nextRoundNumber;
+          updates[`${gameStatePath}/phase`] = "countdown";
+          updates[`${gameStatePath}/timeLeft`] = 5; // 5 second countdown
+          updates[`${gameStatePath}/phaseStartTime`] = serverTimestamp();
+          updates[`${gameStatePath}/currentSituation`] = newSituation;
+          updates[`${gameStatePath}/submissions`] = {};
+          updates[`${gameStatePath}/votes`] = {};
+
+          await update(ref(rtdb), updates);
         } catch (error) {
           handleError(error, "next_round");
           throw error;
         }
       }
     );
-  }, [user, gameState, lobbyCode, handleError]);
+  }, [user, gameState, lobbyCode, handleError, players]);
 
   /**
    * End the game (host only)
@@ -348,16 +432,11 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     if (!isHost || !gameState) return;
     try {
       if (gameState.phase === "submission") {
-        // Move to voting phase
-        await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
-          phase: "voting",
-          timeLeft: 30, // e.g., 30 seconds for voting
-        });
-      } else if (gameState.phase === "voting") {
-        // Move to results phase
+        // Move directly to results phase (combined voting + results)
         await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
           phase: "results",
-          timeLeft: 10, // e.g., 10 seconds for results
+          timeLeft: 30, // voting window inside results
+          phaseStartTime: serverTimestamp(),
         });
       } else if (gameState.phase === "results") {
         // Move to next round or end game
@@ -377,7 +456,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     }
   }, [isHost, gameState, lobbyCode, nextRound, endGame, startRound]);
 
-  // --- Early transition to voting when all submissions are in (host only) ---
+  // --- Early transition to results (with voting window) when all submissions are in (host only) ---
   useEffect(() => {
     if (!isHost) return;
     if (!gameState || gameState.phase !== "submission") return;
@@ -386,32 +465,75 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     if (totalPlayers > 0 && submittedCount >= totalPlayers) {
       const gameStatePath = `lobbies/${lobbyCode}/gameState`;
       update(ref(rtdb, gameStatePath), {
-        phase: "voting",
+        phase: "results",
         timeLeft: 30,
+        phaseStartTime: serverTimestamp(),
       }).catch((err) => {
         Sentry.captureException(err, {
-          tags: { operation: "early_transition_voting", lobbyCode },
+          tags: {
+            operation: "early_transition_results_from_submission",
+            lobbyCode,
+          },
           extra: { submittedCount, totalPlayers },
         });
       });
     }
   }, [isHost, gameState, players.length, lobbyCode]);
 
-  // --- Early transition to results when all votes are in (host only) ---
+  // --- During results (voting window), if all votes/abstentions are in, shorten display window (host only) ---
   useEffect(() => {
     if (!isHost) return;
-    if (!gameState || gameState.phase !== "voting") return;
+    if (!gameState || gameState.phase !== "results") return;
+    // Trigger AI votes once when entering voting
+    try {
+      const aiBotService = AIBotService.getInstance();
+      const playersRecord: Record<string, PlayerData> = {} as any;
+      for (const p of players) {
+        playersRecord[p.id] = {
+          id: p.id,
+          displayName: p.name,
+          profileURL: p.avatar,
+          isAI: (p as any).isAI,
+          aiPersonalityId: (p as any).aiPersonalityId,
+          aiDifficulty: (p as any).aiDifficulty,
+        } as any;
+      }
+      const submissionsRecord = (gameState.submissions || {}) as Record<
+        string,
+        { cardId: string; cardName: string }
+      >;
+      aiBotService
+        .processAIBotVotes(
+          lobbyCode,
+          playersRecord,
+          submissionsRecord,
+          gameState.currentSituation
+        )
+        .catch((err) =>
+          Sentry.captureException(err, {
+            tags: { operation: "ai_bot_votes_on_voting_phase", lobbyCode },
+          })
+        );
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { operation: "ai_bot_votes_on_voting_phase_setup", lobbyCode },
+      });
+    }
     const totalPlayers = players.length;
     const votesCount = Object.keys(gameState.votes || {}).length;
-    if (totalPlayers > 0 && votesCount >= totalPlayers) {
+    const abstainCount = Object.keys(gameState.abstentions || {}).length;
+    if (totalPlayers > 0 && votesCount + abstainCount >= totalPlayers) {
       const gameStatePath = `lobbies/${lobbyCode}/gameState`;
       update(ref(rtdb, gameStatePath), {
-        phase: "results",
         timeLeft: 10,
+        phaseStartTime: serverTimestamp(),
       }).catch((err) => {
         Sentry.captureException(err, {
-          tags: { operation: "early_transition_results", lobbyCode },
-          extra: { votesCount, totalPlayers },
+          tags: {
+            operation: "early_results_shorten_after_all_votes",
+            lobbyCode,
+          },
+          extra: { votesCount, abstainCount, totalPlayers },
         });
       });
     }
@@ -622,6 +744,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   const isCurrentPlayer = !!user;
   const hasSubmitted = gameState?.submissions?.[user?.id || ""] !== undefined;
   const hasVoted = gameState?.votes?.[user?.id || ""] !== undefined;
+  const hasAbstained = gameState?.abstentions?.[user?.id || ""] === true;
 
   const canVote = useCallback(
     (playerId: string) => {
@@ -648,6 +771,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     // Actions
     submitCard,
     vote,
+    abstain,
     startRound,
     nextRound,
     endGame,
@@ -656,6 +780,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     isCurrentPlayer,
     hasSubmitted,
     hasVoted,
+    hasAbstained,
     canVote,
     clearError,
     isHost,
