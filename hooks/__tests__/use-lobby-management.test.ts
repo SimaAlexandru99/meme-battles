@@ -68,6 +68,7 @@ const mockLobbyData: LobbyData = {
   },
   players: {
     user123: {
+      id: "user123",
       displayName: "Test User",
       avatarId: "test-avatar",
       profileURL: "https://example.com/avatar.jpg",

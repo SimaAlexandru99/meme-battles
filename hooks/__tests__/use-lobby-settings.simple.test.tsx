@@ -1,5 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { useLobbySettings } from "@/hooks/use-lobby-settings";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Mock Firebase Realtime Database
 jest.mock("firebase/database", () => ({
@@ -40,13 +41,21 @@ jest.mock("@/hooks/useCurrentUser", () => ({
   useCurrentUser: jest.fn(),
 }));
 
-const mockUseCurrentUser = require("@/hooks/useCurrentUser").useCurrentUser;
+const mockUseCurrentUser = jest.mocked(useCurrentUser);
 
-const mockUser = {
+const mockUser: User = {
   id: "user123",
   name: "Test User",
   email: "test@example.com",
   avatarId: "avatar1",
+  provider: "google",
+  role: "user",
+  createdAt: "2025-01-08T10:00:00.000Z",
+  lastLoginAt: "2025-01-08T10:00:00.000Z",
+  xp: 0,
+  plan: "free",
+  isAnonymous: false,
+  setupCompleted: true,
 };
 
 const mockLobbyData: LobbyData = {
@@ -62,6 +71,7 @@ const mockLobbyData: LobbyData = {
   },
   players: {
     user123: {
+      id: "user123",
       displayName: "Test User",
       avatarId: "avatar1",
       joinedAt: "2025-01-08T10:00:00.000Z",
@@ -78,7 +88,15 @@ const mockLobbyData: LobbyData = {
 describe("useLobbySettings - Core Functionality", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseCurrentUser.mockReturnValue({ user: mockUser });
+    mockUseCurrentUser.mockReturnValue({
+      user: mockUser,
+      isLoading: false,
+      isError: false,
+      error: null,
+      mutate: jest.fn(),
+      refresh: jest.fn(),
+      clear: jest.fn(),
+    });
   });
 
   it("should initialize with lobby settings", () => {
@@ -117,6 +135,12 @@ describe("useLobbySettings - Core Functionality", () => {
   it("should identify non-host correctly", () => {
     mockUseCurrentUser.mockReturnValue({
       user: { ...mockUser, id: "user456" },
+      isLoading: false,
+      isError: false,
+      error: null,
+      mutate: jest.fn(),
+      refresh: jest.fn(),
+      clear: jest.fn(),
     });
 
     const { result } = renderHook(() =>

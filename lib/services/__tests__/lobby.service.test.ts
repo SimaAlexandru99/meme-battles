@@ -49,6 +49,7 @@ describe("LobbyService", () => {
     },
     players: {
       host123: {
+        id: "host123",
         displayName: "HostPlayer",
         avatarId: "doge-sunglasses",
         profileURL: "https://example.com/avatar.jpg",

@@ -228,7 +228,7 @@ const MEME_FILENAMES = [
   "Dirigeants regardant la caméra.jpg",
   "Disappointed but not surprised.jpg",
   "Discord guy.jpg",
-  "Discovering something that doesn_t exist.jpg",
+  "Discovering something that doesn't exist.jpg",
   "Disparition.jpg",
   "Do you have brain damage.jpg",
   "Dog hearts.jpg",
@@ -962,16 +962,16 @@ function shuffleArray<T>(array: T[]): T[] {
  */
 export function getRandomMemeCards(
   count: number,
-  excludeIds: string[] = [],
+  excludeIds: string[] = []
 ): MemeCard[] {
   const allCards = getAllMemeCards();
   const availableCards = allCards.filter(
-    (card) => !excludeIds.includes(card.id),
+    (card) => !excludeIds.includes(card.id)
   );
 
   if (availableCards.length < count) {
     throw new Error(
-      `Not enough unique meme cards available. Requested: ${count}, Available: ${availableCards.length}`,
+      `Not enough unique meme cards available. Requested: ${count}, Available: ${availableCards.length}`
     );
   }
 
@@ -1018,14 +1018,14 @@ export class MemeCardPool {
    */
   distributeCards(
     playerCount: number,
-    cardsPerPlayer: number = 7,
+    cardsPerPlayer: number = 7
   ): Map<number, MemeCard[]> {
     const totalCardsNeeded = playerCount * cardsPerPlayer;
     const allCards = getAllMemeCards();
 
     if (totalCardsNeeded > allCards.length) {
       throw new Error(
-        `Not enough meme cards for ${playerCount} players with ${cardsPerPlayer} cards each. Need: ${totalCardsNeeded}, Available: ${allCards.length}`,
+        `Not enough meme cards for ${playerCount} players with ${cardsPerPlayer} cards each. Need: ${totalCardsNeeded}, Available: ${allCards.length}`
       );
     }
 
@@ -1039,7 +1039,7 @@ export class MemeCardPool {
       const startIndex = playerIndex * cardsPerPlayer;
       const playerCards = shuffledCards.slice(
         startIndex,
-        startIndex + cardsPerPlayer,
+        startIndex + cardsPerPlayer
       );
 
       // Track used cards
@@ -1057,7 +1057,7 @@ export class MemeCardPool {
   getPlayerCards(cardsPerPlayer: number = 7): MemeCard[] {
     const cards = getRandomMemeCards(
       cardsPerPlayer,
-      Array.from(this.usedCardIds),
+      Array.from(this.usedCardIds)
     );
     // Mark these cards as used
     cards.forEach((card) => this.usedCardIds.add(card.id));

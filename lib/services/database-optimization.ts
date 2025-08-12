@@ -47,7 +47,6 @@ export class DatabaseOptimizationService {
   private static instance: DatabaseOptimizationService;
   private cache = new Map<string, CacheEntry<unknown>>();
   private listeners = new Map<string, Unsubscribe>();
-  private connectionPool: DatabaseReference[] = [];
   private pendingUpdates = new Map<string, DeltaUpdate[]>();
   private updateBatchTimeout: NodeJS.Timeout | null = null;
 

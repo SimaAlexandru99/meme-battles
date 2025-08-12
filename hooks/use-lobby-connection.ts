@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ref, onValue, off } from "firebase/database";
+import { ref, onValue } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
 
@@ -265,7 +265,7 @@ export function useLobbyConnection(
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [connectionStatus, lobbyCode]);
+  }, [cleanup, connect, connectionStatus, lobbyCode]);
 
   /**
    * Initial connection setup

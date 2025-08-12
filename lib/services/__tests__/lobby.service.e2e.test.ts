@@ -783,7 +783,7 @@ describe("LobbyService - End-to-End Tests", () => {
         "Time limit must be between 30 and 120 seconds"
       );
       expect(validation.errors).toContain(
-          "At least 1 category must be selected"
+        "At least 1 category must be selected"
       );
 
       // Test boundary values

@@ -88,7 +88,7 @@ export function AddBotDialog({
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
-  // Reset form when dialog opens
+  // Reset form when the dialog opens
   React.useEffect(() => {
     if (isOpen) {
       setBotConfig({
@@ -104,7 +104,7 @@ export function AddBotDialog({
       ...prev,
       personalityId,
     }));
-    // Clear personality error when user makes a selection
+    // Clear personality error when the user makes a choice
     setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors.personality;

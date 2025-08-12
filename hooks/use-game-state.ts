@@ -95,7 +95,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode]
+    [lobbyCode],
   );
 
   /**
@@ -131,10 +131,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "submit_card");
             throw error;
           }
-        }
+        },
       );
     },
-    [user, gameState, lobbyCode, playerCards, handleError]
+    [user, gameState, lobbyCode, playerCards, handleError],
   );
 
   /**
@@ -163,10 +163,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "vote");
             throw error;
           }
-        }
+        },
       );
     },
-    [user, gameState, lobbyCode, handleError]
+    [user, gameState, lobbyCode, handleError],
   );
 
   /**
@@ -195,7 +195,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "start_round");
           throw error;
         }
-      }
+      },
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -228,7 +228,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "next_round");
           throw error;
         }
-      }
+      },
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -256,7 +256,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "end_game");
           throw error;
         }
-      }
+      },
     );
   }, [user, lobbyCode, handleError]);
 
@@ -322,7 +322,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       (error) => {
         handleError(error, "game_state_listener");
         setConnectionStatus("disconnected");
-      }
+      },
     );
 
     // Listen to players data
@@ -348,14 +348,14 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               isCurrentPlayer: id === user.id,
               isAI: player.isAI || false,
               aiPersonalityId: player.aiPersonalityId,
-            })
+            }),
           );
           setPlayers(gamePlayers);
         }
       },
       (error) => {
         handleError(error, "players_listener");
-      }
+      },
     );
 
     // Listen to current player's cards
@@ -368,7 +368,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         console.log(
           "Player cards snapshot:",
           snapshot.exists(),
-          snapshot.val()
+          snapshot.val(),
         );
         if (snapshot.exists()) {
           const cards = snapshot.val() as MemeCard[];
@@ -380,7 +380,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       },
       (error) => {
         handleError(error, "player_cards_listener");
-      }
+      },
     );
 
     return () => {
@@ -394,7 +394,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         off(
           ref(rtdb, playerCardsPath),
           "value",
-          playerCardsUnsubscribeRef.current
+          playerCardsUnsubscribeRef.current,
         );
       }
     };
@@ -432,7 +432,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
         } else {
           clearInterval(timer);
-          handleTimerExpire();
+          await handleTimerExpire();
         }
       } catch (err) {
         Sentry.captureException(err, {
@@ -458,7 +458,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         gameState?.submissions?.[playerId] !== undefined
       );
     },
-    [isCurrentPlayer, gameState, hasVoted, user?.id]
+    [isCurrentPlayer, gameState, hasVoted, user?.id],
   );
 
   return {

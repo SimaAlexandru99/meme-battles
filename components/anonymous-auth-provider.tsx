@@ -78,7 +78,7 @@ export default function AnonymousAuthProvider({
       } catch (error) {
         console.error("Failed to authenticate as guest:", error);
         setAuthError(
-          error instanceof Error ? error.message : "Authentication failed"
+          error instanceof Error ? error.message : "Authentication failed",
         );
         // Reset the attempt flag on error so user can retry
         hasAttemptedAuth.current = false;
@@ -90,7 +90,7 @@ export default function AnonymousAuthProvider({
     handleAnonymousAuth();
   }, [needsAuth, isAuthenticating, currentUser]);
 
-  // Reset attempt flag when user changes (for logout scenarios)
+  // Reset attempt flag when a user changes (for logout scenarios)
   useEffect(() => {
     if (currentUser) {
       hasAttemptedAuth.current = false;

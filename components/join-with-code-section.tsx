@@ -51,7 +51,7 @@ export function JoinWithCodeSection({
   const [isJoining, setIsJoining] = React.useState(false);
   const [isValidating, setIsValidating] = React.useState(false);
   const [validationError, setValidationError] = React.useState<string | null>(
-    null
+    null,
   );
   const [lobbyPreview, setLobbyPreview] = React.useState<{
     playerCount: number;
@@ -108,7 +108,7 @@ export function JoinWithCodeSection({
       setInvitationCode(code);
       validateCodeDebounced(code);
     },
-    [validateCodeDebounced]
+    [validateCodeDebounced],
   );
 
   const handleCodeComplete = React.useCallback(
@@ -158,7 +158,7 @@ export function JoinWithCodeSection({
         }
       }
     },
-    [onJoinLobby, isLoading, isJoining, validationError]
+    [onJoinLobby, isLoading, isJoining, validationError],
   );
 
   const handleJoinClick = React.useCallback(async () => {
@@ -180,7 +180,7 @@ export function JoinWithCodeSection({
         handleJoinClick().then((r) => console.log(r));
       }
     },
-    [invitationCode, isLoading, isJoining, handleJoinClick]
+    [invitationCode, isLoading, isJoining, handleJoinClick],
   );
 
   const isOperationInProgress = isLoading || isJoining;
@@ -226,7 +226,7 @@ export function JoinWithCodeSection({
         "bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50",
         "shadow-2xl shadow-purple-500/10",
         "h-full justify-between",
-        className
+        className,
       )}
       role="region"
       aria-label="Join existing lobby with invitation code"
@@ -246,7 +246,7 @@ export function JoinWithCodeSection({
             "w-16 h-16 sm:w-20 sm:h-20 rounded-full",
             "bg-gradient-to-br from-yellow-400 to-yellow-600",
             "flex items-center justify-center shadow-lg shadow-yellow-500/30",
-            "transition-all duration-300"
+            "transition-all duration-300",
           )}
           animate={isOperationInProgress ? "animate" : "initial"}
           variants={
@@ -256,7 +256,7 @@ export function JoinWithCodeSection({
           <RiMailLine
             className={cn(
               "w-8 h-8 sm:w-10 sm:h-10 text-white",
-              isOperationInProgress && "animate-bounce"
+              isOperationInProgress && "animate-bounce",
             )}
             aria-hidden="true"
           />
@@ -271,7 +271,7 @@ export function JoinWithCodeSection({
             "absolute -top-1 -right-1 w-6 h-6 sm:w-7 sm:h-7",
             "bg-gradient-to-br from-red-500 to-red-600",
             "rounded-full flex items-center justify-center",
-            "shadow-lg shadow-red-500/30 border-2 border-slate-800"
+            "shadow-lg shadow-red-500/30 border-2 border-slate-800",
           )}
           role="img"
           aria-label="Notification indicator"
@@ -345,7 +345,7 @@ export function JoinWithCodeSection({
             className={cn(
               "w-full max-w-md p-4 rounded-lg",
               "bg-blue-500/10 border border-blue-500/30",
-              "text-center"
+              "text-center",
             )}
             role="region"
             aria-label="Lobby preview information"
@@ -419,7 +419,7 @@ export function JoinWithCodeSection({
             className={cn(
               "w-full max-w-md p-3 rounded-lg",
               "bg-red-500/10 border border-red-500/30",
-              "text-center"
+              "text-center",
             )}
             role="alert"
             aria-live="polite"
@@ -449,7 +449,7 @@ export function JoinWithCodeSection({
             className={cn(
               "w-full max-w-md p-3 rounded-lg",
               "bg-red-500/10 border border-red-500/30",
-              "text-red-400 text-sm text-center font-bangers tracking-wide"
+              "text-red-400 text-sm text-center font-bangers tracking-wide",
             )}
             role="alert"
             aria-live="polite"
@@ -471,7 +471,7 @@ export function JoinWithCodeSection({
             className={cn(
               "w-full max-w-md p-3 rounded-lg",
               "bg-green-500/10 border border-green-500/30",
-              "text-green-400 text-sm text-center font-bangers tracking-wide"
+              "text-green-400 text-sm text-center font-bangers tracking-wide",
             )}
             role="alert"
             aria-live="polite"
@@ -511,7 +511,7 @@ export function JoinWithCodeSection({
             "focus-visible:ring-2 focus-visible:ring-purple-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             lobbyPreview && "ring-2 ring-green-500/30 shadow-green-500/20",
-            validationError && "ring-2 ring-red-500/30 shadow-red-500/20"
+            validationError && "ring-2 ring-red-500/30 shadow-red-500/20",
           )}
           aria-label={
             isOperationInProgress

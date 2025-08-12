@@ -28,7 +28,7 @@ export default function FirstTimeSetupProvider({
       if (isLoading) return;
 
       try {
-        Sentry.startSpan(
+        await Sentry.startSpan(
           {
             op: "ui.provider.check_first_time",
             name: "Check First Time User Provider",
@@ -43,7 +43,7 @@ export default function FirstTimeSetupProvider({
             } else {
               span.setAttribute("dialog.shown", false);
             }
-          },
+          }
         );
       } catch (error) {
         console.error("Error checking first-time user status:", error);

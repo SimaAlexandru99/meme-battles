@@ -57,7 +57,7 @@ export function PrivateLobbySection({
         const errorMessage =
           err instanceof Error ? err.message : "Failed to join lobby";
         setJoinError(errorMessage);
-        throw err; // Re-throw to let child component handle loading state
+        throw err; // Re-throw to let a child component handle the loading state
       } finally {
         setIsJoining(false);
       }
@@ -65,19 +65,18 @@ export function PrivateLobbySection({
     [onJoinLobby],
   );
 
-  // Handle create lobby with error management
+  // Handle creates a lobby with error management
   const handleCreateLobby = React.useCallback(async () => {
     setCreateError(null);
     setIsCreating(true);
-
+    const code = await onCreateLobby();
     try {
-      const code = await onCreateLobby();
       return code;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to create lobby";
       setCreateError(errorMessage);
-      throw err; // Re-throw to let child component handle loading state
+      throw err; // Re-throw to let a child component handle the loading state
     } finally {
       setIsCreating(false);
     }
@@ -181,7 +180,7 @@ export function PrivateLobbySection({
       className={cn(
         "w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
         "flex flex-col items-center gap-8 sm:gap-12",
-        "min-h-full py-8 sm:py-12", // Add padding to ensure button is clickable
+        "min-h-full py-8 sm:py-12", // Add padding to ensure the button is clickable
         className,
       )}
       role="main"
@@ -207,8 +206,8 @@ export function PrivateLobbySection({
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "focus-visible:ring-2 focus-visible:ring-purple-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-            "z-10 relative", // Ensure button is above other elements
-            "min-h-[48px] min-w-[160px]", // Ensure minimum touch target size
+            "z-10 relative", // Ensure the button is above other elements
+            "min-h-[48px] min-w-[160px]", // Ensure a minimum touch target size
             "cursor-pointer", // Explicitly set cursor
           )}
           aria-label="Navigate back to main menu"

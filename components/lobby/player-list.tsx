@@ -54,7 +54,7 @@ export function PlayerList({
 
   // Kick player dialog state
   const [playerToKick, setPlayerToKick] = React.useState<PlayerData | null>(
-    null
+    null,
   );
   const [isKicking, setIsKicking] = React.useState(false);
 
@@ -88,11 +88,11 @@ export function PlayerList({
         setPlayerToKick(null);
       }
     },
-    [isHost, disabled, kickPlayer, lobbyCode, currentUserId]
+    [isHost, disabled, kickPlayer, lobbyCode, currentUserId],
   );
 
   /**
-   * Open kick confirmation dialog
+   * Open the kick confirmation dialog
    */
   const openKickDialog = React.useCallback((player: PlayerData) => {
     setPlayerToKick(player);
@@ -134,7 +134,7 @@ export function PlayerList({
   }, []);
 
   /**
-   * Check if player is currently online (last seen within 2 minutes)
+   * Check if the player is currently online (last seen within 2 minutes)
    */
   const isPlayerOnline = React.useCallback((player: PlayerData) => {
     const lastSeen = new Date(player.lastSeen);
@@ -148,7 +148,7 @@ export function PlayerList({
       <Card
         className={cn(
           "bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10",
-          className
+          className,
         )}
       >
         <CardHeader>
@@ -171,7 +171,7 @@ export function PlayerList({
           <div className="space-y-3">
             <AnimatePresence mode="popLayout">
               {players.map((player, index) => {
-                const isCurrentUser = player.displayName === currentUserId; // Assuming name is used as identifier
+                const isCurrentUser = player.displayName === currentUserId; // Assuming name is used as an identifier
                 const canKickPlayer =
                   isHost && !isCurrentUser && !player.isHost && !disabled;
                 const statusProps = getPlayerStatusIndicator(player);
@@ -193,7 +193,7 @@ export function PlayerList({
                       "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all duration-200",
                       "bg-slate-700/30 border border-slate-600/30",
                       "hover:bg-slate-700/50 hover:border-slate-600/50",
-                      !isOnline && "opacity-75"
+                      !isOnline && "opacity-75",
                     )}
                     whileHover={{ scale: 1.01 }}
                     role="listitem"
@@ -214,7 +214,7 @@ export function PlayerList({
                           <AvatarFallback
                             className={cn(
                               "font-bangers text-sm sm:text-base",
-                              "bg-purple-600 text-white"
+                              "bg-purple-600 text-white",
                             )}
                           >
                             {player.displayName.charAt(0).toUpperCase()}
@@ -225,7 +225,7 @@ export function PlayerList({
                         <motion.div
                           className={cn(
                             "absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-slate-700",
-                            isOnline ? "bg-green-400" : "bg-gray-400"
+                            isOnline ? "bg-green-400" : "bg-gray-400",
                           )}
                           animate={isOnline ? { scale: [1, 1.2, 1] } : {}}
                           transition={{ duration: 2, repeat: Infinity }}
@@ -265,7 +265,7 @@ export function PlayerList({
                             variant="secondary"
                             className={cn(
                               "font-bangers tracking-wide text-xs",
-                              statusProps.className
+                              statusProps.className,
                             )}
                           >
                             {statusProps.text}

@@ -48,6 +48,7 @@ describe("LobbyService - Unit Tests", () => {
     },
     players: {
       host123: {
+        id: "host123",
         displayName: "HostPlayer",
         avatarId: "doge-sunglasses",
         profileURL: "https://example.com/avatar.jpg",
@@ -93,7 +94,7 @@ describe("LobbyService - Unit Tests", () => {
         const result = lobbyService.validateLobbyCode("ABC");
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code must be exactly 5 characters"
+          "Lobby code must be exactly 5 characters",
         );
       });
 
@@ -101,7 +102,7 @@ describe("LobbyService - Unit Tests", () => {
         const result = lobbyService.validateLobbyCode("abc12");
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code can only contain uppercase letters and numbers"
+          "Lobby code can only contain uppercase letters and numbers",
         );
       });
 
@@ -109,7 +110,7 @@ describe("LobbyService - Unit Tests", () => {
         const result = lobbyService.validateLobbyCode("AB-12");
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code can only contain uppercase letters and numbers"
+          "Lobby code can only contain uppercase letters and numbers",
         );
       });
     });
@@ -139,7 +140,7 @@ describe("LobbyService - Unit Tests", () => {
         mockGet.mockRejectedValueOnce(new Error("Database error"));
 
         await expect(
-          lobbyService.checkLobbyCodeExists("ABC12")
+          lobbyService.checkLobbyCodeExists("ABC12"),
         ).rejects.toMatchObject({
           type: "NETWORK_ERROR",
           retryable: true,
@@ -229,7 +230,7 @@ describe("LobbyService - Unit Tests", () => {
         const result = lobbyService.isValidGameSettings(settings);
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Time limit must be between 30 and 120 seconds"
+          "Time limit must be between 30 and 120 seconds",
         );
       });
 
@@ -243,7 +244,7 @@ describe("LobbyService - Unit Tests", () => {
         const result = lobbyService.isValidGameSettings(settings);
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "At least one category must be selected"
+          "At least one category must be selected",
         );
       });
 
@@ -259,10 +260,10 @@ describe("LobbyService - Unit Tests", () => {
         expect(result.errors).toHaveLength(3);
         expect(result.errors).toContain("Rounds must be between 3 and 15");
         expect(result.errors).toContain(
-          "Time limit must be between 30 and 120 seconds"
+          "Time limit must be between 30 and 120 seconds",
         );
         expect(result.errors).toContain(
-          "At least one category must be selected"
+          "At least one category must be selected",
         );
       });
     });
@@ -272,7 +273,7 @@ describe("LobbyService - Unit Tests", () => {
     describe("joinLobby - Validation", () => {
       it("should reject invalid lobby code format", async () => {
         await expect(
-          lobbyService.joinLobby("abc", mockJoinLobbyParams)
+          lobbyService.joinLobby("abc", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid lobby code"),
@@ -287,7 +288,7 @@ describe("LobbyService - Unit Tests", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -306,7 +307,7 @@ describe("LobbyService - Unit Tests", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_FULL",
           userMessage: "This lobby is full. Try another one.",
@@ -325,7 +326,7 @@ describe("LobbyService - Unit Tests", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_ALREADY_STARTED",
           userMessage: "This game has already started. You cannot join now.",
@@ -357,7 +358,7 @@ describe("LobbyService - Unit Tests", () => {
 
         const result = await lobbyService.joinLobby(
           "ABC12",
-          mockJoinLobbyParams
+          mockJoinLobbyParams,
         );
 
         expect(result.success).toBe(true);
@@ -371,7 +372,7 @@ describe("LobbyService - Unit Tests", () => {
         mockGet.mockRejectedValueOnce(new Error("Network timeout"));
 
         await expect(
-          lobbyService.checkLobbyCodeExists("ABC12")
+          lobbyService.checkLobbyCodeExists("ABC12"),
         ).rejects.toMatchObject({
           type: "NETWORK_ERROR",
           retryable: true,
@@ -387,7 +388,7 @@ describe("LobbyService - Unit Tests", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           retryable: false,
@@ -420,7 +421,7 @@ describe("LobbyService - Unit Tests", () => {
           rounds: 3,
           timeLimit: 30,
           categories: ["general"],
-        }).isValid
+        }).isValid,
       ).toBe(true);
 
       expect(
@@ -428,7 +429,7 @@ describe("LobbyService - Unit Tests", () => {
           rounds: 15,
           timeLimit: 120,
           categories: ["general", "reaction", "wholesome"],
-        }).isValid
+        }).isValid,
       ).toBe(true);
 
       // Test invalid boundary values
@@ -437,7 +438,7 @@ describe("LobbyService - Unit Tests", () => {
           rounds: 2,
           timeLimit: 30,
           categories: ["general"],
-        }).isValid
+        }).isValid,
       ).toBe(false);
 
       expect(
@@ -445,7 +446,7 @@ describe("LobbyService - Unit Tests", () => {
           rounds: 16,
           timeLimit: 30,
           categories: ["general"],
-        }).isValid
+        }).isValid,
       ).toBe(false);
 
       expect(
@@ -453,7 +454,7 @@ describe("LobbyService - Unit Tests", () => {
           rounds: 8,
           timeLimit: 29,
           categories: ["general"],
-        }).isValid
+        }).isValid,
       ).toBe(false);
 
       expect(
@@ -461,7 +462,7 @@ describe("LobbyService - Unit Tests", () => {
           rounds: 8,
           timeLimit: 121,
           categories: ["general"],
-        }).isValid
+        }).isValid,
       ).toBe(false);
     });
   });
@@ -480,7 +481,7 @@ describe("LobbyService - Unit Tests", () => {
 
       // Both should have the same configuration
       expect(instance1.validateLobbyCode("ABC12")).toEqual(
-        instance2.validateLobbyCode("ABC12")
+        instance2.validateLobbyCode("ABC12"),
       );
     });
   });

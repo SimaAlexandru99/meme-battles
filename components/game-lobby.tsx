@@ -51,6 +51,11 @@ import {
 } from "@/lib/animations/private-lobby-variants";
 import { useLobbyGameTransition } from "@/hooks/use-lobby-game-transition";
 
+interface GameLobbyProps {
+  lobbyCode: string;
+  currentUser: User;
+}
+
 export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const router = useRouter();
 
@@ -79,6 +84,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   const [isLeaving, setIsLeaving] = React.useState(false);
   const [isAddingBot, setIsAddingBot] = React.useState(false);
   const [botError, setBotError] = React.useState<string | null>(null);
+
+  // Game transition state
+  const [showTransitionOverlay, setShowTransitionOverlay] =
+    React.useState(false);
+  const [transitionCountdown, setTransitionCountdown] = React.useState<
+    number | null
+  >(null);
 
   // Handle kicking a player from the lobby
   const handleKickPlayer = React.useCallback(
@@ -133,14 +145,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
   // Use Haiku's useEventListener for beforeunload event
   useEventListener("beforeunload", (event: BeforeUnloadEvent) => {
     event.preventDefault();
-    event.returnValue = "";
     return "";
   });
 
   // Use Haiku's useEventListener for visibility change
   useEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
-      // Log that user left the tab while in lobby
+      // Log that the user left the tab while in the lobby
       Sentry.addBreadcrumb({
         category: "navigation",
         message: "User left tab while in game lobby",
@@ -192,11 +203,11 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             });
           } catch (err) {
             console.error("Failed to share lobby link", err);
-            // User cancelled sharing
+            // User canceled sharing
             console.log("Share cancelled");
           }
         } else {
-          // Fallback to copying link
+          // Fallback to copying the link
           try {
             copyToClipboard(shareUrl);
             toast.success("Lobby link copied to clipboard!");
@@ -210,16 +221,42 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     );
   }, [lobbyCode, copyToClipboard]);
 
-  // Start the game
+  // Start the game with enhanced transition
   const handleStartGame = React.useCallback(async () => {
     try {
+      // Show transition overlay
+      setShowTransitionOverlay(true);
+
+      // Start countdown
+      setTransitionCountdown(3);
+
+      // Countdown timer
+      const countdownInterval = setInterval(() => {
+        setTransitionCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownInterval);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Wait for the countdown to finish
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // Start the actual game
       await startGame();
-      // Navigation will be handled by the transition hook
+
+      toast.success("Game started! Transitioning to gameplay...");
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to start game";
       toast.error(errorMessage);
       Sentry.captureException(err);
+
+      // Reset transition state on error
+      setShowTransitionOverlay(false);
+      setTransitionCountdown(null);
     }
   }, [startGame]);
 
@@ -251,7 +288,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     setShowExitDialog(false);
   }, []);
 
-  // Use Haiku's useEventListener for keyboard shortcuts in exit dialog
+  // Use Haiku's useEventListener for keyboard shortcuts in the exit dialog
   useEventListener("keydown", (event: Event) => {
     const keyboardEvent = event as KeyboardEvent;
     if (keyboardEvent.key === "Escape" && showExitDialog) {
@@ -342,6 +379,31 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
     },
     [addBot]
   );
+
+  // Handle game state redirects
+  React.useEffect(() => {
+    if (lobby?.status !== "started") {
+      if (lobby?.status === "ended") {
+        router.push("/");
+      }
+    } else {
+      // Add a small delay to show the final transition state
+      setTimeout(() => {
+        router.push(`/game/${lobbyCode}/play`);
+      }, 1000);
+    }
+  }, [lobby?.status, lobbyCode, router]);
+
+  // Clean up transition state when lobby status changes
+  React.useEffect(() => {
+    if (lobby?.status === "started" || lobby?.status === "ended") {
+      // Clear transition state after navigation
+      setTimeout(() => {
+        setShowTransitionOverlay(false);
+        setTransitionCountdown(null);
+      }, 1500);
+    }
+  }, [lobby?.status]);
 
   // Show loading state while fetching lobby data
   if (isLobbyLoading) {
@@ -480,17 +542,6 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
         </motion.div>
       </div>
     );
-  }
-
-  // Handle game state redirects
-  if (lobby.status === "started") {
-    router.push(`/game/${lobbyCode}/play`);
-    return null;
-  }
-
-  if (lobby.status === "ended") {
-    router.push("/");
-    return null;
   }
 
   return (
@@ -693,7 +744,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                         <Button
                           onClick={handleStartGame}
                           disabled={
-                            Object.keys(lobby.players).length < 2 || isStarting
+                            Object.keys(lobby.players).length < 2 ||
+                            isStarting ||
+                            showTransitionOverlay
                           }
                           className={cn(
                             "w-full h-14 sm:h-12",
@@ -711,7 +764,22 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             "sm:ring-1 sm:hover:ring-2"
                           )}
                         >
-                          {isStarting ? (
+                          {showTransitionOverlay && transitionCountdown ? (
+                            <motion.div
+                              className="flex items-center gap-2"
+                              variants={successVariants}
+                              animate="animate"
+                            >
+                              <motion.div
+                                className="w-8 h-8 rounded-full bg-purple-500/30 border border-purple-400/50 flex items-center justify-center text-2xl font-bold text-purple-100"
+                                animate={{ scale: [1, 1.2, 1] }}
+                                transition={{ duration: 0.5, repeat: Infinity }}
+                              >
+                                {transitionCountdown}
+                              </motion.div>
+                              <span>Starting in...</span>
+                            </motion.div>
+                          ) : isStarting ? (
                             <motion.div
                               className="flex items-center gap-2"
                               variants={successVariants}
@@ -877,7 +945,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                               isCurrentUser={playerId === currentUser.id}
                               isAI={false}
                               disabled={
-                                isStarting || isSavingSettings || isAddingBot
+                                isStarting ||
+                                isSavingSettings ||
+                                isAddingBot ||
+                                showTransitionOverlay
                               }
                               onKickPlayer={handleKickPlayer}
                               onKickSuccess={() =>
@@ -975,6 +1046,102 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Game Start Transition Overlay */}
+      <AnimatePresence>
+        {showTransitionOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="text-center relative"
+            >
+              {/* Purple glow effect */}
+              <div className="absolute inset-0 bg-purple-500/10 rounded-full blur-3xl scale-150" />
+              <motion.div
+                className="mb-8 relative z-10"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                <RiGamepadLine className="w-24 h-24 text-purple-400 mx-auto" />
+              </motion.div>
+
+              {transitionCountdown ? (
+                <motion.div
+                  key={transitionCountdown}
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 1.5, opacity: 0 }}
+                  className="mb-6 relative z-10"
+                >
+                  <motion.div
+                    className="w-32 h-32 mx-auto rounded-full border-4 border-purple-400/30 border-t-purple-400 flex items-center justify-center text-6xl font-bangers text-purple-400"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, ease: "easeInOut" }}
+                  >
+                    {transitionCountdown}
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  className="mb-6 relative z-10"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  <div className="w-16 h-16 mx-auto border-4 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                </motion.div>
+              )}
+
+              <motion.h2
+                className="text-4xl font-bangers text-white mb-4 tracking-wide relative z-10"
+                animate={{ opacity: [1, 0.7, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                {transitionCountdown ? "Get Ready!" : "Starting Game..."}
+              </motion.h2>
+
+              <motion.p
+                className="text-xl text-purple-300 font-bangers tracking-wide relative z-10"
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                {transitionCountdown
+                  ? "The battle begins in..."
+                  : "Preparing your meme arsenal..."}
+              </motion.p>
+
+              {/* Fun background particles */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {[...Array(20)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 bg-purple-400/30 rounded-full"
+                    initial={{
+                      x: Math.random() * window.innerWidth,
+                      y: window.innerHeight + 10,
+                    }}
+                    animate={{
+                      y: -10,
+                      opacity: [0, 1, 0],
+                    }}
+                    transition={{
+                      duration: Math.random() * 3 + 2,
+                      repeat: Infinity,
+                      delay: Math.random() * 2,
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

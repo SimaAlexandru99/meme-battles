@@ -77,7 +77,7 @@ export default function FirstTimeSetupDialog({
     setIsSubmitting(true);
 
     try {
-      Sentry.startSpan(
+      await Sentry.startSpan(
         {
           op: "ui.dialog.submit",
           name: "First Time Setup Submit",
@@ -97,7 +97,7 @@ export default function FirstTimeSetupDialog({
           span.setAttribute("user.username", username.trim());
           span.setAttribute("user.avatar", currentAvatar);
           span.setAttribute("setup.completed", true);
-        }
+        },
       );
 
       // Close dialog after successful update

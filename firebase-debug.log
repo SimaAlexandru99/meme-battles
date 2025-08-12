@@ -154,3 +154,93 @@
 [debug] [2025-08-07T05:56:43.345Z] > authorizing via signed-in user (sima.alex33@gmail.com)
 [debug] [2025-08-07T05:56:43.608Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com 200
 [debug] [2025-08-07T05:56:43.608Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:40.236Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.240Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.240Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.243Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.243Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.284Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.285Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.285Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.285Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.285Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.288Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.288Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.288Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.288Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.288Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.289Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.289Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.289Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.290Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.290Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.313Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.314Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.314Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.314Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.314Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.316Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.316Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.316Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.316Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.316Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.318Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.318Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.318Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.319Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.319Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.320Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.320Z] Checked if tokens are valid: false, expires at: 1754987081811
+[debug] [2025-08-12T11:41:40.320Z] > refreshing access token with scopes: []
+[debug] [2025-08-12T11:41:40.320Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-12T11:41:40.320Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.453Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.453Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.463Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.463Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.469Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.469Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.477Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.477Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.479Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.479Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.487Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.487Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.494Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.494Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.501Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.501Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.504Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.504Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.512Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.512Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.514Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.514Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.522Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.522Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.524Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.524Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.532Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.532Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:40.535Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-12T11:41:40.535Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-12T11:41:40.543Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-08-12T11:41:40.543Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/meme-battles-project
+[debug] [2025-08-12T11:41:41.489Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-08-12T11:41:41.489Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:41.490Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com 200
+[debug] [2025-08-12T11:41:41.490Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:41.503Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com 200
+[debug] [2025-08-12T11:41:41.503Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:41.606Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-08-12T11:41:41.606Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:41.840Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-08-12T11:41:41.840Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:42.312Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com 200
+[debug] [2025-08-12T11:41:42.313Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/storage.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:42.390Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com 200
+[debug] [2025-08-12T11:41:42.391Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasecrashlytics.googleapis.com [omitted]
+[debug] [2025-08-12T11:41:42.396Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-12T11:41:42.396Z] > authorizing via signed-in user (sima.alex33@gmail.com)
+[debug] [2025-08-12T11:41:42.436Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-08-12T11:41:42.436Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/meme-battles-project/services/firebasedataconnect.googleapis.com [omitted]
