@@ -1,13 +1,9 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { motion } from "framer-motion";
-import {
-  RiTimeLine,
-  RiFireLine,
-  RiCheckLine,
-  RiThumbUpLine,
-} from "react-icons/ri";
+import { Flame, Check, ThumbsUp, Timer, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -40,7 +36,17 @@ export function VotingPhase({
   totalRounds,
   timeLeft,
 }: VotingPhaseProps) {
-  console.log("🗳️ VotingPhase render:", { roundNumber, totalRounds, timeLeft });
+  // Track voting phase renders for debugging
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      Sentry.addBreadcrumb({
+        message: "VotingPhase render",
+        category: "navigation",
+        level: "info",
+        data: { roundNumber, totalRounds, timeLeft },
+      });
+    }
+  }, [roundNumber, totalRounds, timeLeft]);
   const hasVoted = useMemo(
     () => Boolean(votes?.[currentUser.id]),
     [votes, currentUser.id]
@@ -103,36 +109,61 @@ export function VotingPhase({
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-6xl mx-auto px-4"
     >
-      {/* Header with phase indicator and timer */}
-      <div className="text-center mb-8">
+      {/* Enhanced Header with dramatic timer */}
+      <div className="text-center mb-6 sm:mb-8">
         <motion.h2
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-3xl font-bangers text-white tracking-wide mb-4"
+          className="text-2xl sm:text-4xl font-bangers text-white tracking-wide mb-4 sm:mb-6"
         >
-          Round {roundNumber} Voting
+          🗳️ Round {roundNumber} Voting
         </motion.h2>
 
-        <div className="flex items-center justify-center gap-4 mb-6">
+        {/* Enhanced timer section */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
           <Badge
             variant="secondary"
-            className="text-lg font-bangers tracking-wide bg-purple-600 text-white"
+            className="text-base sm:text-lg font-bangers tracking-wide bg-purple-600/80 backdrop-blur text-white border border-purple-400/50 px-3 sm:px-4 py-2"
           >
-            <RiFireLine className="w-4 h-4 mr-2" />
+            <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Round {roundNumber}/{totalRounds}
           </Badge>
 
-          <Badge
+          {/* Dramatic timer display */}
+          <div
             className={cn(
-              "font-bangers",
+              "flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border-2 font-bangers text-lg sm:text-2xl transition-all duration-300",
               isCriticalTime
-                ? "bg-red-600 text-white animate-pulse"
-                : "bg-green-600 text-white"
+                ? "bg-red-600/90 border-red-400 text-white animate-pulse shadow-lg shadow-red-500/50"
+                : timeLeft <= 20
+                  ? "bg-orange-600/90 border-orange-400 text-white shadow-lg shadow-orange-500/30"
+                  : "bg-green-600/90 border-green-400 text-white shadow-lg shadow-green-500/30"
             )}
+            style={
+              isCriticalTime
+                ? {
+                    textShadow: "0 0 10px rgba(239, 68, 68, 0.8)",
+                    boxShadow:
+                      "0 0 20px rgba(239, 68, 68, 0.4), 0 8px 32px rgba(239, 68, 68, 0.3)",
+                  }
+                : undefined
+            }
           >
-            <RiTimeLine className="w-4 h-4 mr-2" />
-            Voting: {timeLeft}s
-          </Badge>
+            <Timer
+              className={cn(
+                "w-5 h-5 sm:w-6 sm:h-6",
+                isCriticalTime && "animate-bounce"
+              )}
+            />
+            <span
+              className={cn(
+                "font-bold tracking-wider",
+                isCriticalTime && "animate-pulse"
+              )}
+            >
+              {timeLeft}s
+            </span>
+          </div>
         </div>
 
         {situation && (
@@ -148,12 +179,12 @@ export function VotingPhase({
           <p className="text-white font-bangers text-lg tracking-wide">
             {hasVoted ? (
               <>
-                <RiCheckLine className="inline w-5 h-5 mr-2 text-green-400" />
+                <Check className="inline w-5 h-5 mr-2 text-green-400" />
                 You&apos;ve voted! Waiting for others...
               </>
             ) : (
               <>
-                <RiThumbUpLine className="inline w-5 h-5 mr-2 text-green-400" />
+                <ThumbsUp className="inline w-5 h-5 mr-2 text-green-400" />
                 Click on a meme to vote for it!
               </>
             )}
@@ -161,126 +192,198 @@ export function VotingPhase({
         </div>
       </div>
 
-      {/* Voting Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+      {/* Enhanced Voting Grid */}
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
         {stableSubmissions.map((submission) => (
           <div key={submission.playerId} className="relative">
-            <Card
-              className={cn(
-                "transition-colors duration-200",
-                "bg-slate-800/50 backdrop-blur-sm border border-slate-700/50",
-                "shadow-2xl shadow-purple-500/10",
-                // Voting interactions
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.random() * 0.3 }}
+              whileHover={
                 !hasVoted &&
-                  submission.playerId !== currentUser.id &&
-                  timeLeft > 0 &&
-                  "hover:ring-2 hover:ring-green-500 hover:border-green-500 cursor-pointer hover:bg-slate-700/60",
-                // Already voted indicator
-                hasVoted &&
-                  safeVotes[currentUser.id] === submission.playerId &&
-                  "ring-2 ring-green-500 border-green-500",
-                // Own submission (cannot vote)
-                submission.playerId === currentUser.id &&
-                  "opacity-60 cursor-not-allowed"
-              )}
-              onClick={() => handleVote(submission.playerId)}
+                submission.playerId !== currentUser.id &&
+                timeLeft > 0
+                  ? { scale: 1.02 }
+                  : {}
+              }
+              whileTap={
+                !hasVoted &&
+                submission.playerId !== currentUser.id &&
+                timeLeft > 0
+                  ? { scale: 0.98 }
+                  : {}
+              }
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white font-bangers text-lg tracking-wide text-center">
-                  {submission.playerName}
-                  {submission.playerId === currentUser.id && (
-                    <span className="text-sm text-slate-400 block">
-                      (Your Submission)
-                    </span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Meme Image */}
-                <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-700/50">
-                  <Image
-                    src={submission.memeCard.url}
-                    alt={submission.memeCard.alt}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-
-                  {/* Voted indicator for current user */}
-                  {hasVoted &&
-                    safeVotes[currentUser.id] === submission.playerId && (
-                      <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-2">
-                        <RiCheckLine className="w-4 h-4" />
-                      </div>
+              <Card
+                className={cn(
+                  "transition-all duration-300 transform",
+                  "bg-slate-800/60 backdrop-blur-sm border shadow-xl",
+                  // Voting interactions
+                  !hasVoted &&
+                    submission.playerId !== currentUser.id &&
+                    timeLeft > 0 &&
+                    "hover:shadow-2xl hover:shadow-green-500/20 border-slate-600/50 hover:border-green-500/80 cursor-pointer hover:bg-slate-700/80",
+                  // Already voted indicator
+                  hasVoted &&
+                    safeVotes[currentUser.id] === submission.playerId &&
+                    "ring-2 ring-green-500 border-green-500/80 shadow-green-500/20 bg-green-900/20",
+                  // Own submission (cannot vote)
+                  submission.playerId === currentUser.id &&
+                    "border-purple-500/50 bg-purple-900/20 cursor-not-allowed",
+                  // Default state
+                  hasVoted &&
+                    safeVotes[currentUser.id] !== submission.playerId &&
+                    submission.playerId !== currentUser.id &&
+                    "opacity-70 border-slate-600/30"
+                )}
+                onClick={() => handleVote(submission.playerId)}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white font-bangers text-base sm:text-lg tracking-wide text-center">
+                    {submission.playerName}
+                    {submission.playerId === currentUser.id && (
+                      <span className="text-xs sm:text-sm text-purple-300 block">
+                        (Your Submission)
+                      </span>
                     )}
+                  </CardTitle>
+                </CardHeader>
 
-                  {/* Vote count indicator (only show current vote count during voting) */}
-                  <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
-                    <span className="text-white text-sm font-bangers">
-                      {
-                        Object.values(safeVotes).filter(
-                          (vote) => vote === submission.playerId
-                        ).length
-                      }{" "}
-                      votes
-                    </span>
+                <CardContent className="space-y-4">
+                  {/* Meme Image */}
+                  <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-700/50">
+                    <Image
+                      src={submission.memeCard.url}
+                      alt={submission.memeCard.alt}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+
+                    {/* Voted indicator for current user */}
+                    {hasVoted &&
+                      safeVotes[currentUser.id] === submission.playerId && (
+                        <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-2">
+                          <Check className="w-4 h-4" />
+                        </div>
+                      )}
+
+                    {/* Vote count indicator (only show current vote count during voting) */}
+                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
+                      <span className="text-white text-sm font-bangers">
+                        {
+                          Object.values(safeVotes).filter(
+                            (vote) => vote === submission.playerId
+                          ).length
+                        }{" "}
+                        votes
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Voting status indicator */}
-                <div className="text-center">
-                  {hasVoted &&
-                  safeVotes[currentUser.id] === submission.playerId ? (
-                    <Badge className="bg-green-600 text-white font-bangers">
-                      <RiCheckLine className="w-4 h-4 mr-1" />
-                      Your Vote
-                    </Badge>
-                  ) : submission.playerId === currentUser.id ? (
-                    <Badge
-                      variant="outline"
-                      className="text-slate-400 font-bangers border-slate-500"
-                    >
-                      Your Submission
-                    </Badge>
-                  ) : hasVoted ? (
-                    <Badge
-                      variant="outline"
-                      className="text-slate-400 font-bangers border-slate-600"
-                    >
-                      You voted for someone else
-                    </Badge>
-                  ) : timeLeft > 0 ? (
-                    <Badge className="bg-blue-600 text-white font-bangers hover:bg-blue-700 transition-colors">
-                      <RiThumbUpLine className="w-4 h-4 mr-1" />
-                      Click to Vote
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="text-slate-400 font-bangers border-slate-600"
-                    >
-                      Voting Closed
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  {/* Enhanced voting status indicator */}
+                  <div className="text-center">
+                    {hasVoted &&
+                    safeVotes[currentUser.id] === submission.playerId ? (
+                      <Badge className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bangers px-3 py-1 text-sm shadow-lg">
+                        <Check className="w-4 h-4 mr-1" />
+                        Your Vote ✨
+                      </Badge>
+                    ) : submission.playerId === currentUser.id ? (
+                      <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bangers px-3 py-1 text-sm">
+                        <User className="w-4 h-4 mr-1" />
+                        Your Submission
+                      </Badge>
+                    ) : hasVoted ? (
+                      <Badge
+                        variant="outline"
+                        className="text-slate-400 font-bangers border-slate-500/50 px-3 py-1 text-xs"
+                      >
+                        You voted elsewhere
+                      </Badge>
+                    ) : timeLeft > 0 ? (
+                      <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bangers hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 px-3 py-1 text-sm shadow-lg animate-pulse">
+                        <ThumbsUp className="w-4 h-4 mr-1" />
+                        🗳️ Tap to Vote!
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-slate-400 font-bangers border-slate-600/50 px-3 py-1 text-xs"
+                      >
+                        ⏰ Voting Closed
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         ))}
       </div>
 
-      {/* Voting status message */}
+      {/* Enhanced voting status message */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <p className="text-white font-bangers text-lg tracking-wide">
-          {hasVoted
-            ? "🗳️ Vote submitted! Waiting for other players to vote..."
-            : `⏱️ ${timeLeft}s left to vote! Choose your favorite meme!`}
-        </p>
+        <div
+          className={cn(
+            "inline-flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-lg",
+            hasVoted
+              ? "bg-green-600/20 border border-green-400/30"
+              : isCriticalTime
+                ? "bg-red-600/20 border border-red-400/30"
+                : "bg-blue-600/20 border border-blue-400/30"
+          )}
+        >
+          {hasVoted ? (
+            <>
+              <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+              <div className="text-left">
+                <p className="text-green-300 font-bangers text-base sm:text-lg tracking-wide">
+                  Vote submitted successfully!
+                </p>
+                <p className="text-green-200/80 font-bangers text-sm">
+                  Waiting for other players...
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Timer
+                className={cn(
+                  "w-5 h-5 sm:w-6 sm:h-6",
+                  isCriticalTime
+                    ? "text-red-400 animate-bounce"
+                    : "text-blue-400"
+                )}
+              />
+              <div className="text-left">
+                <p
+                  className={cn(
+                    "font-bangers text-base sm:text-lg tracking-wide",
+                    isCriticalTime ? "text-red-300" : "text-blue-300"
+                  )}
+                >
+                  {isCriticalTime
+                    ? "⚠️ Hurry up!"
+                    : "Choose your favorite meme!"}
+                </p>
+                <p
+                  className={cn(
+                    "font-bangers text-sm",
+                    isCriticalTime ? "text-red-200/80" : "text-blue-200/80"
+                  )}
+                >
+                  {timeLeft}s remaining
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </motion.div>
     </motion.div>
   );

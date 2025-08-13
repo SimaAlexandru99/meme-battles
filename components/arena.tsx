@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  RiTimeLine,
-  RiGamepadLine,
-  RiChat3Line,
-  RiGroupLine,
-} from "react-icons/ri";
+import { ref, onValue, push } from "firebase/database";
+import { rtdb } from "@/firebase/client";
+import { Clock, Gamepad2, MessageCircle, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +23,7 @@ import { VotingPhase } from "./voting-phase";
 import { LeaderboardPhase } from "./leaderboard-phase";
 import { RoundCountdown } from "./round-countdown";
 import { GameTransition } from "./game-transition";
+import { GameOver } from "./game-over";
 import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
@@ -55,12 +53,21 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     clearError,
   } = useGameState(lobbyCode);
 
-  console.log("🏟️ Arena re-render with gameState:", {
-    phase: gameState?.phase,
-    roundNumber: gameState?.roundNumber,
-    totalRounds: gameState?.totalRounds,
-    timestamp: new Date().toISOString(),
-  });
+  // Track game state changes for debugging in non-production
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      Sentry.addBreadcrumb({
+        message: "Arena re-render",
+        category: "navigation",
+        level: "info",
+        data: {
+          phase: gameState?.phase,
+          roundNumber: gameState?.roundNumber,
+          totalRounds: gameState?.totalRounds,
+        },
+      });
+    }
+  }, [gameState?.phase, gameState?.roundNumber, gameState?.totalRounds]);
 
   // Use lobby management for lobby-specific operations
   const { isHost, leaveLobby, completeGameTransition } =
@@ -71,9 +78,30 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     cards: playerCards,
   });
 
-  // Chat functionality
+  // Chat functionality - now using Firebase real-time data
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
+
+  // Real-time chat listener
+  useEffect(() => {
+    if (!lobbyCode) return;
+
+    const chatRef = ref(rtdb, `lobbies/${lobbyCode}/chat`);
+    const unsubscribe = onValue(chatRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const chatData = snapshot.val() as Record<string, ChatMessage>;
+        const messagesList = Object.values(chatData).sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        setMessages(messagesList);
+      } else {
+        setMessages([]);
+      }
+    });
+
+    return unsubscribe;
+  }, [lobbyCode]);
 
   // Handle errors
   useEffect(() => {
@@ -85,30 +113,38 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
   // Handle game state changes
   useEffect(() => {
+    // Note: Removed automatic redirect for game_over phase
+    // GameOver component now handles navigation with better UX
     if (gameState?.phase === "game_over") {
-      toast.success("Game finished! Returning to lobby...");
-      setTimeout(() => {
-        router.push(`/game/${lobbyCode}`);
-      }, 3000);
+      toast.success("Game finished! Check out the results!");
     }
   }, [gameState?.phase, lobbyCode, router]);
 
   // Handler functions
-  const handleSendMessage = useCallback(() => {
-    if (!newMessage.trim()) return;
+  const handleSendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !lobbyCode) return;
 
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      playerId: currentUser.id,
-      playerName: currentUser.name,
-      message: newMessage,
-      timestamp: new Date(),
-      type: "chat",
-    };
+    try {
+      const message: ChatMessage = {
+        id: Date.now().toString(),
+        playerId: currentUser.id,
+        playerName: currentUser.name,
+        message: newMessage.trim(),
+        timestamp: new Date(),
+        type: "chat",
+      };
 
-    setMessages((prev) => [...prev, message]);
-    setNewMessage("");
-  }, [newMessage, currentUser]);
+      const chatRef = ref(rtdb, `lobbies/${lobbyCode}/chat`);
+      await push(chatRef, message);
+      setNewMessage("");
+    } catch (error) {
+      toast.error("Failed to send message. Please try again.");
+      Sentry.captureException(error, {
+        tags: { operation: "send_chat_message", lobbyCode },
+        extra: { message: newMessage.trim() },
+      });
+    }
+  }, [newMessage, currentUser, lobbyCode]);
 
   const handleSubmitCard = useCallback(async () => {
     if (!selectedCard) {
@@ -135,15 +171,63 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     }
   }, [startRound]);
 
-  const handleLeaveGame = useCallback(async () => {
+  const handleGoHome = useCallback(async () => {
     try {
+      // Clean up Firebase data before navigating
       await leaveLobby();
+      toast.success("Thanks for playing! See you next time!");
       router.push("/");
     } catch (error) {
-      toast.error("Failed to leave game. Please try again.");
-      Sentry.captureException(error);
+      // Even if leave fails, still navigate home
+      Sentry.captureException(error, {
+        tags: { operation: "go_home_cleanup", lobbyCode },
+      });
+      toast.warning("Left game, but cleanup may be incomplete.");
+      router.push("/");
     }
-  }, [leaveLobby, router]);
+  }, [leaveLobby, router, lobbyCode]);
+
+  // Clean up Firebase when user navigates away or closes browser
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Use navigator.sendBeacon for reliable cleanup on page unload
+      // This works even when the page is being closed
+      if (
+        typeof navigator.sendBeacon === "function" &&
+        lobbyCode &&
+        currentUser?.id
+      ) {
+        const cleanup = async () => {
+          try {
+            await leaveLobby();
+          } catch (error) {
+            // Silent fail on unload - user is already leaving
+            Sentry.captureException(error, {
+              tags: { operation: "beforeunload_cleanup", lobbyCode },
+            });
+          }
+        };
+        // Don't await - page is unloading
+        cleanup();
+      }
+    };
+
+    // Add beforeunload listener for browser close/refresh/navigation
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Also cleanup Firebase if component unmounts unexpectedly
+      if (lobbyCode && currentUser?.id) {
+        leaveLobby().catch((error) => {
+          Sentry.captureException(error, {
+            tags: { operation: "unmount_cleanup", lobbyCode },
+          });
+        });
+      }
+    };
+  }, [lobbyCode, currentUser?.id, leaveLobby]);
 
   // Loading state
   if (isLoading) {
@@ -265,7 +349,22 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <GameTransition
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players as unknown as PlayerData[]}
+        players={players.map((p) => ({
+          id: p.id,
+          displayName: p.name,
+          avatarId: p.avatar,
+          profileURL: p.avatar,
+          joinedAt: p.lastSeen || new Date().toISOString(),
+          isHost: p.isHost || false,
+          score: p.score,
+          status: p.status as PlayerStatus,
+          lastSeen: p.lastSeen || new Date().toISOString(),
+          isCurrentPlayer: p.isCurrentPlayer,
+          cards: p.cards,
+          isAI: p.isAI,
+          aiPersonalityId: p.aiPersonalityId,
+          aiDifficulty: p.aiDifficulty,
+        }))}
         onTransitionComplete={completeGameTransition}
       />
     );
@@ -276,7 +375,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <RoundCountdown
         lobbyCode={lobbyCode}
         currentUser={currentUser}
-        players={players as unknown as Player[]}
+        players={players}
         roundNumber={gameState.roundNumber || 1}
         totalRounds={gameState.totalRounds || 8}
         onRoundStart={handleStartRound}
@@ -302,7 +401,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                       size="sm"
                       className="text-white hover:bg-slate-700/50"
                     >
-                      <RiChat3Line className="w-5 h-5" />
+                      <MessageCircle className="w-5 h-5" />
                     </Button>
                   </SheetTrigger>
                   <SheetContent
@@ -314,7 +413,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                         Chat
                       </SheetTitle>
                     </SheetHeader>
-                    <div className="mt-4 h-full">
+                    <div className="mt-8 h-full">
                       <ChatPanel
                         messages={messages}
                         newMessage={newMessage}
@@ -334,7 +433,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                       size="sm"
                       className="text-white hover:bg-slate-700/50"
                     >
-                      <RiGroupLine className="w-5 h-5" />
+                      <Users className="w-5 h-5" />
                     </Button>
                   </SheetTrigger>
                   <SheetContent
@@ -346,8 +445,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                         Players
                       </SheetTitle>
                     </SheetHeader>
-                    <div className="mt-4 h-full">
-                      <PlayersList players={players as unknown as Player[]} />
+                    <div className="mt-8 h-full">
+                      <PlayersList players={players} />
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -355,52 +454,70 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
               {/* Game Info (Center on mobile, Left on desktop) */}
               <div className="flex items-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <RiGamepadLine className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-                  <span className="text-white font-bangers tracking-wide text-sm sm:text-base">
-                    Round{" "}
-                    {(() => {
-                      console.log("🎯 TopBar round display:", {
-                        rawRoundNumber: gameState.roundNumber,
-                        fallbackUsed: gameState.roundNumber || 1,
-                        phase: gameState.phase,
-                        gameStateExists: !!gameState,
-                      });
-                      return gameState.roundNumber || 1;
-                    })()}
-                    /{gameState.totalRounds || 8}
-                  </span>
+                <div className="flex items-center gap-1 sm:gap-3 bg-purple-600/20 border border-purple-400/30 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
+                  <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300" />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
+                    <span className="text-purple-200 font-bangers tracking-wide text-xs sm:text-sm uppercase">
+                      Round
+                    </span>
+                    <span className="text-white font-bangers tracking-wide text-lg sm:text-xl font-bold">
+                      {gameState.roundNumber || 1}
+                      <span className="text-purple-300 font-normal">
+                        /{gameState.totalRounds || 8}
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <RiTimeLine className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
                   {(() => {
                     const timeLeftValue =
                       typeof gameState.timeLeft === "number"
                         ? gameState.timeLeft
                         : 0;
                     const isCritical = timeLeftValue <= 15;
+                    const isVeryLow = timeLeftValue <= 5;
+
                     return (
-                      <span
-                        className={cn(
-                          "font-bangers tracking-wide text-sm sm:text-base",
-                          isCritical
-                            ? "text-red-400 animate-pulse"
-                            : "text-white"
-                        )}
-                      >
-                        {timeLeftValue}s
-                      </span>
+                      <>
+                        <Clock
+                          className={cn(
+                            "w-4 h-4 sm:w-6 sm:h-6",
+                            isCritical ? "text-red-400" : "text-purple-400",
+                            isVeryLow && "animate-bounce"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "font-bangers tracking-wide",
+                            isCritical
+                              ? "text-lg sm:text-2xl text-red-400 font-bold"
+                              : "text-sm sm:text-lg text-white",
+                            isVeryLow && "animate-pulse text-red-300",
+                            isCritical && "drop-shadow-lg"
+                          )}
+                          style={
+                            isVeryLow
+                              ? {
+                                  textShadow:
+                                    "0 0 10px rgba(248, 113, 113, 0.8), 0 0 20px rgba(248, 113, 113, 0.4)",
+                                }
+                              : undefined
+                          }
+                        >
+                          {timeLeftValue}s
+                        </span>
+                      </>
                     );
                   })()}
                 </div>
               </div>
 
               {/* Lobby Code (Right) */}
-              <div className="flex items-center gap-1 sm:gap-2">
-                <span className="text-purple-200/70 font-bangers tracking-wide text-sm sm:text-base">
+              <div className="flex items-center gap-1 sm:gap-2 bg-purple-600/20 border border-purple-400/30 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
+                <span className="text-purple-200 font-bangers tracking-wide text-xs sm:text-sm uppercase">
                   Code:
                 </span>
-                <Badge className="bg-purple-600 text-white font-bangers text-sm">
+                <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-bangers text-sm sm:text-base px-2 sm:px-3 py-1 tracking-wider border border-purple-400/50">
                   {lobbyCode}
                 </Badge>
               </div>
@@ -409,9 +526,9 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         </div>
 
         {/* Responsive Main Game Area */}
-        <div className="pt-20 h-screen flex gap-4 p-4 min-h-0">
+        <div className="pt-16 sm:pt-20 h-screen flex gap-2 sm:gap-4 p-2 sm:p-4 min-h-0">
           {/* Desktop: Chat Panel (Left) - Hidden on mobile */}
-          <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4">
+          <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4 pt-8">
             <ChatPanel
               messages={messages}
               newMessage={newMessage}
@@ -423,20 +540,22 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
           {/* Center Column - Situation + Cards (Full width on mobile) */}
           <div className="flex-1 flex flex-col justify-between min-h-0">
-            {/* Situation (Top Center) - Responsive text sizes */}
-            <div className="flex-1 flex items-center justify-center text-center px-4">
-              <div>
-                <h2 className="text-white font-bangers text-xl sm:text-2xl mb-2">
-                  Current Situation:
-                </h2>
-                <p className="text-purple-200 font-bangers text-lg sm:text-xl max-w-2xl break-words">
-                  {gameState.currentSituation}
-                </p>
+            {/* Situation (Top Center) - Enhanced readability */}
+            <div className="flex-1 flex items-center justify-center text-center px-2 sm:px-4">
+              <div className="max-w-4xl w-full">
+                <div className="bg-slate-800/40 border border-purple-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-6 mb-3 sm:mb-4">
+                  <h2 className="text-purple-300 font-bangers text-sm sm:text-xl mb-2 sm:mb-3 uppercase tracking-wider">
+                    Current Situation
+                  </h2>
+                  <p className="text-white font-bangers text-lg sm:text-3xl md:text-4xl leading-tight break-words drop-shadow-lg">
+                    {gameState.currentSituation}
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Cards + Submit Button (Bottom Center) - Mobile optimized */}
-            <div className="flex flex-col items-center gap-3 sm:gap-4 pb-4 px-2 lg:px-4">
+            <div className="flex flex-col items-center gap-2 sm:gap-4 pb-2 sm:pb-4 px-1 sm:px-2 lg:px-4">
               <div className="w-full max-w-full overflow-hidden">
                 <MemeCardHand
                   cards={playerCards}
@@ -446,32 +565,71 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                 />
               </div>
 
-              {/* Submit Button - Responsive size */}
+              {/* Submit Button - Enhanced prominence & mobile-friendly */}
               {!hasSubmitted && (
-                <Button
-                  onClick={handleSubmitCard}
-                  disabled={!selectedCard}
-                  className={cn(
-                    "bg-purple-600 hover:bg-purple-700 text-white font-bangers text-base sm:text-lg px-6 sm:px-8 py-2 sm:py-3 transition-all",
-                    !selectedCard && "opacity-50 cursor-not-allowed"
+                <div className="flex flex-col items-center gap-2 w-full max-w-sm">
+                  {selectedCard && (
+                    <div className="text-center px-2">
+                      <p className="text-purple-200 font-bangers text-xs sm:text-base">
+                        Ready to submit:{" "}
+                        <span className="text-white font-bold">
+                          {selectedCard.filename?.replace(
+                            /\.(jpg|jpeg|png|gif|webp)$/i,
+                            ""
+                          ) || "Card"}
+                        </span>
+                      </p>
+                    </div>
                   )}
-                >
-                  {selectedCard ? "Submit Card" : "Select a Card First"}
-                </Button>
+                  <Button
+                    onClick={handleSubmitCard}
+                    disabled={!selectedCard}
+                    className={cn(
+                      "font-bangers w-full min-h-[44px] transition-all duration-300 transform shadow-2xl",
+                      "text-base sm:text-xl px-4 sm:px-12 py-3 sm:py-4",
+                      selectedCard
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-105 text-white"
+                        : "bg-slate-600 cursor-not-allowed opacity-60 text-slate-300",
+                      selectedCard &&
+                        "animate-pulse hover:animate-none border-2 border-purple-400/50"
+                    )}
+                    style={
+                      selectedCard
+                        ? {
+                            boxShadow:
+                              "0 10px 30px rgba(168, 85, 247, 0.4), 0 0 0 2px rgba(168, 85, 247, 0.2)",
+                          }
+                        : undefined
+                    }
+                  >
+                    <span className="block sm:hidden">
+                      {selectedCard ? "🎭 Submit!" : "⚡ Select First"}
+                    </span>
+                    <span className="hidden sm:block">
+                      {selectedCard
+                        ? "🎭 Submit Your Meme!"
+                        : "⚡ Select a Card First"}
+                    </span>
+                  </Button>
+                </div>
               )}
 
-              {/* Submitted Indicator - Responsive padding */}
+              {/* Submitted Indicator - Enhanced styling & mobile-friendly */}
               {hasSubmitted && (
-                <div className="inline-flex items-center gap-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg font-bangers text-sm sm:text-base">
-                  ✓ Card Submitted
+                <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-lg sm:rounded-xl font-bangers text-base sm:text-xl shadow-2xl border-2 border-green-400/50">
+                  <span className="text-lg sm:text-2xl">✅</span>
+                  <span className="block sm:hidden">Submitted!</span>
+                  <span className="hidden sm:block">
+                    Card Submitted Successfully!
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Desktop: Players List (Right) - Hidden on mobile */}
-          <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4">
-            <PlayersList players={players as unknown as Player[]} />
+          <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4 pt-8">
+            <PlayersList players={players} />
           </div>
         </div>
       </div>
@@ -496,7 +654,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         <VotingPhase
           lobbyCode={lobbyCode}
           currentUser={currentUser}
-          players={players as unknown as Player[]}
+          players={players}
           situation={gameState.currentSituation}
           submissions={safeSubmissions}
           votes={safeVotes}
@@ -522,7 +680,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         <ResultsPhase
           lobbyCode={lobbyCode}
           currentUser={currentUser}
-          players={players as unknown as Player[]}
+          players={players}
           situation={gameState.currentSituation}
           submissions={safeSubmissions}
           votes={safeVotes}
@@ -550,7 +708,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <LeaderboardPhase
           currentUser={currentUser}
-          players={players as unknown as Player[]}
+          players={players}
           situation={gameState.currentSituation}
           submissions={safeSubmissions}
           votes={safeVotes}
@@ -566,34 +724,28 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
   if (gameState.phase === "game_over") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
-          <CardHeader>
-            <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
-              Game Over!
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="text-center">
-              <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
-                Thanks for playing!
-              </p>
-              <Button
-                onClick={handleLeaveGame}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
-              >
-                Return to Lobby
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <GameOver
+        players={players}
+        scores={gameState.scores || {}}
+        totalRounds={gameState.totalRounds || 8}
+        currentUser={currentUser}
+        lobbyCode={lobbyCode}
+        onReturnToLobby={() => {
+          router.push(`/game/${lobbyCode}`);
+        }}
+        onGoHome={handleGoHome}
+      />
     );
   }
 
-  // Debug game state
-  console.log("Current game state:", gameState);
-  console.log("Player cards:", playerCards);
+  // Log unknown game phase for debugging
+  if (gameState) {
+    Sentry.captureMessage("Unknown game phase encountered", {
+      level: "warning",
+      tags: { lobbyCode, phase: gameState.phase },
+      extra: { gameState, playerCards },
+    });
+  }
 
   // If we reach here, we have an unknown game phase
   return (

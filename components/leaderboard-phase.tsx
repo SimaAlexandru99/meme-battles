@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
-import { RiTrophyLine, RiFireLine, RiStarLine } from "react-icons/ri";
+import { Trophy, Flame, Star, Crown, Medal, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -42,11 +43,17 @@ export function LeaderboardPhase({
   totalRounds,
   timeLeft,
 }: LeaderboardPhaseProps) {
-  console.log("🏆 LeaderboardPhase render:", {
-    roundNumber,
-    totalRounds,
-    timeLeft,
-  });
+  // Track leaderboard phase renders for debugging
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      Sentry.addBreadcrumb({
+        message: "LeaderboardPhase render",
+        category: "navigation",
+        level: "info",
+        data: { roundNumber, totalRounds, timeLeft },
+      });
+    }
+  }, [roundNumber, totalRounds, timeLeft]);
   const [showRoundDetails, setShowRoundDetails] = useState(true);
 
   // Calculate current round scoring
@@ -90,33 +97,41 @@ export function LeaderboardPhase({
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-5xl mx-auto px-4"
     >
-      {/* Header */}
-      <div className="text-center mb-8">
+      {/* Enhanced Header */}
+      <div className="text-center mb-6 sm:mb-8">
         <motion.h2
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-3xl font-bangers text-white tracking-wide mb-4"
+          className="text-2xl sm:text-4xl md:text-5xl font-bangers text-white tracking-wider mb-4 sm:mb-6 drop-shadow-lg"
         >
-          {isGameEnd ? "Final Results!" : `Round ${roundNumber} Complete`}
+          {isGameEnd ? "🏆 Final Results!" : `🎯 Round ${roundNumber} Complete`}
         </motion.h2>
 
-        <div className="flex items-center justify-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
           <Badge
             variant="secondary"
-            className="text-lg font-bangers tracking-wide bg-purple-600 text-white"
+            className="text-base sm:text-lg font-bangers tracking-wide bg-purple-600/90 backdrop-blur text-white border border-purple-400/50 px-3 sm:px-4 py-2 shadow-lg"
           >
-            <RiFireLine className="w-4 h-4 mr-2" />
+            <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Round {roundNumber}/{totalRounds}
           </Badge>
 
-          <Badge className="bg-blue-600 text-white font-bangers">
-            <RiStarLine className="w-4 h-4 mr-2" />
-            Leaderboard
+          <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bangers px-3 sm:px-4 py-2 shadow-lg border border-blue-400/50">
+            <Star className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            Standings
           </Badge>
 
           {!isGameEnd && (
-            <Badge className="bg-green-600 text-white font-bangers">
-              Next Round: {timeLeft}s
+            <Badge
+              className={cn(
+                "font-bangers px-3 sm:px-4 py-2 shadow-lg border",
+                timeLeft <= 5
+                  ? "bg-red-600 border-red-400 text-white animate-pulse"
+                  : "bg-green-600 border-green-400 text-white"
+              )}
+            >
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              Next: {timeLeft}s
             </Badge>
           )}
         </div>
@@ -128,7 +143,7 @@ export function LeaderboardPhase({
             className="mb-6"
           >
             <div className="text-center bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-black rounded-2xl p-6 shadow-2xl">
-              <RiTrophyLine className="w-12 h-12 mx-auto mb-2" />
+              <Trophy className="w-12 h-12 mx-auto mb-2" />
               <h3 className="text-2xl font-bangers tracking-wide">
                 🎉 Game Winner: {gameWinner?.playerName} 🎉
               </h3>
@@ -140,28 +155,30 @@ export function LeaderboardPhase({
         )}
       </div>
 
-      {/* Toggle between Round Details and Leaderboard */}
-      <div className="flex justify-center gap-4 mb-6">
+      {/* Enhanced Toggle between Round Details and Leaderboard */}
+      <div className="flex justify-center gap-2 sm:gap-4 mb-6">
         <button
           onClick={() => setShowRoundDetails(true)}
           className={cn(
-            "px-4 py-2 rounded-lg font-bangers transition-all",
+            "px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bangers transition-all duration-300 shadow-lg border-2",
             showRoundDetails
-              ? "bg-purple-600 text-white"
-              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 shadow-purple-500/30"
+              : "bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500"
           )}
         >
+          <Trophy className="w-4 h-4 inline mr-2" />
           Round {roundNumber} Results
         </button>
         <button
           onClick={() => setShowRoundDetails(false)}
           className={cn(
-            "px-4 py-2 rounded-lg font-bangers transition-all",
+            "px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bangers transition-all duration-300 shadow-lg border-2",
             !showRoundDetails
-              ? "bg-purple-600 text-white"
-              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-blue-400 shadow-blue-500/30"
+              : "bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500"
           )}
         >
+          <Crown className="w-4 h-4 inline mr-2" />
           Overall Standings
         </button>
       </div>
@@ -206,7 +223,7 @@ export function LeaderboardPhase({
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
                           {scoring.isWinner && (
-                            <RiTrophyLine className="w-5 h-5 text-yellow-400" />
+                            <Trophy className="w-5 h-5 text-yellow-400" />
                           )}
                           <span
                             className={cn(
@@ -226,7 +243,7 @@ export function LeaderboardPhase({
                         {/* Streak indicator */}
                         {scoring.streakBonus > 0 && (
                           <Badge className="bg-orange-600 text-white font-bangers text-xs">
-                            <RiFireLine className="w-3 h-3 mr-1" />
+                            <Flame className="w-3 h-3 mr-1" />
                             Streak!
                           </Badge>
                         )}
@@ -307,21 +324,29 @@ export function LeaderboardPhase({
                           {/* Rank */}
                           <div
                             className={cn(
-                              "flex items-center justify-center w-10 h-10 rounded-full font-bangers text-lg",
+                              "flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full font-bangers text-lg sm:text-xl shadow-lg border-2",
                               entry.rank === 1 &&
-                                "bg-yellow-500 text-black shadow-lg",
+                                "bg-gradient-to-br from-yellow-400 to-yellow-600 text-black border-yellow-300 shadow-yellow-500/30",
                               entry.rank === 2 &&
-                                "bg-slate-400 text-black shadow-lg",
+                                "bg-gradient-to-br from-slate-300 to-slate-500 text-black border-slate-200 shadow-slate-500/30",
                               entry.rank === 3 &&
-                                "bg-orange-600 text-white shadow-lg",
+                                "bg-gradient-to-br from-orange-500 to-orange-700 text-white border-orange-400 shadow-orange-500/30",
                               entry.rank > 3 &&
-                                "bg-slate-600 text-white shadow-md"
+                                "bg-gradient-to-br from-slate-600 to-slate-800 text-white border-slate-500 shadow-slate-600/20"
                             )}
                           >
                             {entry.rank === 1 && (
-                              <RiTrophyLine className="w-5 h-5" />
+                              <Crown className="w-6 h-6 sm:w-7 sm:h-7" />
                             )}
-                            {entry.rank !== 1 && entry.rank}
+                            {entry.rank === 2 && (
+                              <Medal className="w-6 h-6 sm:w-7 sm:h-7" />
+                            )}
+                            {entry.rank === 3 && (
+                              <Trophy className="w-6 h-6 sm:w-7 sm:h-7" />
+                            )}
+                            {entry.rank > 3 && (
+                              <span className="font-bold">{entry.rank}</span>
+                            )}
                           </div>
 
                           {/* Player Info */}
@@ -340,7 +365,7 @@ export function LeaderboardPhase({
                             {/* Streak display */}
                             {streak && streak.currentStreak > 1 && (
                               <div className="flex items-center gap-1 mt-1">
-                                <RiFireLine className="w-4 h-4 text-orange-400" />
+                                <Flame className="w-4 h-4 text-orange-400" />
                                 <span className="text-orange-300 text-sm font-bangers">
                                   {streak.currentStreak} win streak
                                 </span>
@@ -349,11 +374,11 @@ export function LeaderboardPhase({
                           </div>
                         </div>
 
-                        {/* Score */}
+                        {/* Enhanced Score Display */}
                         <div className="text-right">
                           <div
                             className={cn(
-                              "font-bangers text-2xl",
+                              "font-bangers text-2xl sm:text-3xl font-bold drop-shadow-lg",
                               entry.rank === 1 && "text-yellow-300",
                               entry.rank === 2 && "text-slate-300",
                               entry.rank === 3 && "text-orange-300",
@@ -362,9 +387,18 @@ export function LeaderboardPhase({
                           >
                             {entry.totalScore}
                           </div>
-                          <div className="text-slate-400 text-sm font-bangers">
+                          <div className="text-slate-400 text-xs sm:text-sm font-bangers uppercase tracking-wider">
                             points
                           </div>
+                          {/* Rank-specific indicators */}
+                          {entry.rank === 1 && (
+                            <div className="flex items-center justify-end gap-1 mt-1">
+                              <Star className="w-3 h-3 text-yellow-400" />
+                              <span className="text-yellow-400 text-xs font-bangers">
+                                Champion
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     );
