@@ -12,14 +12,19 @@ interface RoundCountdownProps {
   lobbyCode: string;
   currentUser: User;
   players: Player[];
+  roundNumber: number;
+  totalRounds: number;
   onRoundStart: () => void;
 }
 
 export function RoundCountdown({
   lobbyCode,
   players,
+  roundNumber,
+  totalRounds,
   onRoundStart,
 }: RoundCountdownProps) {
+  console.log("⏰ RoundCountdown render:", { roundNumber, totalRounds });
   const [countdown, setCountdown] = useState(5);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -90,13 +95,13 @@ export function RoundCountdown({
                   <div className="flex items-center gap-2">
                     <RiGamepadLine className="w-5 h-5 text-purple-400" />
                     <span className="text-white font-bangers tracking-wide">
-                      Round 1
+                      Round {roundNumber}/{totalRounds}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <RiTimeLine className="w-5 h-5 text-purple-400" />
                     <span className="text-white font-bangers tracking-wide">
-                      30s
+                      {countdown}s
                     </span>
                   </div>
                 </div>
@@ -139,7 +144,7 @@ export function RoundCountdown({
                       "flex items-center gap-3 p-2 rounded-lg",
                       "bg-slate-700/30 border border-slate-600/50",
                       player.isCurrentPlayer &&
-                        "ring-2 ring-purple-500 bg-purple-600/20",
+                        "ring-2 ring-purple-500 bg-purple-600/20"
                     )}
                   >
                     <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -150,7 +155,7 @@ export function RoundCountdown({
                         "font-bangers text-sm tracking-wide flex-1",
                         player.isCurrentPlayer
                           ? "text-purple-300"
-                          : "text-white",
+                          : "text-white"
                       )}
                     >
                       {player.name}

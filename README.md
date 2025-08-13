@@ -35,11 +35,11 @@ the winner.
    - If a player fails to submit, a random card from their hand is auto-submitted to keep the round moving.
 
 4. **Voting System**:
-   - Players rate submissions on a **1–5-star scale** within a **30-second window**. In rooms with 6+ players, each
-     player rates a random subset of five submissions to reduce fatigue.
-   - Players cannot rate their own submission (disabled in UI).
-   - The meme with the **highest average rating** wins. Ties are broken by total votes received.
-   - Visual feedback shows ratings and highlights the winner with confetti effects.
+   - Players vote for their favorite submission with a **single vote per player** within a **30-second window**.
+     In rooms with many submissions, players can easily browse all entries to make their choice.
+   - Players cannot vote for their own submission (disabled in UI).
+   - The meme with the **most votes** wins. Ties are broken randomly or by earliest submission time.
+   - Visual feedback shows vote counts and highlights the winner with confetti effects.
 
 5. **Scoring**:
    - Players earn **1 point per vote** received, a **3-point bonus** for the winning meme, and **1 participation point
@@ -62,7 +62,7 @@ the winner.
 
 - **Random Meme Selection**: Ensures unique hands per player, with themed sub-pools for variety.
 - **AI Situations**: Dynamic, moderated prompts with fallback templates for reliability.
-- **Engaging Voting**: 1–5 star ratings with time limits and subset voting for scalability.
+- **Engaging Voting**: Single vote per player with time limits for quick decision-making.
 - **Social Features**: Real-time chat, shareable memes, and power-ups for interactivity.
 - **Robustness**: Handles disconnections, no-submissions, and low player counts gracefully.
 

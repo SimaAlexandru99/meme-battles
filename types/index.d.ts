@@ -253,6 +253,7 @@ interface Player {
   // AI-specific properties
   isAI?: boolean;
   aiPersonalityId?: string;
+  aiDifficulty?: "easy" | "medium" | "hard";
   // Presence and metadata
   isOnline?: boolean;
   lastSeen?: string;
@@ -270,12 +271,32 @@ interface ChatMessage {
 }
 
 interface GameState {
-  currentRound: number;
-  totalRounds: number;
+  phase:
+    | "waiting"
+    | "transition"
+    | "countdown"
+    | "submission"
+    | "voting"
+    | "results"
+    | "leaderboard"
+    | "game_over";
   timeLeft: number;
-  phase: "waiting" | "prompt" | "playing" | "voting" | "results" | "game_over";
-  currentPrompt: string;
-  winner?: Player;
+  currentSituation: string;
+  submissions: Record<
+    string,
+    { cardId: string; cardName: string; submittedAt: string }
+  >;
+  votes: Record<string, string>;
+  abstentions?: Record<string, boolean>;
+  roundNumber: number;
+  totalRounds: number;
+  winner?: string;
+  scores: Record<string, number>;
+  playerStreaks?: Record<
+    string,
+    { playerId: string; currentStreak: number; lastWonRound: number }
+  >;
+  phaseStartTime?: number;
 }
 
 // Lobby Management Types - Core Data Interfaces

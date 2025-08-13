@@ -6,7 +6,6 @@ import {
   RiTrophyLine,
   RiStarLine,
   RiFireLine,
-  RiTimeLine,
   RiCheckLine,
 } from "react-icons/ri";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,27 +38,27 @@ export function ResultsPhase({
   totalRounds,
 }: ResultsPhaseProps) {
   const [winner, setWinner] = useState<string | null>(null);
-  const hasVoted = useMemo(
-    () => Boolean(votes?.[currentUser.id]),
-    [votes, currentUser.id]
-  );
 
-  // Calculate votes for each submission
+  // Ensure votes object exists to prevent runtime errors
+  const safeVotes = useMemo(() => votes || {}, [votes]);
+
+  // Calculate votes for each submission and determine winner
   useEffect(() => {
     const voteCounts: Record<string, number> = {};
 
     // Count votes for each submission
-    Object.values(votes).forEach((votedFor) => {
+    Object.values(safeVotes).forEach((votedFor) => {
       voteCounts[votedFor] = (voteCounts[votedFor] || 0) + 1;
     });
 
     // Find winner (player with most votes)
-    const winnerPlayerId = Object.entries(voteCounts).reduce((prev, current) =>
-      current[1] > prev[1] ? current : prev
-    )[0];
-
-    setWinner(winnerPlayerId);
-  }, [votes]);
+    if (Object.keys(voteCounts).length > 0) {
+      const winnerPlayerId = Object.entries(voteCounts).reduce(
+        (prev, current) => (current[1] > prev[1] ? current : prev)
+      )[0];
+      setWinner(winnerPlayerId);
+    }
+  }, [safeVotes]);
 
   // Convert submissions to array format for display
   const submissionArray = Object.entries(submissions).map(
@@ -74,7 +73,8 @@ export function ResultsPhase({
         url: `/memes/${submission.cardId}.jpg`,
         alt: `Meme card ${submission.cardId}`,
       },
-      votes: Object.values(votes).filter((vote) => vote === playerId).length,
+      votes: Object.values(safeVotes).filter((vote) => vote === playerId)
+        .length,
       submittedAt: new Date(submission.submittedAt),
     })
   );
@@ -91,14 +91,14 @@ export function ResultsPhase({
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-6xl mx-auto px-4"
     >
-      {/* Header with timer and situation */}
+      {/* Header with phase indicator and timer */}
       <div className="text-center mb-8">
         <motion.h2
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-3xl font-bangers text-white tracking-wide mb-4"
         >
-          Round {roundNumber} Voting & Results
+          Round {roundNumber} Results
         </motion.h2>
 
         <div className="flex items-center justify-center gap-4 mb-6">
@@ -110,9 +110,10 @@ export function ResultsPhase({
             Round {roundNumber}/{totalRounds}
           </Badge>
 
-          <div className="flex items-center gap-2">
-            <RiTimeLine className="w-5 h-5 text-purple-400" />
-          </div>
+          <Badge className="bg-blue-600 text-white font-bangers">
+            <RiCheckLine className="w-4 h-4 mr-2" />
+            Voting Complete
+          </Badge>
 
           {winner && (
             <Badge className="bg-yellow-600 text-white font-bangers">
@@ -129,9 +130,16 @@ export function ResultsPhase({
             </p>
           </div>
         )}
+
+        {/* Results message */}
+        <div className="max-w-2xl mx-auto bg-blue-600/20 border border-blue-500/30 rounded-xl p-4 mt-4">
+          <p className="text-white font-bangers text-lg tracking-wide">
+            🏆 Round {roundNumber} Results - See how everyone voted!
+          </p>
+        </div>
       </div>
 
-      {/* Voting + Results Grid */}
+      {/* Results Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <AnimatePresence>
           {sortedSubmissions.map((submission, index) => (
@@ -141,20 +149,6 @@ export function ResultsPhase({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className="relative"
-              onClick={async () => {
-                if (hasVoted || submission.playerId === currentUser.id) return;
-                try {
-                  const { ref, set } = await import("firebase/database");
-                  const { rtdb } = await import("@/firebase/client");
-                  await set(
-                    ref(
-                      rtdb,
-                      `lobbies/${lobbyCode}/gameState/votes/${currentUser.id}`
-                    ),
-                    submission.playerId
-                  );
-                } catch {}
-              }}
             >
               <Card
                 className={cn(
@@ -182,14 +176,6 @@ export function ResultsPhase({
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
 
-                    {/* Voted indicator for current user */}
-                    {hasVoted &&
-                      votes[currentUser.id] === submission.playerId && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-2">
-                          <RiCheckLine className="w-4 h-4" />
-                        </div>
-                      )}
-
                     {/* Winner Crown */}
                     {winner === submission.playerId && (
                       <motion.div
@@ -213,8 +199,38 @@ export function ResultsPhase({
                           : "bg-slate-600 text-white border-slate-500"
                       )}
                     >
-                      {submission.votes} vote{submission.votes !== 1 ? "s" : ""}
+                      {submission.votes} vote
+                      {submission.votes !== 1 ? "s" : ""}
                     </Badge>
+                  </div>
+
+                  {/* Results status indicator */}
+                  <div className="text-center">
+                    {safeVotes[currentUser.id] === submission.playerId ? (
+                      <Badge className="bg-green-600 text-white font-bangers">
+                        <RiCheckLine className="w-4 h-4 mr-1" />
+                        You Voted For This
+                      </Badge>
+                    ) : submission.playerId === currentUser.id ? (
+                      <Badge
+                        variant="outline"
+                        className="text-blue-400 font-bangers border-blue-500"
+                      >
+                        Your Submission
+                      </Badge>
+                    ) : winner === submission.playerId ? (
+                      <Badge className="bg-yellow-600 text-white font-bangers">
+                        <RiTrophyLine className="w-4 h-4 mr-1" />
+                        Round Winner!
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-slate-400 font-bangers border-slate-600"
+                      >
+                        Result
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -223,7 +239,19 @@ export function ResultsPhase({
         </AnimatePresence>
       </div>
 
-      {/* No Next Round button; auto-advance via timers */}
+      {/* Phase transition message */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center"
+      >
+        <p className="text-white font-bangers text-lg tracking-wide">
+          🎉 Round {roundNumber} complete!{" "}
+          {winner &&
+            `Congratulations to ${players.find((p) => p.id === winner)?.name}!`}{" "}
+          Next round starting soon...
+        </p>
+      </motion.div>
     </motion.div>
   );
 }
