@@ -14,8 +14,11 @@ interface PlayersListProps {
 }
 
 export function PlayersList({ players }: PlayersListProps) {
+  // Safety check for undefined players
+  const safePlayers = players || [];
+
   // Sort players by score (highest first), with current player always first
-  const sortedPlayers = [...players].sort((a, b) => {
+  const sortedPlayers = [...safePlayers].sort((a, b) => {
     if (a.isCurrentPlayer) return -1;
     if (b.isCurrentPlayer) return 1;
     return b.score - a.score;
@@ -82,7 +85,7 @@ export function PlayersList({ players }: PlayersListProps) {
       <CardHeader className="pb-3 border-b shrink-0">
         <CardTitle className="text-white text-lg flex items-center gap-2">
           <RiFireLine className="w-5 h-5 text-orange-500" />
-          Players ({players.length})
+          Players ({safePlayers.length})
         </CardTitle>
       </CardHeader>
 

@@ -157,44 +157,67 @@ export class AIBotService {
           ([, player]) => player.isAI
         );
 
-        // Process each AI player
-        for (const [botId, botPlayer] of aiPlayers) {
-          try {
-            // Get the bot's cards
-            const botCards = botPlayer.cards || [];
-            if (botCards.length === 0) {
-              console.warn(`AI bot ${botId} has no cards`);
-              continue;
+        // Process each AI player with realistic delays
+        for (let i = 0; i < aiPlayers.length; i++) {
+          const [botId, botPlayer] = aiPlayers[i];
+
+          // Add realistic delay based on difficulty and bot index
+          const baseDelay = 3000; // 3 seconds base delay
+          const difficultyMultiplier =
+            botPlayer.aiDifficulty === "easy"
+              ? 0.5
+              : botPlayer.aiDifficulty === "medium"
+                ? 1.0
+                : 1.5;
+          const randomDelay = Math.random() * 5000; // 0-5 seconds random
+          const indexDelay = i * 2000; // Stagger bots by 2 seconds
+
+          const totalDelay =
+            baseDelay * difficultyMultiplier + randomDelay + indexDelay;
+
+          console.log(
+            `🤖 AI bot ${botId} will submit in ${Math.round(totalDelay / 1000)}s`
+          );
+
+          // Use setTimeout to add realistic delay
+          setTimeout(async () => {
+            try {
+              // Get the bot's cards
+              const botCards = botPlayer.cards || [];
+              if (botCards.length === 0) {
+                console.warn(`AI bot ${botId} has no cards`);
+                return;
+              }
+
+              // Make decision
+              const decision = await this.makeDecision(
+                botId,
+                situation,
+                botCards,
+                botPlayer.aiPersonalityId!,
+                botPlayer.aiDifficulty!
+              );
+
+              // Submit the card
+              const submission = await this.submitCardForBot(
+                botId,
+                decision.selectedCardId,
+                decision.reasoning,
+                decision.confidence
+              );
+
+              // Save the submission to Firebase
+              await this.saveBotSubmission(lobbyCode, botId, submission);
+
+              console.log(`🤖 AI bot ${botId} submitted card:`, submission);
+            } catch (error) {
+              console.error(`Error processing AI bot ${botId}:`, error);
+              Sentry.captureException(error, {
+                tags: { operation: "ai_bot_submission", botId },
+                extra: { botId, lobbyCode },
+              });
             }
-
-            // Make decision
-            const decision = await this.makeDecision(
-              botId,
-              situation,
-              botCards,
-              botPlayer.aiPersonalityId!,
-              botPlayer.aiDifficulty!
-            );
-
-            // Submit the card
-            const submission = await this.submitCardForBot(
-              botId,
-              decision.selectedCardId,
-              decision.reasoning,
-              decision.confidence
-            );
-
-            // Save the submission to Firebase
-            await this.saveBotSubmission(lobbyCode, botId, submission);
-
-            console.log(`AI bot ${botId} submitted card:`, submission);
-          } catch (error) {
-            console.error(`Error processing AI bot ${botId}:`, error);
-            Sentry.captureException(error, {
-              tags: { operation: "ai_bot_submission", botId },
-              extra: { botId, lobbyCode },
-            });
-          }
+          }, totalDelay);
         }
       }
     );

@@ -59,6 +59,7 @@ interface UseGameStateReturn {
   nextRound: () => Promise<void>;
   endGame: () => Promise<void>;
   resetGameState: () => Promise<void>;
+  completeGameTransition: () => Promise<void>;
 
   // Utilities
   isCurrentPlayer: boolean;
@@ -79,6 +80,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [playerCards, setPlayerCards] = useState<MemeCard[]>([]);
+  const [cardsLoadedOnce, setCardsLoadedOnce] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<
@@ -419,13 +421,31 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               ? playerCardsArray.filter((c) => c.id !== submitted.cardId)
               : playerCardsArray;
 
-            // Ensure uniqueness by marking remaining as used (already done globally),
-            // then draw additional cards to reach 7
+            // CRITICAL: Always ensure exactly 7 cards per player as per game rules
             let newHand = [...filtered];
             const needed = Math.max(0, 7 - newHand.length);
             if (needed > 0) {
-              const extra = pool.getPlayerCards(needed);
-              newHand = newHand.concat(extra);
+              try {
+                const extra = pool.getPlayerCards(needed);
+                newHand = newHand.concat(extra);
+              } catch (error) {
+                console.error(
+                  `Failed to get ${needed} cards for player ${playerId}:`,
+                  error
+                );
+                // If we can't get enough unique cards, at least try to maintain the hand
+                Sentry.captureException(error, {
+                  tags: { operation: "card_refill", lobbyCode },
+                  extra: { playerId, needed, currentHandSize: newHand.length },
+                });
+              }
+            }
+
+            // Ensure we have exactly 7 cards (game rule requirement)
+            if (newHand.length !== 7) {
+              console.warn(
+                `Player ${playerId} has ${newHand.length} cards instead of 7`
+              );
             }
 
             updates[`lobbies/${lobbyCode}/players/${playerId}/cards`] = newHand;
@@ -526,6 +546,42 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     );
   }, [user, lobbyCode, handleError]);
 
+  /**
+   * Complete game transition (host only)
+   */
+  const completeGameTransition = useCallback(async (): Promise<void> => {
+    if (!user || !lobbyCode) {
+      throw new Error(
+        "Cannot complete game transition: missing user or lobby code"
+      );
+    }
+
+    return Sentry.startSpan(
+      {
+        op: "ui.action",
+        name: "Complete Game Transition",
+      },
+      async () => {
+        try {
+          console.log("🎮 GameState: Completing game transition");
+
+          // Transition from "transition" phase to "submission" phase
+          const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+          const updates: Record<string, unknown> = {
+            phase: "submission",
+            phaseStartTime: serverTimestamp(),
+          };
+
+          await update(ref(rtdb, gameStatePath), updates);
+          console.log("✅ GameState: Game transition completed successfully");
+        } catch (error) {
+          handleError(error, "complete_game_transition");
+          throw error;
+        }
+      }
+    );
+  }, [user, lobbyCode, handleError]);
+
   // --- Helper: handle phase/round transition when timer expires ---
   const handleTimerExpire = useCallback(async () => {
     if (!isHost || !gameState) return;
@@ -601,9 +657,39 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   useEffect(() => {
     if (!isHost) return;
     if (!gameState || gameState.phase !== "submission") return;
+
     const totalPlayers = players.length;
-    const submittedCount = Object.keys(gameState.submissions || {}).length;
-    if (totalPlayers > 0 && submittedCount >= totalPlayers) {
+    const submissions = gameState.submissions || {};
+    const submittedCount = Object.keys(submissions).length;
+
+    // Calculate time elapsed since submission phase started
+    const phaseStartTime = gameState.phaseStartTime || Date.now();
+    const timeElapsed = Date.now() - phaseStartTime;
+    const MIN_SUBMISSION_TIME = 10000; // Minimum 10 seconds for human players
+
+    console.log("🗳️ Checking early transition to voting:", {
+      phase: gameState.phase,
+      roundNumber: gameState.roundNumber,
+      totalPlayers,
+      submittedCount,
+      submissions: Object.keys(submissions),
+      timeElapsed: Math.round(timeElapsed / 1000) + "s",
+      minTimeReached: timeElapsed >= MIN_SUBMISSION_TIME,
+      shouldTransition:
+        totalPlayers > 0 &&
+        submittedCount >= totalPlayers &&
+        timeElapsed >= MIN_SUBMISSION_TIME,
+    });
+
+    // Only transition early if all players submitted AND minimum time has passed
+    if (
+      totalPlayers > 0 &&
+      submittedCount >= totalPlayers &&
+      timeElapsed >= MIN_SUBMISSION_TIME
+    ) {
+      console.log(
+        "✅ All players submitted and minimum time passed, transitioning to voting early"
+      );
       const gameStatePath = `lobbies/${lobbyCode}/gameState`;
       update(ref(rtdb, gameStatePath), {
         phase: "voting",
@@ -617,7 +703,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             operation: "early_transition_voting_from_submission",
             lobbyCode,
           },
-          extra: { submittedCount, totalPlayers },
+          extra: { submittedCount, totalPlayers, submissions, timeElapsed },
         });
       });
     }
@@ -832,6 +918,13 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             string,
             PlayerData
           >;
+
+          // Safety check for playersData
+          if (!playersData || typeof playersData !== "object") {
+            console.warn("⚠️ Invalid players data received:", playersData);
+            return;
+          }
+
           const nowMs = Date.now();
           const ONLINE_WINDOW_MS = 30_000; // 30 seconds window considered online
           const gamePlayers: Player[] = Object.entries(playersData).map(
@@ -860,7 +953,12 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               };
             }
           );
-          setPlayers(gamePlayers);
+
+          // Ensure we always have a valid array
+          setPlayers(gamePlayers || []);
+        } else {
+          console.log("No players data found, keeping existing players");
+          // Don't clear players if snapshot doesn't exist - they might be loading
         }
       },
       (error) => {
@@ -883,9 +981,25 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         if (snapshot.exists()) {
           const cards = snapshot.val() as MemeCard[];
           console.log("Setting player cards:", cards);
+          // Validate that we have exactly 7 cards as per game rules
+          if (cards && cards.length !== 7) {
+            console.warn(`Player has ${cards.length} cards instead of 7`);
+          }
           setPlayerCards(cards || []);
+          setCardsLoadedOnce(true);
         } else {
           console.log("No player cards found at path:", playerCardsPath);
+          // Only clear cards if we haven't loaded them before or if we're in waiting phase
+          setPlayerCards((prevCards) => {
+            if (cardsLoadedOnce && prevCards.length > 0) {
+              console.warn(
+                "⚠️ Cards snapshot is null but we had cards before - keeping previous cards to prevent loss"
+              );
+              return prevCards; // Keep existing cards to prevent loss during transitions
+            }
+            console.log("Setting empty cards array");
+            return []; // Only set empty if we haven't loaded cards before
+          });
         }
       },
       (error) => {
@@ -894,21 +1008,21 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     );
 
     return () => {
+      // Properly cleanup Firebase listeners
       if (gameStateUnsubscribeRef.current) {
-        off(ref(rtdb, gameStatePath), "value", gameStateUnsubscribeRef.current);
+        gameStateUnsubscribeRef.current();
+        gameStateUnsubscribeRef.current = null;
       }
       if (playersUnsubscribeRef.current) {
-        off(ref(rtdb, playersPath), "value", playersUnsubscribeRef.current);
+        playersUnsubscribeRef.current();
+        playersUnsubscribeRef.current = null;
       }
       if (playerCardsUnsubscribeRef.current) {
-        off(
-          ref(rtdb, playerCardsPath),
-          "value",
-          playerCardsUnsubscribeRef.current
-        );
+        playerCardsUnsubscribeRef.current();
+        playerCardsUnsubscribeRef.current = null;
       }
     };
-  }, [user, handleError, lobbyCode]);
+  }, [user, handleError, lobbyCode, cardsLoadedOnce]);
 
   // --- Initialize presence with onDisconnect handler ---
   useEffect(() => {
@@ -1035,6 +1149,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     nextRound,
     endGame,
     resetGameState,
+    completeGameTransition,
 
     // Utilities
     isCurrentPlayer,

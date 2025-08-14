@@ -39,10 +39,13 @@ interface ArenaProps {
 export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const router = useRouter();
 
+  // Track if user is intentionally leaving vs normal navigation
+  const [isIntentionallyLeaving, setIsIntentionallyLeaving] = useState(false);
+
   // Use real-time game state from lobby system
   const {
     gameState,
-    players,
+    players: rawPlayers,
     playerCards,
     isLoading,
     error,
@@ -51,7 +54,52 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     startRound,
     hasSubmitted,
     clearError,
+    completeGameTransition,
   } = useGameState(lobbyCode);
+
+  // Ensure players is always a valid array
+  const players = rawPlayers || [];
+
+  // Debug logging for players data
+  useEffect(() => {
+    console.log("🎮 Arena players update:", {
+      rawPlayers: rawPlayers
+        ? `${rawPlayers.length} players`
+        : "undefined/null",
+      players: `${players.length} players`,
+      gamePhase: gameState?.phase,
+    });
+  }, [rawPlayers, players.length, gameState?.phase]);
+
+  // Debug logging and auto-retry for card state
+  useEffect(() => {
+    if (gameState?.phase === "submission" && playerCards.length === 0) {
+      console.warn("⚠️ In submission phase but no player cards available");
+
+      // Auto-retry after 3 seconds if cards are still missing
+      const retryTimeout = setTimeout(() => {
+        if (playerCards.length === 0) {
+          console.log(
+            "🔄 Retrying card load - cards still missing after 3 seconds"
+          );
+          toast.warning("Loading your cards... Please wait.");
+        }
+      }, 3000);
+
+      // Show error after 10 seconds if cards still not loaded
+      const errorTimeout = setTimeout(() => {
+        if (playerCards.length === 0) {
+          console.error("❌ Cards failed to load after 10 seconds");
+          toast.error("Failed to load your cards. Please refresh the page.");
+        }
+      }, 10000);
+
+      return () => {
+        clearTimeout(retryTimeout);
+        clearTimeout(errorTimeout);
+      };
+    }
+  }, [gameState?.phase, playerCards.length]);
 
   // Track game state changes for debugging in non-production
   useEffect(() => {
@@ -69,9 +117,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     }
   }, [gameState?.phase, gameState?.roundNumber, gameState?.totalRounds]);
 
-  // Use lobby management for lobby-specific operations
-  const { isHost, leaveLobby, completeGameTransition } =
-    useLobbyManagement(lobbyCode);
+  // Use lobby management for lobby-specific operations (only need leaveLobby)
+  const { leaveLobby } = useLobbyManagement(lobbyCode);
 
   // Card selection functionality
   const { selectedCard, selectCard, clearSelection } = useMemeCardSelection({
@@ -173,6 +220,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
   const handleGoHome = useCallback(async () => {
     try {
+      console.log("🏠 Arena: User explicitly going home - leaving lobby");
+      setIsIntentionallyLeaving(true);
       // Clean up Firebase data before navigating
       await leaveLobby();
       toast.success("Thanks for playing! See you next time!");
@@ -189,43 +238,35 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
   // Clean up Firebase when user navigates away or closes browser
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Use navigator.sendBeacon for reliable cleanup on page unload
-      // This works even when the page is being closed
-      if (
-        typeof navigator.sendBeacon === "function" &&
-        lobbyCode &&
-        currentUser?.id
-      ) {
-        const cleanup = async () => {
-          try {
-            await leaveLobby();
-          } catch (error) {
-            // Silent fail on unload - user is already leaving
-            Sentry.captureException(error, {
-              tags: { operation: "beforeunload_cleanup", lobbyCode },
-            });
-          }
-        };
-        // Don't await - page is unloading
-        cleanup();
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Only cleanup on actual page unload (browser close/refresh)
+      // Don't cleanup on normal navigation within the app
+      console.log("🚪 Arena: beforeunload triggered - user leaving page");
+
+      if (lobbyCode && currentUser?.id) {
+        // Use synchronous approach for beforeunload
+        event.preventDefault();
+        event.returnValue = ""; // Show browser confirmation dialog
+
+        // Attempt cleanup but don't block
+        leaveLobby().catch((error) => {
+          console.error("Failed to cleanup on beforeunload:", error);
+        });
       }
     };
 
-    // Add beforeunload listener for browser close/refresh/navigation
+    // Add beforeunload listener for browser close/refresh only
     window.addEventListener("beforeunload", handleBeforeUnload);
 
-    // Cleanup on component unmount
+    // Cleanup on component unmount - but be more careful
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      // Also cleanup Firebase if component unmounts unexpectedly
-      if (lobbyCode && currentUser?.id) {
-        leaveLobby().catch((error) => {
-          Sentry.captureException(error, {
-            tags: { operation: "unmount_cleanup", lobbyCode },
-          });
-        });
-      }
+
+      // DON'T automatically leave lobby on unmount during normal navigation
+      // Only leave if the game is actually over or user explicitly left
+      console.log(
+        "🔄 Arena: Component unmounting - NOT leaving lobby (normal navigation)"
+      );
     };
   }, [lobbyCode, currentUser?.id, leaveLobby]);
 
@@ -365,7 +406,16 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
           aiPersonalityId: p.aiPersonalityId,
           aiDifficulty: p.aiDifficulty,
         }))}
-        onTransitionComplete={completeGameTransition}
+        onTransitionComplete={async () => {
+          console.log("🎮 Arena: Transition complete requested");
+          try {
+            await completeGameTransition();
+            console.log("✅ Arena: Game transition completed successfully");
+          } catch (error) {
+            console.error("❌ Arena: Failed to complete transition:", error);
+            toast.error("Failed to start game. Please try again.");
+          }
+        }}
       />
     );
   }
@@ -384,6 +434,36 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   }
 
   if (gameState.phase === "submission") {
+    // Check if player has cards before showing submission interface
+    if (playerCards.length === 0) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+            <CardHeader>
+              <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
+                Loading Your Cards...
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center">
+                <div className="text-4xl font-bangers text-purple-400 mb-4">
+                  🃏
+                </div>
+                <p className="text-purple-200/70 font-bangers text-lg tracking-wide">
+                  Preparing your meme arsenal...
+                </p>
+                <div className="mt-4">
+                  <div className="w-full bg-slate-700/50 rounded-full h-2">
+                    <div className="bg-purple-500 h-2 rounded-full animate-pulse w-3/4"></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     // Show the main game interface for card submission
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">

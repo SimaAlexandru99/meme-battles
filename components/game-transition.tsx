@@ -23,6 +23,7 @@ type TransitionStep =
 
 export function GameTransition({
   lobbyCode,
+  currentUser,
   players,
   onTransitionComplete,
 }: GameTransitionProps) {
@@ -61,11 +62,23 @@ export function GameTransition({
   useEffect(() => {
     if (currentStep === "starting_round") {
       const timer = setTimeout(() => {
-        onTransitionComplete();
+        // Add safety check before calling transition complete
+        if (currentUser && lobbyCode) {
+          console.log(
+            "🎮 GameTransition: Completing transition with user:",
+            currentUser.id
+          );
+          onTransitionComplete();
+        } else {
+          console.error("❌ GameTransition: Missing user or lobby data", {
+            currentUser,
+            lobbyCode,
+          });
+        }
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [currentStep, onTransitionComplete]);
+  }, [currentStep, onTransitionComplete, currentUser, lobbyCode]);
 
   // Progress animation
   useEffect(() => {

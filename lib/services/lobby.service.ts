@@ -1646,7 +1646,16 @@ export class LobbyService {
           }
 
           // Distribute meme cards to all players
+          console.log(
+            "🃏 Starting card distribution for players:",
+            Object.keys(lobby.players)
+          );
           const playerCards = await this.distributeMemeCards(lobby.players);
+          console.log(
+            "🃏 Card distribution complete:",
+            Object.keys(playerCards).length,
+            "players"
+          );
 
           // Create game state
           const gameState: GameState = {
@@ -1669,11 +1678,25 @@ export class LobbyService {
             currentSituation,
             submissions: {},
             votes: {},
+            abstentions: {},
+            scores: {},
+            playerStreaks: {},
             roundResults: null,
           };
 
-          // Add player cards to each player's data
+          // Add player cards to each player's data - CRITICAL for game functionality
           Object.entries(playerCards).forEach(([playerUid, cards]) => {
+            // Ensure we have exactly 7 cards per player (game rule)
+            if (cards.length !== 7) {
+              console.error(
+                `❌ GAME RULE VIOLATION: Player ${playerUid} has ${cards.length} cards instead of 7`
+              );
+              throw new Error(
+                `Card distribution failed: Player ${playerUid} should have 7 cards but has ${cards.length}`
+              );
+            }
+
+            // Store cards in the correct Firebase structure
             updates[`lobbies/${lobbyCode}/players/${playerUid}/cards`] =
               cards.map((card) => ({
                 id: card.id,
@@ -1681,12 +1704,58 @@ export class LobbyService {
                 url: card.url,
                 alt: card.alt,
               }));
+
+            console.log(
+              `✅ Assigned ${cards.length} cards to player ${playerUid}:`,
+              cards
+                .map((c) => c.filename)
+                .slice(0, 3)
+                .join(", ") + "..."
+            );
+          });
+
+          // Ensure all players have their status reset
+          Object.keys(lobby.players).forEach((playerUid) => {
+            updates[`lobbies/${lobbyCode}/players/${playerUid}/status`] =
+              "waiting";
           });
 
           updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
 
+          console.log("🚀 Applying game start updates to Firebase...");
+
           // Apply all updates atomically
           await update(ref(rtdb), updates);
+
+          console.log("✅ Game start updates applied successfully");
+
+          // Verify that cards were actually written to the database
+          const verificationPromises = Object.keys(playerCards).map(
+            async (playerUid) => {
+              const playerCardsRef = ref(
+                rtdb,
+                `lobbies/${lobbyCode}/players/${playerUid}/cards`
+              );
+              const snapshot = await get(playerCardsRef);
+              if (!snapshot.exists()) {
+                console.error(
+                  `❌ Cards not found for player ${playerUid} after write`
+                );
+                throw new Error(
+                  `Failed to write cards for player ${playerUid}`
+                );
+              } else {
+                const cards = snapshot.val();
+                console.log(
+                  `✅ Verified ${cards.length} cards for player ${playerUid}`
+                );
+              }
+            }
+          );
+
+          // Wait for all verifications to complete
+          await Promise.all(verificationPromises);
+          console.log("✅ All player cards verified in database");
 
           return {
             success: true,
@@ -1993,23 +2062,57 @@ export class LobbyService {
     const playerUids = Object.keys(players);
     const cardsPerPlayer = 7;
 
+    console.log(
+      `🃏 Distributing ${cardsPerPlayer} cards to ${playerUids.length} players`
+    );
+
     try {
+      // Validate we have enough cards for all players
+      const totalCardsNeeded = playerUids.length * cardsPerPlayer;
+      console.log(`🃏 Total cards needed: ${totalCardsNeeded}`);
+
       const distribution = cardPool.distributeCards(
         playerUids.length,
         cardsPerPlayer
       );
       const playerCards: Record<string, MemeCard[]> = {};
 
-      // Map player indices to UIDs
+      // Map player indices to UIDs and validate
       playerUids.forEach((uid, index) => {
         const cards = distribution.get(index);
         if (cards) {
+          if (cards.length !== cardsPerPlayer) {
+            throw new Error(
+              `Player ${uid} received ${cards.length} cards instead of ${cardsPerPlayer}`
+            );
+          }
           playerCards[uid] = cards;
+          console.log(`🃏 Player ${uid} assigned ${cards.length} cards`);
+        } else {
+          throw new Error(
+            `No cards assigned to player ${uid} at index ${index}`
+          );
         }
       });
 
+      // Final validation
+      const totalDistributed = Object.values(playerCards).reduce(
+        (sum, cards) => sum + cards.length,
+        0
+      );
+      console.log(
+        `🃏 Distribution complete: ${totalDistributed} cards distributed to ${Object.keys(playerCards).length} players`
+      );
+
+      if (totalDistributed !== totalCardsNeeded) {
+        throw new Error(
+          `Card distribution mismatch: expected ${totalCardsNeeded}, got ${totalDistributed}`
+        );
+      }
+
       return playerCards;
     } catch (error) {
+      console.error("🃏 Card distribution failed:", error);
       throw this.createLobbyError(
         "UNKNOWN_ERROR",
         `Failed to distribute meme cards: ${error}`,

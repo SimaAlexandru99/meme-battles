@@ -346,9 +346,34 @@ export function useLobbyManagement(
    * Complete the game transition and start the actual game
    */
   const completeGameTransition = useCallback(async (): Promise<void> => {
-    if (!user || !lobby || !isHost) {
+    console.log("🎮 completeGameTransition called", {
+      user: user?.id,
+      lobby: lobby?.code,
+      isHost,
+    });
+
+    if (!user) {
+      console.error("❌ No user available for game transition");
+      throw new Error("User not available. Please refresh the page.");
+    }
+
+    if (!lobby) {
+      console.error("❌ No lobby available for game transition");
+      throw new Error("Lobby not available. Please refresh the page.");
+    }
+
+    // More robust host check - also allow if user is the original host
+    const isUserHost = lobby.hostUid === user.id || isHost;
+    if (!isUserHost) {
+      console.error("❌ User is not host", {
+        userUid: user.id,
+        lobbyHostUid: lobby.hostUid,
+        isHost,
+      });
       throw new Error("Only the host can complete the game transition");
     }
+
+    console.log("✅ Host validation passed, proceeding with game transition");
 
     setIsLoading(true);
     setError(null);
