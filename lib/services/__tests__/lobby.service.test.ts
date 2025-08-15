@@ -176,7 +176,7 @@ describe("LobbyService", () => {
           type: "CODE_GENERATION_FAILED",
           retryable: true,
           userMessage: expect.stringContaining(
-            "Unable to create a unique lobby code",
+            "Unable to create a unique lobby code"
           ),
         });
 
@@ -186,7 +186,7 @@ describe("LobbyService", () => {
           "Lobby code generation failed after maximum attempts",
           expect.objectContaining({
             level: "warning",
-          }),
+          })
         );
       });
 
@@ -277,7 +277,7 @@ describe("LobbyService", () => {
         mockGet.mockRejectedValueOnce(new Error("Database error"));
 
         await expect(
-          lobbyService.checkLobbyCodeExists("ABC12"),
+          lobbyService.checkLobbyCodeExists("ABC12")
         ).rejects.toMatchObject({
           type: "NETWORK_ERROR",
           retryable: true,
@@ -310,7 +310,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code must be exactly 5 characters",
+          "Lobby code must be exactly 5 characters"
         );
       });
 
@@ -319,7 +319,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code can only contain uppercase letters and numbers",
+          "Lobby code can only contain uppercase letters and numbers"
         );
       });
 
@@ -328,7 +328,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Lobby code can only contain uppercase letters and numbers",
+          "Lobby code can only contain uppercase letters and numbers"
         );
       });
     });
@@ -371,7 +371,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "Time limit must be between 30 and 120 seconds",
+          "Time limit must be between 30 and 120 seconds"
         );
       });
 
@@ -386,7 +386,7 @@ describe("LobbyService", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain(
-          "At least one category must be selected",
+          "At least one category must be selected"
         );
       });
 
@@ -474,7 +474,7 @@ describe("LobbyService", () => {
         };
 
         await expect(
-          lobbyService.createLobby(invalidParams),
+          lobbyService.createLobby(invalidParams)
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid settings"),
@@ -509,7 +509,7 @@ describe("LobbyService", () => {
         mockSet.mockRejectedValueOnce(new Error("Database error")); // Lobby creation fails
 
         await expect(
-          lobbyService.createLobby(mockCreateLobbyParams),
+          lobbyService.createLobby(mockCreateLobbyParams)
         ).rejects.toMatchObject({
           type: "UNKNOWN_ERROR",
           retryable: true,
@@ -554,7 +554,7 @@ describe("LobbyService", () => {
 
         const result = await lobbyService.joinLobby(
           "ABC12",
-          mockJoinLobbyParams,
+          mockJoinLobbyParams
         );
 
         expect(result.success).toBe(true);
@@ -568,7 +568,7 @@ describe("LobbyService", () => {
 
       it("should reject invalid lobby code format", async () => {
         await expect(
-          lobbyService.joinLobby("abc", mockJoinLobbyParams),
+          lobbyService.joinLobby("abc", mockJoinLobbyParams)
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid lobby code"),
@@ -583,7 +583,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -614,7 +614,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
         ).rejects.toMatchObject({
           type: "LOBBY_FULL",
           userMessage: "This lobby is full. Try another one.",
@@ -633,7 +633,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
+          lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
         ).rejects.toMatchObject({
           type: "LOBBY_ALREADY_STARTED",
           userMessage: "This game has already started. You cannot join now.",
@@ -664,7 +664,7 @@ describe("LobbyService", () => {
 
         const result = await lobbyService.joinLobby(
           "ABC12",
-          mockJoinLobbyParams,
+          mockJoinLobbyParams
         );
 
         expect(result.success).toBe(true);
@@ -698,7 +698,7 @@ describe("LobbyService", () => {
         const settingsPromise = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 10 },
-          "host123",
+          "host123"
         );
 
         // Fast-forward through debounce delay
@@ -717,11 +717,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings(
-            "ABC12",
-            { rounds: 10 },
-            "player456",
-          ),
+          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "player456")
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the host can change game settings.",
@@ -736,7 +732,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123"),
+          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123")
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -755,7 +751,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123"),
+          lobbyService.updateLobbySettings("ABC12", { rounds: 10 }, "host123")
         ).rejects.toMatchObject({
           type: "LOBBY_ALREADY_STARTED",
           userMessage: "Cannot change settings after the game has started.",
@@ -769,7 +765,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updateLobbySettings("ABC12", { rounds: 2 }, "host123"),
+          lobbyService.updateLobbySettings("ABC12", { rounds: 2 }, "host123")
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: expect.stringContaining("Invalid settings"),
@@ -788,17 +784,17 @@ describe("LobbyService", () => {
         const promise1 = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 10 },
-          "host123",
+          "host123"
         );
         const promise2 = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 12 },
-          "host123",
+          "host123"
         );
         const promise3 = lobbyService.updateLobbySettings(
           "ABC12",
           { rounds: 15 },
-          "host123",
+          "host123"
         );
 
         // Fast-forward through debounce delay
@@ -814,7 +810,7 @@ describe("LobbyService", () => {
             "lobbies/ABC12/settings": expect.objectContaining({
               rounds: 15,
             }),
-          }),
+          })
         );
       });
     });
@@ -852,7 +848,7 @@ describe("LobbyService", () => {
         const result = await lobbyService.kickPlayer(
           "ABC12",
           "player456",
-          "host123",
+          "host123"
         );
 
         expect(result.success).toBe(true);
@@ -860,7 +856,7 @@ describe("LobbyService", () => {
           expect.anything(),
           expect.objectContaining({
             "lobbies/ABC12/players/player456": null,
-          }),
+          })
         );
       });
 
@@ -871,7 +867,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.kickPlayer("ABC12", "player456", "player789"),
+          lobbyService.kickPlayer("ABC12", "player456", "player789")
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the host can kick players.",
@@ -885,7 +881,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.kickPlayer("ABC12", "nonexistent", "host123"),
+          lobbyService.kickPlayer("ABC12", "nonexistent", "host123")
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "Player not found in this lobby.",
@@ -899,7 +895,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.kickPlayer("ABC12", "host123", "host123"),
+          lobbyService.kickPlayer("ABC12", "host123", "host123")
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "You cannot kick yourself from the lobby.",
@@ -967,7 +963,7 @@ describe("LobbyService", () => {
         const result = await lobbyService.transferHost(
           "ABC12",
           "player456",
-          "host123",
+          "host123"
         );
 
         expect(result.success).toBe(true);
@@ -980,7 +976,7 @@ describe("LobbyService", () => {
             "lobbies/ABC12/hostDisplayName": "NewHost",
             "lobbies/ABC12/players/host123/isHost": false,
             "lobbies/ABC12/players/player456/isHost": true,
-          }),
+          })
         );
       });
 
@@ -991,7 +987,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.transferHost("ABC12", "player456", "player789"),
+          lobbyService.transferHost("ABC12", "player456", "player789")
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the current host can transfer host privileges.",
@@ -1005,7 +1001,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.transferHost("ABC12", "nonexistent", "host123"),
+          lobbyService.transferHost("ABC12", "nonexistent", "host123")
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "Cannot transfer host to a player not in the lobby.",
@@ -1019,7 +1015,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.transferHost("ABC12", "host123", "host123"),
+          lobbyService.transferHost("ABC12", "host123", "host123")
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "You are already the host.",
@@ -1039,7 +1035,7 @@ describe("LobbyService", () => {
         const result = await lobbyService.updatePlayerStatus(
           "ABC12",
           "host123",
-          "ready",
+          "ready"
         );
 
         expect(result.success).toBe(true);
@@ -1048,7 +1044,7 @@ describe("LobbyService", () => {
           expect.objectContaining({
             "lobbies/ABC12/players/host123/status": "ready",
             "lobbies/ABC12/players/host123/lastSeen": expect.any(String),
-          }),
+          })
         );
       });
 
@@ -1059,7 +1055,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updatePlayerStatus("ABC12", "nonexistent", "ready"),
+          lobbyService.updatePlayerStatus("ABC12", "nonexistent", "ready")
         ).rejects.toMatchObject({
           type: "VALIDATION_ERROR",
           userMessage: "Player not found in this lobby.",
@@ -1072,7 +1068,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.updatePlayerStatus("ABC12", "host123", "ready"),
+          lobbyService.updatePlayerStatus("ABC12", "host123", "ready")
         ).rejects.toMatchObject({
           type: "LOBBY_NOT_FOUND",
           userMessage: "Lobby not found. Please check the code.",
@@ -1113,7 +1109,7 @@ describe("LobbyService", () => {
         } as DataSnapshot);
 
         await expect(
-          lobbyService.deleteLobby("ABC12", "player456"),
+          lobbyService.deleteLobby("ABC12", "player456")
         ).rejects.toMatchObject({
           type: "PERMISSION_DENIED",
           userMessage: "Only the host can delete the lobby.",
@@ -1146,7 +1142,7 @@ describe("LobbyService", () => {
       mockGet.mockRejectedValueOnce(new Error("Network timeout"));
 
       await expect(
-        lobbyService.checkLobbyCodeExists("ABC12"),
+        lobbyService.checkLobbyCodeExists("ABC12")
       ).rejects.toMatchObject({
         type: "NETWORK_ERROR",
         retryable: true,
@@ -1164,7 +1160,7 @@ describe("LobbyService", () => {
       mockSet.mockRejectedValueOnce(new Error("Unexpected error"));
 
       await expect(
-        lobbyService.createLobby(mockCreateLobbyParams),
+        lobbyService.createLobby(mockCreateLobbyParams)
       ).rejects.toMatchObject({
         type: "UNKNOWN_ERROR",
         retryable: true,
@@ -1181,7 +1177,7 @@ describe("LobbyService", () => {
       mockGet.mockRejectedValueOnce(lobbyError);
 
       await expect(
-        lobbyService.joinLobby("ABC12", mockJoinLobbyParams),
+        lobbyService.joinLobby("ABC12", mockJoinLobbyParams)
       ).rejects.toMatchObject({
         type: "LOBBY_NOT_FOUND",
         retryable: false,
@@ -1205,7 +1201,7 @@ describe("LobbyService", () => {
       const settingsPromise = lobbyService.updateLobbySettings(
         "ABC12",
         { rounds: 10 },
-        "host123",
+        "host123"
       );
 
       // Then delete the lobby before the timeout completes
@@ -1216,6 +1212,326 @@ describe("LobbyService", () => {
 
       // The settings update should still resolve (or be handled gracefully)
       await expect(settingsPromise).resolves.toBeDefined();
+    });
+  });
+
+  describe("AI-Only Scenarios", () => {
+    const mockAIOnlyLobby: LobbyData = {
+      code: "AI123",
+      hostUid: "human123",
+      hostDisplayName: "HumanHost",
+      maxPlayers: 8,
+      status: "started",
+      settings: {
+        rounds: 8,
+        timeLimit: 60,
+        categories: ["general"],
+      },
+      players: {
+        human123: {
+          id: "human123",
+          displayName: "HumanHost",
+          avatarId: "human-avatar",
+          profileURL: "",
+          joinedAt: "2025-01-08T10:00:00.000Z",
+          isHost: true,
+          score: 10,
+          status: "waiting",
+          lastSeen: "2025-01-08T10:00:00.000Z",
+          isAI: false,
+        },
+        bot1: {
+          id: "bot1",
+          displayName: "AI Bot 1",
+          avatarId: "ai-avatar",
+          profileURL: "",
+          joinedAt: "2025-01-08T10:01:00.000Z",
+          isHost: false,
+          score: 5,
+          status: "waiting",
+          lastSeen: "2025-01-08T10:01:00.000Z",
+          isAI: true,
+          aiPersonalityId: "comedian",
+          aiDifficulty: "medium",
+        },
+        bot2: {
+          id: "bot2",
+          displayName: "AI Bot 2",
+          avatarId: "ai-avatar",
+          profileURL: "",
+          joinedAt: "2025-01-08T10:02:00.000Z",
+          isHost: false,
+          score: 3,
+          status: "waiting",
+          lastSeen: "2025-01-08T10:02:00.000Z",
+          isAI: true,
+          aiPersonalityId: "serious",
+          aiDifficulty: "hard",
+        },
+      },
+      gameState: {
+        roundNumber: 3,
+        totalRounds: 8,
+        timeLeft: 30,
+        phase: "submission",
+        currentSituation: "Test situation",
+        submissions: {},
+        votes: {},
+        scores: { human123: 10, bot1: 5, bot2: 3 },
+      },
+      createdAt: "2025-01-08T10:00:00.000Z",
+      updatedAt: "2025-01-08T10:05:00.000Z",
+    };
+
+    describe("leaveLobby with AI-only scenario", () => {
+      it("should create final AI results and delete lobby when last human leaves", async () => {
+        // Mock initial lobby read
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => mockAIOnlyLobby,
+        } as DataSnapshot);
+
+        // Mock player removal update
+        mockUpdate.mockResolvedValueOnce(undefined);
+
+        // Mock updated lobby read (human player removed)
+        const updatedLobby = {
+          ...mockAIOnlyLobby,
+          players: {
+            bot1: mockAIOnlyLobby.players.bot1,
+            bot2: mockAIOnlyLobby.players.bot2,
+          },
+        };
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => updatedLobby,
+        } as DataSnapshot);
+
+        // Mock final results update
+        mockUpdate.mockResolvedValueOnce(undefined);
+
+        // Mock lobby deletion
+        mockRemove.mockResolvedValueOnce(undefined);
+
+        const result = await lobbyService.leaveLobby("AI123", "human123");
+
+        expect(result.success).toBe(true);
+
+        // Verify player was removed
+        expect(mockUpdate).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            "lobbies/AI123/players/human123": null,
+          })
+        );
+
+        // Verify final results were created
+        expect(mockUpdate).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            "lobbies/AI123/gameState/phase": "completed",
+            "lobbies/AI123/gameState/finalResults": expect.objectContaining({
+              reason: "ai_only_completion",
+              finalRankings: expect.arrayContaining([
+                expect.objectContaining({
+                  playerId: "bot1",
+                  isAI: true,
+                  finalScore: 5,
+                }),
+                expect.objectContaining({
+                  playerId: "bot2",
+                  isAI: true,
+                  finalScore: 3,
+                }),
+              ]),
+            }),
+            "lobbies/AI123/status": "completed",
+          })
+        );
+
+        // Verify lobby was deleted
+        expect(mockRemove).toHaveBeenCalledWith(expect.anything());
+
+        // Verify Sentry logging
+        expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "AI-only scenario detected - ending game",
+            data: expect.objectContaining({
+              code: "AI123",
+              aiPlayerCount: 2,
+            }),
+          })
+        );
+      });
+
+      it("should proceed normally when human players remain", async () => {
+        const lobbyWithHumans = {
+          ...mockAIOnlyLobby,
+          players: {
+            ...mockAIOnlyLobby.players,
+            human456: {
+              id: "human456",
+              displayName: "Another Human",
+              avatarId: "human-avatar",
+              profileURL: "",
+              joinedAt: "2025-01-08T10:03:00.000Z",
+              isHost: false,
+              score: 0,
+              status: "waiting" as const,
+              lastSeen: "2025-01-08T10:03:00.000Z",
+              isAI: false,
+            },
+          },
+        };
+
+        // Mock initial lobby read
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => lobbyWithHumans,
+        } as DataSnapshot);
+
+        // Mock player removal update
+        mockUpdate.mockResolvedValueOnce(undefined);
+
+        // Mock updated lobby read (still has human players)
+        const updatedLobby = {
+          ...lobbyWithHumans,
+          players: {
+            ...lobbyWithHumans.players,
+            human456: {
+              ...lobbyWithHumans.players.human456,
+              isHost: true,
+            },
+          },
+        };
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => updatedLobby,
+        } as DataSnapshot);
+
+        // Mock host transfer
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => updatedLobby,
+        } as DataSnapshot);
+        mockUpdate.mockResolvedValueOnce(undefined);
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => updatedLobby,
+        } as DataSnapshot);
+
+        const result = await lobbyService.leaveLobby("AI123", "human123");
+
+        expect(result.success).toBe(true);
+
+        // Should NOT create final results or delete lobby
+        expect(mockUpdate).not.toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            "lobbies/AI123/gameState/phase": "completed",
+          })
+        );
+        expect(mockRemove).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("transferHostToEarliestPlayer with AI-only scenario", () => {
+      it("should warn when only AI players available for host transfer", async () => {
+        const aiOnlyPlayers = {
+          bot1: mockAIOnlyLobby.players.bot1,
+          bot2: mockAIOnlyLobby.players.bot2,
+        };
+
+        const aiOnlyLobby = {
+          ...mockAIOnlyLobby,
+          players: aiOnlyPlayers,
+        };
+
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => aiOnlyLobby,
+        } as DataSnapshot);
+
+        mockUpdate.mockResolvedValueOnce(undefined);
+
+        mockGet.mockResolvedValueOnce({
+          exists: () => true,
+          val: () => {
+            return {
+              ...aiOnlyLobby,
+              hostUid: "bot1",
+              hostDisplayName: "AI Bot 1",
+            };
+          },
+        } as DataSnapshot);
+
+        const result = await lobbyService.transferHostToEarliestPlayer("AI123");
+
+        expect(result.success).toBe(true);
+
+        // Verify warning was logged
+        expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "AI-only host transfer - potential game stall",
+            level: "warning",
+            data: expect.objectContaining({
+              code: "AI123",
+              aiPlayerCount: 2,
+              totalPlayers: 2,
+            }),
+          })
+        );
+
+        // Verify AI bot became host
+        expect(mockUpdate).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            "lobbies/AI123/hostUid": "bot1",
+            "lobbies/AI123/hostDisplayName": "AI Bot 1",
+            "lobbies/AI123/players/bot1/isHost": true,
+          })
+        );
+      });
+    });
+
+    describe("utility functions", () => {
+      it("should correctly detect AI-only scenarios", async () => {
+        // Access private methods via type assertion for testing
+        const service = lobbyService as unknown as {
+          hasOnlyAIPlayers: (players: Record<string, PlayerData>) => boolean;
+          hasHumanPlayers: (players: Record<string, PlayerData>) => boolean;
+          getPlayerCounts: (players: Record<string, PlayerData>) => {
+            total: number;
+            human: number;
+            ai: number;
+          };
+        };
+
+        const aiOnlyPlayers = {
+          bot1: { ...mockAIOnlyLobby.players.bot1 },
+          bot2: { ...mockAIOnlyLobby.players.bot2 },
+        };
+
+        const mixedPlayers = {
+          ...aiOnlyPlayers,
+          human1: { ...mockAIOnlyLobby.players.human123 },
+        };
+
+        expect(service.hasOnlyAIPlayers(aiOnlyPlayers)).toBe(true);
+        expect(service.hasOnlyAIPlayers(mixedPlayers)).toBe(false);
+        expect(service.hasOnlyAIPlayers({})).toBe(false);
+
+        expect(service.hasHumanPlayers(aiOnlyPlayers)).toBe(false);
+        expect(service.hasHumanPlayers(mixedPlayers)).toBe(true);
+        expect(service.hasHumanPlayers({})).toBe(false);
+
+        const counts = service.getPlayerCounts(mixedPlayers);
+        expect(counts).toEqual({
+          total: 3,
+          human: 1,
+          ai: 2,
+        });
+      });
     });
   });
 });

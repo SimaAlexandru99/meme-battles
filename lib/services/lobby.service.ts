@@ -1247,6 +1247,25 @@ export class LobbyService {
             };
           }
 
+          // Check if only AI players remain after host transfer
+          const playerCounts = this.getPlayerCounts(Object.fromEntries(nonHostPlayers));
+          
+          if (this.hasOnlyAIPlayers(Object.fromEntries(nonHostPlayers))) {
+            console.log(
+              `🤖 Only AI players remain for host transfer in lobby ${code}. AI will become host but game may stall.`
+            );
+            
+            Sentry.addBreadcrumb({
+              message: "AI-only host transfer - potential game stall",
+              data: {
+                code,
+                aiPlayerCount: playerCounts.ai,
+                totalPlayers: playerCounts.total,
+              },
+              level: "warning",
+            });
+          }
+
           // Sort by joinedAt timestamp to find earliest
           const earliestPlayer = nonHostPlayers.sort(
             ([, a], [, b]) =>
@@ -1488,6 +1507,52 @@ export class LobbyService {
           updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
 
           await update(ref(rtdb), updates);
+
+          // Get updated lobby data to check remaining players
+          const updatedSnapshot = await get(lobbyRef);
+          const updatedLobby = updatedSnapshot.val() as LobbyData;
+          const remainingPlayers = updatedLobby?.players || {};
+          const playerCounts = this.getPlayerCounts(remainingPlayers);
+
+          // Log player status for monitoring
+          Sentry.addBreadcrumb({
+            message: "Player left lobby - checking remaining players",
+            data: {
+              code,
+              leavingPlayer: playerUid,
+              wasHost: isHost,
+              remainingPlayers: playerCounts,
+            },
+            level: "info",
+          });
+
+          // If only AI players remain, end the game gracefully
+          if (playerCounts.total > 0 && this.hasOnlyAIPlayers(remainingPlayers)) {
+            console.log(
+              `🤖 Only AI players remain in lobby ${code} (${playerCounts.ai} AI players). Ending game gracefully.`
+            );
+            
+            Sentry.addBreadcrumb({
+              message: "AI-only scenario detected - ending game",
+              data: {
+                code,
+                aiPlayerCount: playerCounts.ai,
+                gameStatus: updatedLobby.status,
+              },
+              level: "info",
+            });
+
+            // If game is in progress, create final results for AI players
+            if (updatedLobby.status === "started" && updatedLobby.gameState) {
+              await this.createFinalAIResults(code, updatedLobby.gameState, remainingPlayers);
+            }
+
+            // Delete the lobby since no humans can manage it
+            await this.deleteLobby(code, playerUid);
+            return {
+              success: true,
+            };
+          }
 
           // If the leaving player was the host, transfer to earliest joined player
           if (isHost) {
@@ -2244,6 +2309,125 @@ export class LobbyService {
         }
       }
     );
+  }
+
+  /**
+   * Create final results for AI-only game completion
+   */
+  private async createFinalAIResults(
+    code: string,
+    gameState: GameState,
+    players: Record<string, PlayerData>
+  ): Promise<void> {
+    return Sentry.startSpan(
+      {
+        op: "db.game.ai_only_completion",
+        name: "Create AI-Only Final Results",
+      },
+      async () => {
+        try {
+          console.log(`🤖 Creating final results for AI-only game ${code}`);
+
+          // Calculate final scores and rankings
+          const playerList = Object.values(players);
+          const finalScores = gameState.scores || {};
+          
+          // Sort players by score (descending)
+          const rankedPlayers = playerList
+            .map(player => ({
+              ...player,
+              finalScore: finalScores[player.id] || 0,
+            }))
+            .sort((a, b) => b.finalScore - a.finalScore);
+
+          // Create final game results
+          const finalResults = {
+            completedAt: new Date().toISOString(),
+            totalRounds: gameState.totalRounds || 8,
+            roundsCompleted: gameState.roundNumber || 1,
+            reason: "ai_only_completion",
+            finalRankings: rankedPlayers.map((player, index) => ({
+              rank: index + 1,
+              playerId: player.id,
+              displayName: player.displayName,
+              isAI: player.isAI,
+              finalScore: player.finalScore,
+              aiPersonality: player.aiPersonalityId,
+            })),
+            winner: rankedPlayers[0] || null,
+          };
+
+          // Update game state with final results
+          const updates: Record<string, unknown> = {};
+          updates[`lobbies/${code}/gameState/phase`] = "completed";
+          updates[`lobbies/${code}/gameState/finalResults`] = finalResults;
+          updates[`lobbies/${code}/status`] = "completed";
+          updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
+
+          await update(ref(rtdb), updates);
+
+          // Log completion for monitoring
+          Sentry.addBreadcrumb({
+            message: "AI-only game completed",
+            data: {
+              code,
+              totalPlayers: rankedPlayers.length,
+              roundsCompleted: finalResults.roundsCompleted,
+              winner: finalResults.winner?.displayName,
+            },
+            level: "info",
+          });
+
+          console.log(
+            `✅ AI-only game ${code} completed. Winner: ${finalResults.winner?.displayName} (${finalResults.winner?.finalScore} points)`
+          );
+        } catch (error) {
+          console.error(`❌ Failed to create AI-only final results for ${code}:`, error);
+          Sentry.captureException(error, {
+            tags: { operation: "ai_only_game_completion", code },
+            extra: { gameState, playerCount: Object.keys(players).length },
+          });
+          // Don't throw - we still want to clean up the lobby
+        }
+      }
+    );
+  }
+
+  /**
+   * Check if only AI players remain in the lobby (no human players)
+   */
+  private hasOnlyAIPlayers(players: Record<string, PlayerData>): boolean {
+    const allPlayers = Object.values(players);
+    if (allPlayers.length === 0) return false;
+    
+    // Check if all remaining players are AI
+    return allPlayers.every(player => player.isAI === true);
+  }
+
+  /**
+   * Check if any human players remain in the lobby
+   */
+  private hasHumanPlayers(players: Record<string, PlayerData>): boolean {
+    return Object.values(players).some(player => !player.isAI);
+  }
+
+  /**
+   * Get count of human vs AI players
+   */
+  private getPlayerCounts(players: Record<string, PlayerData>): {
+    total: number;
+    human: number;
+    ai: number;
+  } {
+    const allPlayers = Object.values(players);
+    const humanCount = allPlayers.filter(p => !p.isAI).length;
+    const aiCount = allPlayers.filter(p => p.isAI).length;
+    
+    return {
+      total: allPlayers.length,
+      human: humanCount,
+      ai: aiCount,
+    };
   }
 }
 

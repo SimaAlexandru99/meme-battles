@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ref, onValue, push } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 import { Clock, Gamepad2, MessageCircle, Users } from "lucide-react";
@@ -28,6 +28,7 @@ import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { useRouter } from "next/navigation";
+import { ErrorToast } from "@/lib/utils/error-toast";
 import * as Sentry from "@sentry/nextjs";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,6 @@ interface ArenaProps {
 
 export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const router = useRouter();
-
 
   // Use real-time game state from lobby system
   const {
@@ -53,10 +53,11 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     hasSubmitted,
     clearError,
     completeGameTransition,
+    hasOnlyAIPlayers,
   } = useGameState(lobbyCode);
 
   // Ensure players is always a valid array
-  const players = rawPlayers || [];
+  const players = useMemo(() => rawPlayers || [], [rawPlayers]);
 
   // Debug logging for players data
   useEffect(() => {
@@ -233,6 +234,38 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     }
   }, [leaveLobby, router, lobbyCode]);
 
+  // Monitor AI-only scenarios and show warnings
+  useEffect(() => {
+    if (!players || players.length === 0 || !currentUser) return;
+
+    const humanPlayers = players.filter(p => !p.isAI);
+    const aiPlayers = players.filter(p => p.isAI);
+    const isUserLastHuman = humanPlayers.length === 1 && humanPlayers[0]?.id === currentUser.id;
+
+    // Show warning if user is the last human player
+    if (isUserLastHuman && aiPlayers.length > 0) {
+      console.log(`⚠️ User is last human with ${aiPlayers.length} AI players`);
+      
+      ErrorToast.showLastHumanWarning({
+        aiCount: aiPlayers.length,
+        onConfirmLeave: () => {
+          console.log("🚪 User confirmed leaving as last human");
+          handleGoHome();
+        },
+      });
+    }
+
+    // Show warning if only AI players remain (shouldn't happen often due to cleanup)
+    if (hasOnlyAIPlayers()) {
+      console.log("🤖 Only AI players detected in Arena");
+      
+      ErrorToast.showAIOnlyNotification({
+        gameEnded: true,
+        onGoHome: handleGoHome,
+      });
+    }
+  }, [players, currentUser, hasOnlyAIPlayers, handleGoHome]);
+
   // Clean up Firebase when user navigates away or closes browser
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -368,7 +401,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               </p>
             </div>
 
-            {players.find(p => p.id === currentUser.id)?.isHost && (
+            {players.find((p) => p.id === currentUser.id)?.isHost && (
               <Button
                 onClick={handleStartRound}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
@@ -755,7 +788,6 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <ResultsPhase
-          lobbyCode={lobbyCode}
           currentUser={currentUser}
           players={players}
           situation={gameState.currentSituation}

@@ -25,6 +25,34 @@ interface AIBotResponse {
   confidence: number;
 }
 
+// Calculate string similarity using Levenshtein distance
+function calculateStringSimilarity(str1: string, str2: string): number {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  
+  if (len1 === 0) return len2 === 0 ? 1 : 0;
+  if (len2 === 0) return 0;
+  
+  const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(null));
+  
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+  
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  
+  const maxLen = Math.max(len1, len2);
+  return (maxLen - matrix[len1][len2]) / maxLen;
+}
+
 // Simple fallback card selection
 function selectFallbackCard(cards: AIBotRequest["cards"]): AIBotResponse {
   const randomCard = cards[Math.floor(Math.random() * cards.length)];
@@ -128,7 +156,22 @@ Format your response as valid JSON only.`;
         (card) => card.id === aiResponse.selectedCardId
       );
 
-      // If not found, try to interpret as index (AI might be using 1-based indexing)
+      // If not found, try fuzzy matching for similar IDs (handles minor typos)
+      if (!selectedCard) {
+        selectedCard = cards.find((card) => {
+          const similarity = calculateStringSimilarity(card.id, aiResponse.selectedCardId);
+          return similarity > 0.8; // 80% similarity threshold
+        });
+        
+        if (selectedCard) {
+          console.log(
+            `AI card ID "${aiResponse.selectedCardId}" fuzzy matched to "${selectedCard.id}"`
+          );
+          aiResponse.selectedCardId = selectedCard.id;
+        }
+      }
+
+      // If still not found, try to interpret as index (AI might be using 1-based indexing)
       if (!selectedCard) {
         const cardIndex = parseInt(aiResponse.selectedCardId.toString()) - 1; // Convert to 0-based index
         if (cardIndex >= 0 && cardIndex < cards.length) {

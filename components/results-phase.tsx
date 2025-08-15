@@ -28,7 +28,6 @@ interface ResultsPhaseProps {
 }
 
 export function ResultsPhase({
-  lobbyCode: _lobbyCode,
   currentUser,
   players,
   situation,
@@ -36,7 +35,7 @@ export function ResultsPhase({
   votes,
   roundNumber,
   totalRounds,
-}: ResultsPhaseProps) {
+}: Omit<ResultsPhaseProps, 'lobbyCode'>) {
   const [winner, setWinner] = useState<string | null>(null);
 
   // Ensure votes object exists to prevent runtime errors

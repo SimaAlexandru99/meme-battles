@@ -15,7 +15,7 @@ export class ErrorToast {
       onRetry?: () => void;
       duration?: number;
       dismissible?: boolean;
-    } = {},
+    } = {}
   ): void {
     const {
       title = "Error",
@@ -60,7 +60,7 @@ export class ErrorToast {
     options: {
       onRetry?: () => void;
       operation?: string;
-    } = {},
+    } = {}
   ): void {
     const { onRetry, operation = "operation" } = options;
 
@@ -91,7 +91,7 @@ export class ErrorToast {
       onRetry?: () => void;
       onCreateNew?: () => void;
       onJoinDifferent?: () => void;
-    } = {},
+    } = {}
   ): void {
     const { lobbyCode, onRetry, onCreateNew, onJoinDifferent } = options;
     const friendlyError = ErrorHandler.getUserFriendlyMessage(error);
@@ -176,7 +176,7 @@ export class ErrorToast {
         label: string;
         onClick: () => void;
       };
-    } = {},
+    } = {}
   ): void {
     const { description, duration = 3000, action } = options;
 
@@ -194,7 +194,7 @@ export class ErrorToast {
     message: string,
     options: {
       description?: string;
-    } = {},
+    } = {}
   ): string | number {
     const { description } = options;
 
@@ -212,7 +212,7 @@ export class ErrorToast {
     options: {
       description?: string;
       duration?: number;
-    } = {},
+    } = {}
   ): void {
     const { description, duration = 3000 } = options;
 
@@ -231,7 +231,7 @@ export class ErrorToast {
     error: unknown,
     options: {
       onRetry?: () => void;
-    } = {},
+    } = {}
   ): void {
     const { onRetry } = options;
     const friendlyError = ErrorHandler.getUserFriendlyMessage(error);
@@ -276,7 +276,7 @@ export class ErrorToast {
         label: string;
         onClick: () => void;
       };
-    } = {},
+    } = {}
   ): void {
     const { description, duration = 4000, action } = options;
 
@@ -299,7 +299,7 @@ export class ErrorToast {
         label: string;
         onClick: () => void;
       };
-    } = {},
+    } = {}
   ): void {
     const { description, duration = 3000, action } = options;
 
@@ -307,6 +307,87 @@ export class ErrorToast {
       description,
       duration,
       action,
+    });
+  }
+
+  /**
+   * Show AI-only scenario notification to inform user
+   */
+  static showAIOnlyNotification(
+    options: {
+      gameEnded?: boolean;
+      onGoHome?: () => void;
+      onCreateNew?: () => void;
+    } = {}
+  ): void {
+    const { gameEnded = false, onGoHome, onCreateNew } = options;
+
+    if (gameEnded) {
+      toast.info("Game Completed", {
+        description:
+          "All human players have left. The AI-only game has been ended automatically.",
+        duration: 8000,
+        action: onGoHome
+          ? {
+              label: "Go Home",
+              onClick: onGoHome,
+            }
+          : undefined,
+      });
+    } else {
+      toast.warning("Only AI Players Remain", {
+        description:
+          "Warning: If you leave, the game will end as AI players cannot continue alone.",
+        duration: 6000,
+        action: onCreateNew
+          ? {
+              label: "Create New Game",
+              onClick: onCreateNew,
+            }
+          : undefined,
+      });
+    }
+  }
+
+  /**
+   * Show host transfer warning when only AI available
+   */
+  static showAIHostWarning(options: {
+    playerCount: number;
+    onStayInGame?: () => void;
+  }): void {
+    const { playerCount, onStayInGame } = options;
+
+    toast.warning("AI Players Only", {
+      description: `Only ${playerCount} AI players remain. Game management may fail if all humans leave.`,
+      duration: 7000,
+      action: onStayInGame
+        ? {
+            label: "Stay in Game",
+            onClick: onStayInGame,
+          }
+        : undefined,
+    });
+  }
+
+  /**
+   * Show game continuation warning for last human player
+   */
+  static showLastHumanWarning(options: {
+    aiCount: number;
+    onConfirmLeave?: () => void;
+  }): void {
+    const { aiCount, onConfirmLeave } = options;
+
+    toast.warning("Last Human Player", {
+      description: `You are the last human player with ${aiCount} AI players. Leaving will end the game.`,
+      duration: 8000,
+      action: onConfirmLeave
+        ? {
+            label: "Leave Anyway",
+            onClick: onConfirmLeave,
+          }
+        : undefined,
     });
   }
 }
