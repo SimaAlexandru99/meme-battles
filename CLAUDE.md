@@ -157,3 +157,6 @@ Pending implementation:
 - ⏳ Multiplayer lobby system
 
 When implementing game features, follow the Firestore schema outlined in the README.md and ensure real-time updates using Firebase listeners.
+
+- in this project we have index.d.ts where we have all interfaces so we dont need to import and we dont need to export from it, because is global already
+- Always for ui/ux use and shadcn/ui mcp

@@ -39,8 +39,6 @@ interface ArenaProps {
 export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const router = useRouter();
 
-  // Track if user is intentionally leaving vs normal navigation
-  const [isIntentionallyLeaving, setIsIntentionallyLeaving] = useState(false);
 
   // Use real-time game state from lobby system
   const {
@@ -221,7 +219,6 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const handleGoHome = useCallback(async () => {
     try {
       console.log("🏠 Arena: User explicitly going home - leaving lobby");
-      setIsIntentionallyLeaving(true);
       // Clean up Firebase data before navigating
       await leaveLobby();
       toast.success("Thanks for playing! See you next time!");
@@ -371,7 +368,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               </p>
             </div>
 
-            {isHost && (
+            {players.find(p => p.id === currentUser.id)?.isHost && (
               <Button
                 onClick={handleStartRound}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"

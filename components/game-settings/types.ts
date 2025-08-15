@@ -3,13 +3,11 @@
 export interface GameSettingsFormData {
   rounds: number;
   timeLimit: number;
-  categories: string[];
 }
 
 export interface GameSettingsValidationErrors {
   rounds?: string;
   timeLimit?: string;
-  categories?: string;
 }
 
 export interface GameSettingsValidationRules {
@@ -22,12 +20,6 @@ export interface GameSettingsValidationRules {
     min: number;
     max: number;
     step: number;
-    required: boolean;
-  };
-  categories: {
-    minLength: number;
-    maxLength: number;
-    allowedValues: string[];
     required: boolean;
   };
 }
@@ -45,19 +37,12 @@ export const GAME_SETTINGS_VALIDATION: GameSettingsValidationRules = {
     step: 15,
     required: true,
   },
-  categories: {
-    minLength: 1,
-    maxLength: 5,
-    allowedValues: ["funny", "wholesome", "dark", "random", "trending"],
-    required: true,
-  },
 };
 
 // Default settings
 export const DEFAULT_GAME_SETTINGS: GameSettingsFormData = {
   rounds: 3,
   timeLimit: 60,
-  categories: ["funny", "random"],
 };
 
 // Available AI personalities for selection
@@ -123,24 +108,6 @@ export function validateGameSettings(
     0
   ) {
     errors.timeLimit = `Time limit must be in ${GAME_SETTINGS_VALIDATION.timeLimit.step} second increments`;
-  }
-
-  // Validate categories
-  if (!settings.categories || settings.categories.length === 0) {
-    errors.categories = "At least one category must be selected";
-  } else if (
-    settings.categories.length > GAME_SETTINGS_VALIDATION.categories.maxLength
-  ) {
-    errors.categories = `Maximum ${GAME_SETTINGS_VALIDATION.categories.maxLength} categories allowed`;
-  } else {
-    // Check if all categories are valid
-    const invalidCategories = settings.categories.filter(
-      (category) =>
-        !GAME_SETTINGS_VALIDATION.categories.allowedValues.includes(category),
-    );
-    if (invalidCategories.length > 0) {
-      errors.categories = `Invalid categories: ${invalidCategories.join(", ")}`;
-    }
   }
 
   return errors;
