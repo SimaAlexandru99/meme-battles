@@ -1659,11 +1659,14 @@ export class LobbyService {
 
           // Create game state
           const gameState: GameState = {
-            currentRound: 1,
+            roundNumber: 1,
             totalRounds: lobby.settings.rounds,
             timeLeft: lobby.settings.timeLimit,
-            phase: "playing",
-            currentPrompt: currentSituation,
+            phase: "transition",
+            currentSituation,
+            submissions: {},
+            votes: {},
+            scores: {},
           };
 
           // Prepare database updates - start with transition phase

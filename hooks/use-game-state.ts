@@ -15,6 +15,14 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { calculateRoundScoring, type PlayerStreak } from "@/lib/utils/scoring";
 import * as Sentry from "@sentry/nextjs";
 
+interface TimerCoordination {
+  hostId: string; // ID of the host currently managing the timer
+  timerStartTime: number; // Server timestamp when timer was started
+  expectedEndTime: number; // Server timestamp when timer should expire
+  phaseId: string; // Unique ID for current phase instance to prevent duplicate transitions
+  lastHeartbeat: number; // Last heartbeat from timer host for validation
+}
+
 interface GameState {
   phase:
     | "waiting"
@@ -40,6 +48,8 @@ interface GameState {
   playerStreaks?: Record<string, PlayerStreak>;
   // Optional phase start marker written with serverTimestamp() when transitioning
   phaseStartTime?: number;
+  // Timer coordination metadata for host synchronization
+  timerMeta?: TimerCoordination;
 }
 
 interface UseGameStateReturn {
@@ -127,6 +137,78 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     },
     [lobbyCode]
   );
+
+  /**
+   * Generate unique phase ID for timer coordination
+   */
+  const generatePhaseId = useCallback((phase: string, roundNumber: number): string => {
+    return `${phase}-${roundNumber}-${Date.now()}`;
+  }, []);
+
+  /**
+   * Check if current user can take timer ownership
+   */
+  const canTakeTimerOwnership = useCallback((timerMeta?: TimerCoordination): boolean => {
+    if (!user || !timerMeta) return true; // No existing timer, can take ownership
+    
+    const now = Date.now();
+    const HEARTBEAT_TIMEOUT = 5000; // 5 seconds timeout for host heartbeat
+    
+    // Check if current timer host is still active
+    const isCurrentHostActive = timerMeta.hostId === user.id;
+    const isHeartbeatExpired = now - timerMeta.lastHeartbeat > HEARTBEAT_TIMEOUT;
+    
+    // Can take ownership if: no active timer host OR heartbeat expired OR we're already the host
+    return !timerMeta.hostId || isHeartbeatExpired || isCurrentHostActive;
+  }, [user]);
+
+  /**
+   * Calculate accurate time left using server timestamp
+   */
+  const calculateServerTimeLeft = useCallback((timerMeta?: TimerCoordination): number => {
+    if (!timerMeta) return 0;
+    
+    const now = Date.now();
+    const timeLeft = Math.max(0, Math.ceil((timerMeta.expectedEndTime - now) / 1000));
+    
+    return timeLeft;
+  }, []);
+
+  /**
+   * Create timer coordination metadata
+   */
+  const createTimerCoordination = useCallback((
+    duration: number, 
+    phase: string, 
+    roundNumber: number
+  ): TimerCoordination => {
+    if (!user) throw new Error("Cannot create timer coordination without user");
+    
+    const now = Date.now();
+    return {
+      hostId: user.id,
+      timerStartTime: now,
+      expectedEndTime: now + (duration * 1000),
+      phaseId: generatePhaseId(phase, roundNumber),
+      lastHeartbeat: now,
+    };
+  }, [user, generatePhaseId]);
+
+  /**
+   * Update timer heartbeat to signal active management
+   */
+  const updateTimerHeartbeat = useCallback(async (timerMeta: TimerCoordination) => {
+    if (!user || timerMeta.hostId !== user.id) return;
+    
+    try {
+      const gameStatePath = `lobbies/${lobbyCode}/gameState/timerMeta`;
+      await update(ref(rtdb, gameStatePath), {
+        lastHeartbeat: Date.now(),
+      });
+    } catch (error) {
+      console.warn("Failed to update timer heartbeat:", error);
+    }
+  }, [user, lobbyCode]);
 
   /**
    * Submit a card for the current round
@@ -293,9 +375,18 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       async () => {
         try {
           const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+          const submissionTime = submissionDuration ?? 60;
+          
+          // Create timer coordination for submission phase
+          const timerMeta = createTimerCoordination(
+            submissionTime,
+            "submission",
+            gameState.roundNumber || 1
+          );
+          
           const updates: Record<string, unknown> = {
             phase: "submission",
-            timeLeft: submissionDuration ?? 60,
+            timeLeft: submissionTime,
             // DON'T reset roundNumber - preserve existing round number from nextRound()
             totalRounds: totalRounds, // Use total rounds from lobby settings
             currentSituation: "", // Initialize empty situation
@@ -305,6 +396,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             winner: null, // Reset winner
             scores: {}, // Reset scores
             phaseStartTime: serverTimestamp(),
+            timerMeta, // Add timer coordination
           };
 
           console.log("🎬 startRound called:", {
@@ -372,6 +464,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     submissionDuration,
     totalRounds,
     handleError,
+    createTimerCoordination,
   ]);
 
   /**
@@ -498,15 +591,25 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             nextRound: nextRoundNumber,
             totalRounds: gameState.totalRounds,
           });
+          
+          // Create timer coordination for countdown phase
+          const countdownTime = 5;
+          const timerMeta = createTimerCoordination(
+            countdownTime,
+            "countdown",
+            nextRoundNumber
+          );
+          
           updates[`${gameStatePath}/roundNumber`] = nextRoundNumber;
           updates[`${gameStatePath}/phase`] = "countdown";
-          updates[`${gameStatePath}/timeLeft`] = 5; // 5 second countdown
+          updates[`${gameStatePath}/timeLeft`] = countdownTime; // 5 second countdown
           updates[`${gameStatePath}/phaseStartTime`] = serverTimestamp();
           updates[`${gameStatePath}/currentSituation`] = newSituation;
           updates[`${gameStatePath}/submissions`] = {}; // Reset all submissions
           updates[`${gameStatePath}/votes`] = {}; // Reset all votes
           updates[`${gameStatePath}/abstentions`] = {}; // Reset all abstentions
           updates[`${gameStatePath}/winner`] = null; // Reset winner
+          updates[`${gameStatePath}/timerMeta`] = timerMeta; // Add timer coordination
           // DON'T reset scores - keep cumulative scores across rounds!
 
           await update(ref(rtdb), updates);
@@ -516,7 +619,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         }
       }
     );
-  }, [user, gameState, lobbyCode, handleError, players]);
+  }, [user, gameState, lobbyCode, handleError, players, createTimerCoordination]);
 
   /**
    * End the game (host only)
@@ -585,15 +688,31 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   // --- Helper: handle phase/round transition when timer expires ---
   const handleTimerExpire = useCallback(async () => {
     if (!isHost || !gameState) return;
+    
+    // Prevent duplicate phase transitions using phase ID
+    const currentPhaseId = gameState.timerMeta?.phaseId;
+    if (!currentPhaseId || gameState.timerMeta?.hostId !== user?.id) {
+      console.log("⚠️ Phase transition blocked - not timer owner or missing phase ID");
+      return;
+    }
+
     try {
       if (gameState.phase === "submission") {
         // Move to separate voting phase
+        const votingTime = Math.min(30, Math.floor((submissionDuration || 60) / 2));
+        const timerMeta = createTimerCoordination(
+          votingTime,
+          "voting",
+          gameState.roundNumber || 1
+        );
+
         await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
           phase: "voting",
-          timeLeft: Math.min(30, Math.floor((submissionDuration || 60) / 2)), // Voting time = half of submission time, max 30s
+          timeLeft: votingTime, // Voting time = half of submission time, max 30s
           votes: {}, // Ensure votes object exists
           abstentions: {}, // Ensure abstentions object exists
           phaseStartTime: serverTimestamp(),
+          timerMeta,
         });
       } else if (gameState.phase === "voting") {
         // Calculate scores and move to results phase
@@ -606,20 +725,36 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           gameState.playerStreaks || {}
         );
 
+        const resultsTime = 10;
+        const timerMeta = createTimerCoordination(
+          resultsTime,
+          "results",
+          gameState.roundNumber || 1
+        );
+
         await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
           phase: "results",
-          timeLeft: 10, // 10 seconds to view results
+          timeLeft: resultsTime, // 10 seconds to view results
           scores: scoringResult.updatedScores,
           playerStreaks: scoringResult.updatedStreaks,
           winner: scoringResult.winner,
           phaseStartTime: serverTimestamp(),
+          timerMeta,
         });
       } else if (gameState.phase === "results") {
         // Move to leaderboard after results
+        const leaderboardTime = 15;
+        const timerMeta = createTimerCoordination(
+          leaderboardTime,
+          "leaderboard",
+          gameState.roundNumber || 1
+        );
+
         await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
           phase: "leaderboard",
-          timeLeft: 15, // 15 seconds to view leaderboard
+          timeLeft: leaderboardTime, // 15 seconds to view leaderboard
           phaseStartTime: serverTimestamp(),
+          timerMeta,
         });
       } else if (gameState.phase === "leaderboard") {
         // Move to next round or end game
@@ -640,6 +775,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     } catch (err) {
       Sentry.captureException(err, {
         tags: { operation: "phase_transition", lobbyCode },
+        extra: { currentPhaseId, hostId: gameState.timerMeta?.hostId },
       });
     }
   }, [
@@ -651,6 +787,8 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     startRound,
     players,
     submissionDuration,
+    createTimerCoordination,
+    user?.id,
   ]);
 
   // --- Early transition to voting when all submissions are in (host only) ---
@@ -691,12 +829,20 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         "✅ All players submitted and minimum time passed, transitioning to voting early"
       );
       const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+      const votingTime = Math.min(30, Math.floor((submissionDuration || 60) / 2));
+      const timerMeta = createTimerCoordination(
+        votingTime,
+        "voting", 
+        gameState.roundNumber || 1
+      );
+      
       update(ref(rtdb, gameStatePath), {
         phase: "voting",
-        timeLeft: Math.min(30, Math.floor((submissionDuration || 60) / 2)), // Voting time = half of submission time, max 30s
+        timeLeft: votingTime, // Voting time = half of submission time, max 30s
         votes: {}, // Ensure votes object exists
         abstentions: {}, // Ensure abstentions object exists
         phaseStartTime: serverTimestamp(),
+        timerMeta,
       }).catch((err) => {
         Sentry.captureException(err, {
           tags: {
@@ -707,7 +853,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         });
       });
     }
-  }, [isHost, gameState, players.length, lobbyCode, submissionDuration]);
+  }, [isHost, gameState, players.length, lobbyCode, submissionDuration, createTimerCoordination]);
 
   // --- During submission phase, trigger AI submissions (host only) ---
   useEffect(() => {
@@ -842,13 +988,21 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         );
 
         const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+        const resultsTime = 10;
+        const timerMeta = createTimerCoordination(
+          resultsTime,
+          "results",
+          gameState.roundNumber || 1
+        );
+        
         update(ref(rtdb, gameStatePath), {
           phase: "results",
-          timeLeft: 10, // 10 seconds to view results
+          timeLeft: resultsTime, // 10 seconds to view results
           scores: scoringResult.updatedScores,
           playerStreaks: scoringResult.updatedStreaks,
           winner: scoringResult.winner,
           phaseStartTime: serverTimestamp(),
+          timerMeta,
         }).catch((err) => {
           Sentry.captureException(err, {
             tags: {
@@ -864,7 +1018,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         });
       }
     }
-  }, [isHost, gameState, players.length, lobbyCode, players]);
+  }, [isHost, gameState, players.length, lobbyCode, players, createTimerCoordination]);
 
   /**
    * Set up real-time listeners for game state
@@ -1079,39 +1233,105 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     return () => clearInterval(interval);
   }, [user, lobbyCode]);
 
-  // --- Timer decrement logic for host ---
+  // --- Coordinated timer management for host ---
   useEffect(() => {
     if (!isHost || !gameState || typeof gameState.timeLeft !== "number") return;
+    
     const timedPhases = [
       "submission",
-      "voting",
+      "voting", 
       "countdown",
       "results",
       "leaderboard",
     ];
+    
     if (!timedPhases.includes(gameState.phase)) return;
-    if (gameState.timeLeft <= 0) {
+
+    // Check if we can take timer ownership
+    if (!canTakeTimerOwnership(gameState.timerMeta)) {
+      console.log("⚠️ Cannot take timer ownership - another host is managing timer");
+      return;
+    }
+
+    // If no timer coordination exists, create it
+    if (!gameState.timerMeta) {
+      const timerMeta = createTimerCoordination(
+        gameState.timeLeft,
+        gameState.phase,
+        gameState.roundNumber || 1
+      );
+      
+      // Initialize timer coordination in Firebase
+      const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+      update(ref(rtdb, gameStatePath), { timerMeta }).catch((err) => {
+        Sentry.captureException(err, {
+          tags: { operation: "timer_initialization", lobbyCode },
+        });
+      });
+      
+      return; // Let the next render handle the timer with coordination
+    }
+
+    // Calculate accurate time left based on server timestamp
+    const accurateTimeLeft = calculateServerTimeLeft(gameState.timerMeta);
+    
+    // If timer has expired, handle immediately
+    if (accurateTimeLeft <= 0) {
       handleTimerExpire();
       return;
     }
-    const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+
+    // Update local timeLeft if there's a significant difference
+    if (Math.abs(gameState.timeLeft - accurateTimeLeft) > 2) {
+      const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+      update(ref(rtdb, gameStatePath), { timeLeft: accurateTimeLeft }).catch((err) => {
+        console.warn("Failed to sync timeLeft with server timestamp:", err);
+      });
+    }
+
+    // Set up coordinated timer with heartbeat
     const timer = setInterval(async () => {
       try {
-        const current = gameState.timeLeft;
-        if (current > 0) {
-          await update(ref(rtdb, gameStatePath), { timeLeft: current - 1 });
+        const currentTimerMeta = gameState.timerMeta;
+        if (!currentTimerMeta || currentTimerMeta.hostId !== user?.id) {
+          console.log("🔄 Timer ownership changed, stopping timer");
+          clearInterval(timer);
+          return;
+        }
+
+        // Update heartbeat to signal active management
+        await updateTimerHeartbeat(currentTimerMeta);
+
+        // Calculate accurate time left
+        const serverTimeLeft = calculateServerTimeLeft(currentTimerMeta);
+        
+        if (serverTimeLeft > 0) {
+          // Update timeLeft display value
+          const gameStatePath = `lobbies/${lobbyCode}/gameState`;
+          await update(ref(rtdb, gameStatePath), { timeLeft: serverTimeLeft });
         } else {
           clearInterval(timer);
           await handleTimerExpire();
         }
       } catch (err) {
         Sentry.captureException(err, {
-          tags: { operation: "timer_decrement", lobbyCode },
+          tags: { operation: "coordinated_timer_tick", lobbyCode },
         });
       }
     }, 1000);
+
     return () => clearInterval(timer);
-  }, [isHost, gameState, handleTimerExpire, lobbyCode]);
+  }, [
+    isHost, 
+    gameState, 
+    handleTimerExpire, 
+    lobbyCode, 
+    canTakeTimerOwnership,
+    createTimerCoordination,
+    calculateServerTimeLeft,
+    updateTimerHeartbeat,
+    user?.id
+  ]);
 
   // Derived state
   const isCurrentPlayer = !!user;

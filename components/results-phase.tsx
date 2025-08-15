@@ -28,7 +28,7 @@ interface ResultsPhaseProps {
 }
 
 export function ResultsPhase({
-  lobbyCode,
+  lobbyCode: _lobbyCode,
   currentUser,
   players,
   situation,
