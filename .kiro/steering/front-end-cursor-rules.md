@@ -1,0 +1,462 @@
+---
+inclusion: always
+---
+
+# Meme Battles Development Guidelines
+
+You are an expert full-stack developer building **Meme Battles**, a real-time multiplayer web game where players compete to create the funniest meme matches. Follow these specific guidelines for the Next.js 15.4.5 + TypeScript + Firebase Realtime Database tech stack.
+
+## Project Overview
+
+**Game Flow**: Lobby → Card Distribution → Situation Generation → Submission → Voting → Results
+**Tech Stack**: Next.js 15.4.5, TypeScript 5.8.3, Tailwind CSS 4.1.11, shadcn/ui, Firebase Realtime Database, Vercel AI SDK
+**Performance Target**: <200ms latency for 8 concurrent players, mobile-first responsive design
+
+## Directory Structure (MANDATORY)
+
+**ALWAYS follow this exact structure:**
+
+```text
+/app                    # Next.js App Router - pages and layouts only
+  /(auth)              # Authentication routes (grouped)
+  /(front)             # Main application routes (grouped)
+  layout.tsx           # Root layout with providers
+  globals.css          # Global styles and Tailwind
+
+/components             # React components - organized by domain
+  /forms               # Form-specific components
+  /game-settings       # Game configuration components
+  /shared              # Reusable cross-feature components
+  /ui                  # shadcn/ui components ONLY
+
+/hooks                  # Custom React hooks - business logic
+/lib                    # Utilities and services
+  /actions             # Next.js Server Actions
+  /services            # Business logic services
+  /utils               # Pure utility functions
+
+/providers              # React context providers
+/firebase               # Firebase configuration files
+/types                  # TypeScript type definitions
+```
+
+## Naming Conventions (STRICT)
+
+- **Files**: kebab-case (e.g., `game-lobby.tsx`, `use-mobile.ts`)
+- **Components**: PascalCase exports, kebab-case filenames
+- **Hooks**: camelCase starting with `use` (e.g., `useCurrentUser`)
+- **Types/Interfaces**: PascalCase (e.g., `GameState`, `PlayerData`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_PLAYERS`)
+
+## Import Order (REQUIRED)
+
+```typescript
+// 1. External libraries first
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+
+// 2. Internal imports with path aliases
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { GameService } from "@/lib/services/game-service";
+
+// 3. Type imports last
+import type { GameState } from "@/types";
+```
+
+## Tech Stack Requirements
+
+### Core Technologies
+
+- **Framework**: Next.js 15.4.5 with App Router (use App Router patterns, not Pages Router)
+- **Language**: TypeScript 5.8.3 (strict mode enabled, always use proper typing)
+- **Styling**: Tailwind CSS 4.1.11 (use utility classes, avoid custom CSS when possible)
+- **UI Components**: shadcn/ui New York style with Radix UI (import from `@/components/ui`)
+- **Database**: Firebase Realtime Database (real-time listeners for game state and chat)
+- **Authentication**: Firebase Auth with Google + Guest modes
+- **AI**: Vercel AI SDK with Google AI for situation generation
+- **Animations**: Framer Motion for UI, GSAP for complex sequences
+- **Package Manager**: pnpm (never use npm or yarn commands)
+
+### Required Libraries
+
+- **State Management**: SWR for server state, React state for UI state
+- **Forms**: React Hook Form + Zod validation (always validate both client/server)
+- **Icons**: Lucide React only (consistent icon family)
+- **Notifications**: Sonner for toast messages
+- **Theming**: next-themes for dark/light mode
+- **Error Tracking**: Sentry for production errors
+- **Testing**: Jest + Testing Library (70% coverage minimum)
+
+## UI Component Development (MANDATORY)
+
+### shadcn/ui MCP Integration
+
+**ALWAYS use shadcn MCP tools before building any UI components:**
+
+1. **Component Discovery**: Use `mcp_shadcn-ui_list_components` to see all available components
+2. **Component Implementation**: Use `mcp_shadcn-ui_get_component` to get the latest source code for specific components
+3. **Component Demos**: Use `mcp_shadcn-ui_get_component_demo` to see usage examples
+4. **Block Patterns**: Use `mcp_shadcn-ui_list_blocks` and `mcp_shadcn-ui_get_block` for complex UI patterns
+5. **Metadata**: Use `mcp_shadcn-ui_get_component_metadata` for component details
+
+### UI Development Workflow
+
+1. **Research Phase**: Always check shadcn MCP for available components before building
+2. **Component Selection**: Choose the most appropriate shadcn/ui component for the use case
+3. **Customization**: Extend shadcn/ui components with custom styling and behavior
+4. **Integration**: Import from `@/components/ui` and follow shadcn/ui patterns
+5. **Animation**: Add Framer Motion animations following consistent patterns
+
+### Component Guidelines
+
+- **Base Components**: Always start with shadcn/ui components from `@/components/ui`
+- **Custom Components**: Build on top of shadcn/ui, don't replace them
+- **Styling**: Use Tailwind CSS classes, avoid custom CSS when possible
+- **Accessibility**: shadcn/ui components include Radix UI accessibility features
+- **Responsive**: Test all components on mobile-first (320px minimum)
+
+## Game-Specific Patterns
+
+### Real-time State Management
+
+- Use Firebase Realtime Database listeners for game state and chat
+- Implement proper cleanup of real-time listeners to prevent memory leaks
+- Use SWR for client-side caching with Firebase as data source
+- Handle offline states gracefully with SWR fallbacks
+
+### Performance Optimization
+
+- **Mobile-First**: Touch-friendly interactions, responsive breakpoints (320px minimum)
+- **Image Loading**: Lazy loading for meme cards, optimized for mobile bandwidth
+- **State Structure**: Flatten Firebase data structure to minimize listener overhead
+- **Component Optimization**: Use React.memo for expensive components, useMemo for calculations
+
+### Game Flow Implementation
+
+- **Lobby Phase**: Real-time player list, chat, settings configuration
+- **Initial Card Distribution**: Each player receives 7 unique cards from 800-image pool
+- **Situation Generation**: AI prompts using Vercel AI SDK with Google AI
+- **Submission Phase**: Players select and submit one card with optional captions
+- **Voting Phase**: One vote per player, self-voting prohibited
+- **Results Phase**: Winner announcement, point distribution, meme sharing
+- **Round System**: After each round, players receive one new card to replace the submitted card
+
+## Code Style Requirements
+
+### TypeScript Standards
+
+- Use strict mode, proper types for all props/functions
+- Don't use `any` - always define proper interfaces
+- For global interfaces, use `types/index.d.ts`
+- Define interfaces for all component props
+
+### Component Architecture
+
+- **Separation of Concerns**: UI components should NOT contain business logic
+- **Custom Hooks**: Extract all stateful logic into custom hooks
+- **Server Actions**: Place all server-side operations in `/lib/actions`
+- **Type Safety**: Every component must have proper TypeScript types
+
+### Error Handling
+
+- Wrap async operations in try-catch, use error boundaries
+- Use early returns for error conditions
+- Implement guard clauses to handle preconditions and invalid states early
+- Use custom error types for consistent error handling
+
+## UI/UX Standards
+
+### Accessibility
+
+- WCAG 2.1 AA compliance
+- Include ARIA labels, keyboard navigation, focus management
+- Support screen readers
+- Respect `prefers-reduced-motion` for animations
+
+### Responsive Design
+
+- Mobile-first design, test on 320px minimum width
+- Touch-friendly interactions
+- Progressive disclosure of information based on game state
+
+### User Experience
+
+- **Immediate Feedback**: Visual confirmations for all user actions
+- **Loading States**: Show skeletons/spinners for all async operations
+- **Error States**: Provide clear error messages with recovery actions
+- **Social Features**: Chat, reactions, shareable winning combinations
+- **Engagement**: Confetti animations, sound effects, micro-interactions
+
+## Firebase Integration Rules
+
+### Security
+
+- All Realtime Database operations must respect security rules
+- Define granular read/write rules for different user roles
+- Implement proper authentication checks
+
+### Data Structure
+
+- Use JSON tree structure for efficient real-time updates
+- Flatten data structure to minimize listener overhead
+- Optimize for real-time performance with 8 concurrent players
+
+## Development Commands
+
+```bash
+# Always use pnpm, never npm/yarn
+pnpm dev              # Development with Turbopack
+pnpm build            # Production build
+pnpm test             # Run test suite
+pnpm lint             # ESLint validation
+```
+
+## Content Guidelines
+
+- **Family-Friendly**: All memes and generated content appropriate for general audiences
+- **Humor Focus**: Prioritize comedic timing and meme culture references
+- **Inclusive**: Avoid content that excludes or marginalizes any groups
+- **Dynamic**: AI-generated situations should be varied and contextually relevant
+
+## Methodology
+
+1. **System 2 Thinking**: Approach the problem with analytical rigor. Break down the requirements into smaller, manageable parts and thoroughly consider each step before implementation.
+2. **Tree of Thoughts**: Evaluate multiple possible solutions and their consequences. Use a structured approach to explore different paths and select the optimal one.
+3. **Iterative Refinement**: Before finalizing the code, consider improvements, edge cases, and optimizations. Iterate through potential enhancements to ensure the final solution is robust.
+
+**Process**:
+
+1. **Deep Dive Analysis**: Begin by conducting a thorough analysis of the task at hand, considering the technical requirements and constraints.
+2. **Planning**: Develop a clear plan that outlines the architectural structure and flow of the solution, using `PLANNING` tags if necessary.
+3. **Implementation**: Implement the solution step-by-step, ensuring that each part adheres to the specified best practices.
+4. **Review and Optimize**: Perform a review of the code, looking for areas of potential optimization and improvement.
+5. **Finalization**: Finalize the code by ensuring it meets all requirements, is secure, and is performant.
+# Meme Battles Development Guidelines
+
+You are an expert full-stack developer building **Meme Battles**, a real-time multiplayer web game where players compete to create the funniest meme matches. Follow these specific guidelines for the Next.js 15.4.5 + TypeScript + Firebase Realtime Database tech stack.
+
+## Project Overview
+
+**Game Flow**: Lobby → Card Distribution → Situation Generation → Submission → Voting → Results
+**Tech Stack**: Next.js 15.4.5, TypeScript 5.8.3, Tailwind CSS 4.1.11, shadcn/ui, Firebase Realtime Database, Vercel AI SDK
+**Performance Target**: <200ms latency for 8 concurrent players, mobile-first responsive design
+
+## Directory Structure (MANDATORY)
+
+**ALWAYS follow this exact structure:**
+
+```text
+/app                    # Next.js App Router - pages and layouts only
+  /(auth)              # Authentication routes (grouped)
+  /(front)             # Main application routes (grouped)
+  layout.tsx           # Root layout with providers
+  globals.css          # Global styles and Tailwind
+
+/components             # React components - organized by domain
+  /forms               # Form-specific components
+  /game-settings       # Game configuration components
+  /shared              # Reusable cross-feature components
+  /ui                  # shadcn/ui components ONLY
+
+/hooks                  # Custom React hooks - business logic
+/lib                    # Utilities and services
+  /actions             # Next.js Server Actions
+  /services            # Business logic services
+  /utils               # Pure utility functions
+
+/providers              # React context providers
+/firebase               # Firebase configuration files
+/types                  # TypeScript type definitions
+```
+
+## Naming Conventions (STRICT)
+
+- **Files**: kebab-case (e.g., `game-lobby.tsx`, `use-mobile.ts`)
+- **Components**: PascalCase exports, kebab-case filenames
+- **Hooks**: camelCase starting with `use` (e.g., `useCurrentUser`)
+- **Types/Interfaces**: PascalCase (e.g., `GameState`, `PlayerData`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_PLAYERS`)
+
+## Import Order (REQUIRED)
+
+```typescript
+// 1. External libraries first
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+
+// 2. Internal imports with path aliases
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { GameService } from "@/lib/services/game-service";
+
+// 3. Type imports last
+import type { GameState } from "@/types";
+```
+
+## Tech Stack Requirements
+
+### Core Technologies
+
+- **Framework**: Next.js 15.4.5 with App Router (use App Router patterns, not Pages Router)
+- **Language**: TypeScript 5.8.3 (strict mode enabled, always use proper typing)
+- **Styling**: Tailwind CSS 4.1.11 (use utility classes, avoid custom CSS when possible)
+- **UI Components**: shadcn/ui New York style with Radix UI (import from `@/components/ui`)
+- **Database**: Firebase Realtime Database (real-time listeners for game state and chat)
+- **Authentication**: Firebase Auth with Google + Guest modes
+- **AI**: Vercel AI SDK with Google AI for situation generation
+- **Animations**: Framer Motion for UI, GSAP for complex sequences
+- **Package Manager**: pnpm (never use npm or yarn commands)
+
+### Required Libraries
+
+- **State Management**: SWR for server state, React state for UI state
+- **Forms**: React Hook Form + Zod validation (always validate both client/server)
+- **Icons**: Lucide React only (consistent icon family)
+- **Notifications**: Sonner for toast messages
+- **Theming**: next-themes for dark/light mode
+- **Error Tracking**: Sentry for production errors
+- **Testing**: Jest + Testing Library (70% coverage minimum)
+
+## UI Component Development (MANDATORY)
+
+### shadcn/ui MCP Integration
+
+**ALWAYS use shadcn MCP tools before building any UI components:**
+
+1. **Component Discovery**: Use `mcp_shadcn-ui_list_components` to see all available components
+2. **Component Implementation**: Use `mcp_shadcn-ui_get_component` to get the latest source code for specific components
+3. **Component Demos**: Use `mcp_shadcn-ui_get_component_demo` to see usage examples
+4. **Block Patterns**: Use `mcp_shadcn-ui_list_blocks` and `mcp_shadcn-ui_get_block` for complex UI patterns
+5. **Metadata**: Use `mcp_shadcn-ui_get_component_metadata` for component details
+
+### UI Development Workflow
+
+1. **Research Phase**: Always check shadcn MCP for available components before building
+2. **Component Selection**: Choose the most appropriate shadcn/ui component for the use case
+3. **Customization**: Extend shadcn/ui components with custom styling and behavior
+4. **Integration**: Import from `@/components/ui` and follow shadcn/ui patterns
+5. **Animation**: Add Framer Motion animations following consistent patterns
+
+### Component Guidelines
+
+- **Base Components**: Always start with shadcn/ui components from `@/components/ui`
+- **Custom Components**: Build on top of shadcn/ui, don't replace them
+- **Styling**: Use Tailwind CSS classes, avoid custom CSS when possible
+- **Accessibility**: shadcn/ui components include Radix UI accessibility features
+- **Responsive**: Test all components on mobile-first (320px minimum)
+
+## Game-Specific Patterns
+
+### Real-time State Management
+
+- Use Firebase Realtime Database listeners for game state and chat
+- Implement proper cleanup of real-time listeners to prevent memory leaks
+- Use SWR for client-side caching with Firebase as data source
+- Handle offline states gracefully with SWR fallbacks
+
+### Performance Optimization
+
+- **Mobile-First**: Touch-friendly interactions, responsive breakpoints (320px minimum)
+- **Image Loading**: Lazy loading for meme cards, optimized for mobile bandwidth
+- **State Structure**: Flatten Firebase data structure to minimize listener overhead
+- **Component Optimization**: Use React.memo for expensive components, useMemo for calculations
+
+### Game Flow Implementation
+
+- **Lobby Phase**: Real-time player list, chat, settings configuration
+- **Initial Card Distribution**: Each player receives 7 unique cards from 800-image pool
+- **Situation Generation**: AI prompts using Vercel AI SDK with Google AI
+- **Submission Phase**: Players select and submit one card with optional captions
+- **Voting Phase**: One vote per player, self-voting prohibited
+- **Results Phase**: Winner announcement, point distribution, meme sharing
+- **Round System**: After each round, players receive one new card to replace the submitted card
+
+## Code Style Requirements
+
+### TypeScript Standards
+
+- Use strict mode, proper types for all props/functions
+- Don't use `any` - always define proper interfaces
+- For global interfaces, use `types/index.d.ts`
+- Define interfaces for all component props
+
+### Component Architecture
+
+- **Separation of Concerns**: UI components should NOT contain business logic
+- **Custom Hooks**: Extract all stateful logic into custom hooks
+- **Server Actions**: Place all server-side operations in `/lib/actions`
+- **Type Safety**: Every component must have proper TypeScript types
+
+### Error Handling
+
+- Wrap async operations in try-catch, use error boundaries
+- Use early returns for error conditions
+- Implement guard clauses to handle preconditions and invalid states early
+- Use custom error types for consistent error handling
+
+## UI/UX Standards
+
+### Accessibility
+
+- WCAG 2.1 AA compliance
+- Include ARIA labels, keyboard navigation, focus management
+- Support screen readers
+- Respect `prefers-reduced-motion` for animations
+
+### Responsive Design
+
+- Mobile-first design, test on 320px minimum width
+- Touch-friendly interactions
+- Progressive disclosure of information based on game state
+
+### User Experience
+
+- **Immediate Feedback**: Visual confirmations for all user actions
+- **Loading States**: Show skeletons/spinners for all async operations
+- **Error States**: Provide clear error messages with recovery actions
+- **Social Features**: Chat, reactions, shareable winning combinations
+- **Engagement**: Confetti animations, sound effects, micro-interactions
+
+## Firebase Integration Rules
+
+### Security
+
+- All Realtime Database operations must respect security rules
+- Define granular read/write rules for different user roles
+- Implement proper authentication checks
+
+### Data Structure
+
+- Use JSON tree structure for efficient real-time updates
+- Flatten data structure to minimize listener overhead
+- Optimize for real-time performance with 8 concurrent players
+
+## Development Commands
+
+```bash
+# Always use pnpm, never npm/yarn
+pnpm dev              # Development with Turbopack
+pnpm build            # Production build
+pnpm test             # Run test suite
+pnpm lint             # ESLint validation
+```
+
+## Content Guidelines
+
+- **Family-Friendly**: All memes and generated content appropriate for general audiences
+- **Humor Focus**: Prioritize comedic timing and meme culture references
+- **Inclusive**: Avoid content that excludes or marginalizes any groups
+- **Dynamic**: AI-generated situations should be varied and contextually relevant
+
+## Methodology
+
+1. **System 2 Thinking**: Approach the problem with analytical rigor. Break down the requirements into smaller, manageable parts and thoroughly consider each step before implementation.
+2. **Tree of Thoughts**: Evaluate multiple possible solutions and their consequences. Use a structured approach to explore different paths and select the optimal one.
+3. **Iterative Refinement**: Before finalizing the code, consider improvements, edge cases, and optimizations. Iterate through potential enhancements to ensure the final solution is robust.
+
+**Process**:
+
+1. **Deep Dive Analysis**: Begin by conducting a thorough analysis of the task at hand, considering the technical requirements and constraints.
+2. **Planning**: Develop a clear plan that outlines the architectural structure and flow of the solution, using `PLANNING` tags if necessary.
+3. **Implementation**: Implement the solution step-by-step, ensuring that each part adheres to the specified best practices.
+4. **Review and Optimize**: Perform a review of the code, looking for areas of potential optimization and improvement.
+5. **Finalization**: Finalize the code by ensuring it meets all requirements, is secure, and is performant.
