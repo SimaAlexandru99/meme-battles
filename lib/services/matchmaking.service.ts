@@ -1386,7 +1386,7 @@ export class MatchmakingService {
     const playerCount = players.length;
 
     // Base duration: 8 rounds * 45 seconds + transitions
-    let baseDuration = 8 * 45 + 8 * 15; // 45s per round + 15s transitions
+    const baseDuration = 8 * 45 + 8 * 15; // 45s per round + 15s transitions
 
     // Adjust for skill level (higher skill = slightly longer games due to closer competition)
     const skillMultiplier = 1 + ((avgSkillRating - 1200) / 2000) * 0.2;
