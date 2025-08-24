@@ -8,11 +8,11 @@ import {
   remove,
   onDisconnect,
   serverTimestamp,
-} from "firebase/database";
-import { rtdb } from "@/firebase/client";
-import * as Sentry from "@sentry/nextjs";
-import { AVAILABLE_AI_PERSONALITIES } from "@/components/game-settings/types";
-import { AIBotService } from "./ai-bot.service";
+} from 'firebase/database';
+import { rtdb } from '@/firebase/client';
+import * as Sentry from '@sentry/nextjs';
+import { AVAILABLE_AI_PERSONALITIES } from '@/components/game-settings/types';
+import { AIBotService } from './ai-bot.service';
 
 /**
  * Enhanced service for managing lobby operations using Firebase Realtime Database
@@ -21,7 +21,7 @@ import { AIBotService } from "./ai-bot.service";
 export class LobbyService {
   private static instance: LobbyService;
   private readonly CODE_LENGTH = 5;
-  private readonly CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  private readonly CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   private readonly MAX_CODE_GENERATION_ATTEMPTS = 10;
   private readonly RETRY_DELAYS = [100, 200, 400, 800, 1600]; // Exponential backoff in ms
   private settingsUpdateTimeouts = new Map<string, NodeJS.Timeout>();
@@ -47,12 +47,12 @@ export class LobbyService {
     error.type = type;
     error.userMessage = userMessage;
     error.retryable = retryable;
-    error.name = "LobbyError";
+    error.name = 'LobbyError';
 
     // Automatically report to Sentry for monitoring
     Sentry.captureException(error, {
       tags: {
-        operation: "lobby_service",
+        operation: 'lobby_service',
         error_type: type,
         retryable: retryable.toString(),
       },
@@ -71,7 +71,7 @@ export class LobbyService {
    * Generate a random lobby code
    */
   private generateRandomCode(): string {
-    let code = "";
+    let code = '';
     for (let i = 0; i < this.CODE_LENGTH; i++) {
       code += this.CODE_CHARS.charAt(
         Math.floor(Math.random() * this.CODE_CHARS.length)
@@ -91,9 +91,9 @@ export class LobbyService {
     } catch (error) {
       Sentry.captureException(error);
       throw this.createLobbyError(
-        "NETWORK_ERROR",
+        'NETWORK_ERROR',
         `Failed to check lobby code existence: ${error}`,
-        "Network error while validating lobby code. Please try again.",
+        'Network error while validating lobby code. Please try again.',
         true
       );
     }
@@ -106,8 +106,8 @@ export class LobbyService {
   async generateUniqueLobbyCode(): Promise<string> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.generate_code",
-        name: "Generate Unique Lobby Code",
+        op: 'db.lobby.generate_code',
+        name: 'Generate Unique Lobby Code',
       },
       async () => {
         let attempts = 0;
@@ -126,18 +126,18 @@ export class LobbyService {
               await set(lobbyRef, {
                 reserved: true,
                 reservedAt: Date.now(),
-                reservedBy: "code_generation",
+                reservedBy: 'code_generation',
               });
 
               // Log successful generation for monitoring
               Sentry.addBreadcrumb({
-                message: "Lobby code generated successfully",
+                message: 'Lobby code generated successfully',
                 data: {
                   code,
                   attempts: attempts + 1,
                   duration: Date.now() - startTime,
                 },
-                level: "info",
+                level: 'info',
               });
 
               return code;
@@ -172,9 +172,9 @@ export class LobbyService {
 
             // If we've exhausted retries, throw network error
             throw this.createLobbyError(
-              "NETWORK_ERROR",
+              'NETWORK_ERROR',
               `Network error during code generation: ${error}`,
-              "Unable to generate lobby code due to network issues. Please check your connection and try again.",
+              'Unable to generate lobby code due to network issues. Please check your connection and try again.',
               true
             );
           }
@@ -182,9 +182,9 @@ export class LobbyService {
 
         // Log code generation failure for monitoring collision rates
         Sentry.captureMessage(
-          "Lobby code generation failed after maximum attempts",
+          'Lobby code generation failed after maximum attempts',
           {
-            level: "warning",
+            level: 'warning',
             extra: {
               attempts: this.MAX_CODE_GENERATION_ATTEMPTS,
               duration: Date.now() - startTime,
@@ -196,9 +196,9 @@ export class LobbyService {
 
         // Explicit fallback behavior after maximum retry attempts
         throw this.createLobbyError(
-          "CODE_GENERATION_FAILED",
+          'CODE_GENERATION_FAILED',
           `Unable to generate unique lobby code after ${this.MAX_CODE_GENERATION_ATTEMPTS} attempts`,
-          "Unable to create a unique lobby code. This usually happens during high traffic. Please try again in a moment.",
+          'Unable to create a unique lobby code. This usually happens during high traffic. Please try again in a moment.',
           true
         );
       }
@@ -212,7 +212,7 @@ export class LobbyService {
     const errors: string[] = [];
 
     if (!code) {
-      errors.push("Lobby code is required");
+      errors.push('Lobby code is required');
     } else {
       if (code.length !== this.CODE_LENGTH) {
         errors.push(
@@ -222,21 +222,21 @@ export class LobbyService {
 
       if (!/^[A-Z0-9]+$/.test(code)) {
         errors.push(
-          "Lobby code can only contain uppercase letters and numbers"
+          'Lobby code can only contain uppercase letters and numbers'
         );
       }
     }
 
     // Add breadcrumb for validation attempts
     Sentry.addBreadcrumb({
-      message: "Lobby code validation",
+      message: 'Lobby code validation',
       data: {
         code,
         isValid: errors.length === 0,
         errorCount: errors.length,
         errors,
       },
-      level: errors.length === 0 ? "info" : "warning",
+      level: errors.length === 0 ? 'info' : 'warning',
     });
 
     return {
@@ -252,23 +252,23 @@ export class LobbyService {
     const errors: string[] = [];
 
     if (settings.rounds < 3 || settings.rounds > 15) {
-      errors.push("Rounds must be between 3 and 15");
+      errors.push('Rounds must be between 3 and 15');
     }
 
     if (settings.timeLimit < 30 || settings.timeLimit > 120) {
-      errors.push("Time limit must be between 30 and 120 seconds");
+      errors.push('Time limit must be between 30 and 120 seconds');
     }
 
     if (
       !Array.isArray(settings.categories) ||
       settings.categories.length === 0
     ) {
-      errors.push("At least one category must be selected");
+      errors.push('At least one category must be selected');
     }
 
     // Add breadcrumb for settings validation
     Sentry.addBreadcrumb({
-      message: "Game settings validation",
+      message: 'Game settings validation',
       data: {
         rounds: settings.rounds,
         timeLimit: settings.timeLimit,
@@ -277,7 +277,7 @@ export class LobbyService {
         errorCount: errors.length,
         errors,
       },
-      level: errors.length === 0 ? "info" : "warning",
+      level: errors.length === 0 ? 'info' : 'warning',
     });
 
     return {
@@ -288,27 +288,28 @@ export class LobbyService {
 
   /**
    * Create a new lobby with atomic code generation
+   * Supports both private lobbies and Battle Royale lobbies
    */
   async createLobby(
-    params: CreateLobbyParams
+    params: CreateLobbyParams | BattleRoyaleLobbyParams
   ): Promise<ServiceResult<{ code: string; lobby: LobbyData }>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.create",
-        name: "Create Lobby",
+        op: 'db.lobby.create',
+        name: 'Create Lobby',
       },
       async () => {
         try {
           // Add breadcrumb for lobby creation start
           Sentry.addBreadcrumb({
-            message: "Starting lobby creation",
+            message: 'Starting lobby creation',
             data: {
               hostUid: params.hostUid,
               hostDisplayName: params.hostDisplayName,
               maxPlayers: params.maxPlayers || 8,
               hasCustomSettings: !!params.settings,
             },
-            level: "info",
+            level: 'info',
           });
 
           // Generate unique lobby code atomically
@@ -319,7 +320,7 @@ export class LobbyService {
           const defaultSettings: GameSettings = {
             rounds: 8,
             timeLimit: 60,
-            categories: ["general", "reaction", "wholesome"],
+            categories: ['general', 'reaction', 'wholesome'],
           };
           const settings = { ...defaultSettings, ...params.settings };
 
@@ -327,19 +328,33 @@ export class LobbyService {
           const validation = this.isValidGameSettings(settings);
           if (!validation.isValid) {
             throw this.createLobbyError(
-              "VALIDATION_ERROR",
-              `Invalid game settings: ${validation.errors.join(", ")}`,
-              `Invalid settings: ${validation.errors.join(", ")}`
+              'VALIDATION_ERROR',
+              `Invalid game settings: ${validation.errors.join(', ')}`,
+              `Invalid settings: ${validation.errors.join(', ')}`
             );
           }
 
           const now = serverTimestamp();
-          const lobby: LobbyData = {
+
+          // Check if this is a Battle Royale lobby
+          const isBattleRoyale =
+            'type' in params && params.type === 'battle_royale';
+
+          const lobby: LobbyData & {
+            type?: 'battle_royale';
+            competitiveSettings?: CompetitiveSettings;
+            matchmakingInfo?: {
+              matchId: string;
+              averageSkillRating?: number;
+              skillRatingRange?: number;
+              createdBy: string;
+            };
+          } = {
             code,
             hostUid: params.hostUid,
             hostDisplayName: params.hostDisplayName,
             maxPlayers,
-            status: "waiting" as LobbyStatus,
+            status: 'waiting' as LobbyStatus,
             settings,
             players: {
               [params.hostUid]: {
@@ -350,13 +365,24 @@ export class LobbyService {
                 joinedAt: now as unknown as string,
                 isHost: true,
                 score: 0,
-                status: "waiting" as PlayerStatus,
+                status: 'waiting' as PlayerStatus,
                 lastSeen: now as unknown as string,
               },
             },
             createdAt: now as unknown as string,
             updatedAt: now as unknown as string,
           };
+
+          // Add Battle Royale specific fields if applicable
+          if (isBattleRoyale) {
+            const brParams = params as BattleRoyaleLobbyParams;
+            lobby.type = 'battle_royale';
+            lobby.competitiveSettings = brParams.competitiveSettings;
+            lobby.matchmakingInfo = {
+              matchId: brParams.matchId,
+              createdBy: 'matchmaking_system',
+            };
+          }
 
           // Replace the reserved placeholder with actual lobby data (with retries)
           const lobbyRef = ref(rtdb, `lobbies/${code}`);
@@ -380,14 +406,14 @@ export class LobbyService {
 
           // Add breadcrumb for successful lobby creation
           Sentry.addBreadcrumb({
-            message: "Lobby created successfully",
+            message: 'Lobby created successfully',
             data: {
               code,
               hostUid: params.hostUid,
               playerCount: 1,
               maxPlayers: lobby.maxPlayers,
             },
-            level: "info",
+            level: 'info',
           });
 
           return {
@@ -397,7 +423,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             // Re-throw lobby errors as-is
@@ -406,9 +432,9 @@ export class LobbyService {
 
           Sentry.captureException(error);
           throw this.createLobbyError(
-            "UNKNOWN_ERROR",
+            'UNKNOWN_ERROR',
             `Failed to create lobby: ${error}`,
-            "Failed to create lobby. Please try again.",
+            'Failed to create lobby. Please try again.',
             true
           );
         }
@@ -425,8 +451,8 @@ export class LobbyService {
   ): Promise<ServiceResult<LobbyData>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.join",
-        name: "Join Lobby",
+        op: 'db.lobby.join',
+        name: 'Join Lobby',
       },
       async () => {
         try {
@@ -434,9 +460,9 @@ export class LobbyService {
           const codeValidation = this.validateLobbyCode(lobbyCode);
           if (!codeValidation.isValid) {
             throw this.createLobbyError(
-              "VALIDATION_ERROR",
-              `Invalid lobby code format: ${codeValidation.errors.join(", ")}`,
-              `Invalid lobby code: ${codeValidation.errors.join(", ")}`,
+              'VALIDATION_ERROR',
+              `Invalid lobby code format: ${codeValidation.errors.join(', ')}`,
+              `Invalid lobby code: ${codeValidation.errors.join(', ')}`,
               false
             );
           }
@@ -446,9 +472,9 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             throw this.createLobbyError(
-              "LOBBY_NOT_FOUND",
+              'LOBBY_NOT_FOUND',
               `Lobby ${lobbyCode} not found`,
-              "Lobby not found. Please check the code.",
+              'Lobby not found. Please check the code.',
               false
             );
           }
@@ -459,19 +485,19 @@ export class LobbyService {
           const playerCount = Object.keys(lobby.players || {}).length;
           if (playerCount >= lobby.maxPlayers) {
             throw this.createLobbyError(
-              "LOBBY_FULL",
+              'LOBBY_FULL',
               `Lobby ${lobbyCode} is full (${playerCount}/${lobby.maxPlayers})`,
-              "This lobby is full. Try another one.",
+              'This lobby is full. Try another one.',
               false
             );
           }
 
           // Check if lobby has already started
-          if (lobby.status !== "waiting") {
+          if (lobby.status !== 'waiting') {
             throw this.createLobbyError(
-              "LOBBY_ALREADY_STARTED",
+              'LOBBY_ALREADY_STARTED',
               `Lobby ${lobbyCode} has status ${lobby.status}`,
-              "This game has already started. You cannot join now.",
+              'This game has already started. You cannot join now.',
               false
             );
           }
@@ -496,7 +522,7 @@ export class LobbyService {
             joinedAt: now,
             isHost: false,
             score: 0,
-            status: "waiting" as PlayerStatus,
+            status: 'waiting' as PlayerStatus,
             lastSeen: now,
           };
           updates[`lobbies/${lobbyCode}/updatedAt`] = now;
@@ -514,7 +540,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -523,9 +549,9 @@ export class LobbyService {
           // Report unknown errors to Sentry and create a new error
           Sentry.captureException(error, {
             tags: {
-              operation: "lobby_service",
-              error_type: "unknown_error",
-              method: "joinLobby",
+              operation: 'lobby_service',
+              error_type: 'unknown_error',
+              method: 'joinLobby',
             },
             extra: {
               originalError:
@@ -538,10 +564,10 @@ export class LobbyService {
           const newError = new Error(
             `Failed to join lobby: ${error}`
           ) as LobbyError;
-          newError.userMessage = "Failed to join lobby. Please try again.";
+          newError.userMessage = 'Failed to join lobby. Please try again.';
           newError.retryable = true;
-          newError.type = "UNKNOWN_ERROR";
-          newError.name = "LobbyError";
+          newError.type = 'UNKNOWN_ERROR';
+          newError.name = 'LobbyError';
           throw newError;
         }
       }
@@ -558,8 +584,8 @@ export class LobbyService {
   ): Promise<ServiceResult<LobbyData>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.update_settings",
-        name: "Update Lobby Settings",
+        op: 'db.lobby.update_settings',
+        name: 'Update Lobby Settings',
       },
       async () => {
         try {
@@ -569,15 +595,15 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             const error = new Error(`Lobby ${code} not found`) as LobbyError;
-            error.userMessage = "Lobby not found. Please check the code.";
+            error.userMessage = 'Lobby not found. Please check the code.';
             error.retryable = false;
-            error.type = "LOBBY_NOT_FOUND";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_NOT_FOUND';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_not_found",
-                method: "updateLobbySettings",
+                operation: 'lobby_service',
+                error_type: 'lobby_not_found',
+                method: 'updateLobbySettings',
               },
               extra: {
                 code,
@@ -593,15 +619,15 @@ export class LobbyService {
             const error = new Error(
               `User ${hostUid} is not the host of lobby ${code}`
             ) as LobbyError;
-            error.userMessage = "Only the host can change game settings.";
+            error.userMessage = 'Only the host can change game settings.';
             error.retryable = false;
-            error.type = "PERMISSION_DENIED";
-            error.name = "LobbyError";
+            error.type = 'PERMISSION_DENIED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "permission_denied",
-                method: "updateLobbySettings",
+                operation: 'lobby_service',
+                error_type: 'permission_denied',
+                method: 'updateLobbySettings',
               },
               extra: {
                 hostUid,
@@ -613,25 +639,25 @@ export class LobbyService {
           }
 
           // Validate lobby status
-          if (lobby.status !== "waiting") {
+          if (lobby.status !== 'waiting') {
             const error = new Error(
               `Cannot update settings for lobby ${code} with status ${lobby.status}`
             ) as LobbyError;
             error.userMessage =
-              "Cannot change settings after the game has started.";
+              'Cannot change settings after the game has started.';
             error.retryable = false;
-            error.type = "LOBBY_ALREADY_STARTED";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_ALREADY_STARTED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_already_started",
-                method: "updateLobbySettings",
+                operation: 'lobby_service',
+                error_type: 'lobby_already_started',
+                method: 'updateLobbySettings',
               },
               extra: {
                 code,
                 currentStatus: lobby.status,
-                expectedStatus: "waiting",
+                expectedStatus: 'waiting',
               },
             });
             throw error;
@@ -642,17 +668,17 @@ export class LobbyService {
           const validation = this.isValidGameSettings(updatedSettings);
           if (!validation.isValid) {
             const error = new Error(
-              `Invalid game settings: ${validation.errors.join(", ")}`
+              `Invalid game settings: ${validation.errors.join(', ')}`
             ) as LobbyError;
-            error.userMessage = `Invalid settings: ${validation.errors.join(", ")}`;
+            error.userMessage = `Invalid settings: ${validation.errors.join(', ')}`;
             error.retryable = false;
-            error.type = "VALIDATION_ERROR";
-            error.name = "LobbyError";
+            error.type = 'VALIDATION_ERROR';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "validation_error",
-                method: "updateLobbySettings",
+                operation: 'lobby_service',
+                error_type: 'validation_error',
+                method: 'updateLobbySettings',
               },
               extra: {
                 code,
@@ -700,7 +726,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -709,9 +735,9 @@ export class LobbyService {
           // Report unknown errors to Sentry and create a new error
           Sentry.captureException(error, {
             tags: {
-              operation: "lobby_service",
-              error_type: "unknown_error",
-              method: "updateLobbySettings",
+              operation: 'lobby_service',
+              error_type: 'unknown_error',
+              method: 'updateLobbySettings',
             },
             extra: {
               originalError:
@@ -724,10 +750,10 @@ export class LobbyService {
           const newError = new Error(
             `Failed to update lobby settings: ${error}`
           ) as LobbyError;
-          newError.userMessage = "Failed to update settings. Please try again.";
+          newError.userMessage = 'Failed to update settings. Please try again.';
           newError.retryable = true;
-          newError.type = "UNKNOWN_ERROR";
-          newError.name = "LobbyError";
+          newError.type = 'UNKNOWN_ERROR';
+          newError.name = 'LobbyError';
           throw newError;
         }
       }
@@ -742,13 +768,13 @@ export class LobbyService {
     hostUid: string,
     botConfig: {
       personalityId: string;
-      difficulty: "easy" | "medium" | "hard";
+      difficulty: 'easy' | 'medium' | 'hard';
     }
   ): Promise<ServiceResult<LobbyData>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.add_bot",
-        name: "Add AI Bot to Lobby",
+        op: 'db.lobby.add_bot',
+        name: 'Add AI Bot to Lobby',
       },
       async () => {
         try {
@@ -758,15 +784,15 @@ export class LobbyService {
           if (!snapshot.exists()) {
             const error = new Error(`Lobby ${code} not found`) as LobbyError;
             error.userMessage =
-              "Lobby not found. It may have been deleted or the code is incorrect.";
+              'Lobby not found. It may have been deleted or the code is incorrect.';
             error.retryable = false;
-            error.type = "LOBBY_NOT_FOUND";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_NOT_FOUND';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_not_found",
-                method: "addBot",
+                operation: 'lobby_service',
+                error_type: 'lobby_not_found',
+                method: 'addBot',
               },
               extra: {
                 code,
@@ -782,15 +808,15 @@ export class LobbyService {
             const error = new Error(
               `User ${hostUid} is not the host of lobby ${code}`
             ) as LobbyError;
-            error.userMessage = "Only the lobby host can add AI players.";
+            error.userMessage = 'Only the lobby host can add AI players.';
             error.retryable = false;
-            error.type = "PERMISSION_DENIED";
-            error.name = "LobbyError";
+            error.type = 'PERMISSION_DENIED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "permission_denied",
-                method: "addBot",
+                operation: 'lobby_service',
+                error_type: 'permission_denied',
+                method: 'addBot',
               },
               extra: {
                 hostUid,
@@ -807,15 +833,15 @@ export class LobbyService {
             const error = new Error(
               `Lobby ${code} is full (${currentPlayerCount}/${lobbyData.maxPlayers})`
             ) as LobbyError;
-            error.userMessage = "Lobby is full. Cannot add more players.";
+            error.userMessage = 'Lobby is full. Cannot add more players.';
             error.retryable = false;
-            error.type = "LOBBY_FULL";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_FULL';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_full",
-                method: "addBot",
+                operation: 'lobby_service',
+                error_type: 'lobby_full',
+                method: 'addBot',
               },
               extra: {
                 code,
@@ -827,25 +853,25 @@ export class LobbyService {
           }
 
           // Check if game has already started
-          if (lobbyData.status !== "waiting") {
+          if (lobbyData.status !== 'waiting') {
             const error = new Error(
               `Cannot add bot to lobby ${code} - game already ${lobbyData.status}`
             ) as LobbyError;
             error.userMessage =
-              "Cannot add AI players after the game has started.";
+              'Cannot add AI players after the game has started.';
             error.retryable = false;
-            error.type = "LOBBY_ALREADY_STARTED";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_ALREADY_STARTED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_already_started",
-                method: "addBot",
+                operation: 'lobby_service',
+                error_type: 'lobby_already_started',
+                method: 'addBot',
               },
               extra: {
                 code,
                 currentStatus: lobbyData.status,
-                expectedStatus: "waiting",
+                expectedStatus: 'waiting',
               },
             });
             throw error;
@@ -858,18 +884,18 @@ export class LobbyService {
           const personality = AVAILABLE_AI_PERSONALITIES.find(
             (p) => p.id === botConfig.personalityId
           );
-          const botDisplayName = personality ? personality.name : "AI Player";
+          const botDisplayName = personality ? personality.name : 'AI Player';
 
           // Create bot player data
           const botPlayer: PlayerData = {
             id: botId,
             displayName: botDisplayName,
-            avatarId: "ai-avatar",
-            profileURL: "",
+            avatarId: 'ai-avatar',
+            profileURL: '',
             joinedAt: serverTimestamp() as unknown as string,
             isHost: false,
             score: 0,
-            status: "waiting",
+            status: 'waiting',
             lastSeen: serverTimestamp() as unknown as string,
             isAI: true,
             aiPersonalityId: botConfig.personalityId,
@@ -905,16 +931,16 @@ export class LobbyService {
         } catch (error) {
           Sentry.captureException(error);
 
-          if (error instanceof Error && "type" in error) {
+          if (error instanceof Error && 'type' in error) {
             throw error; // Re-throw LobbyError
           }
 
           // Report unknown errors to Sentry and create a new error
           Sentry.captureException(error, {
             tags: {
-              operation: "lobby_service",
-              error_type: "unknown_error",
-              method: "addBot",
+              operation: 'lobby_service',
+              error_type: 'unknown_error',
+              method: 'addBot',
             },
             extra: {
               originalError:
@@ -927,10 +953,10 @@ export class LobbyService {
           const newError = new Error(
             `Failed to add bot to lobby ${code}: ${error}`
           ) as LobbyError;
-          newError.userMessage = "Failed to add AI player. Please try again.";
+          newError.userMessage = 'Failed to add AI player. Please try again.';
           newError.retryable = true;
-          newError.type = "UNKNOWN_ERROR";
-          newError.name = "LobbyError";
+          newError.type = 'UNKNOWN_ERROR';
+          newError.name = 'LobbyError';
           throw newError;
         }
       }
@@ -944,8 +970,8 @@ export class LobbyService {
   ): Promise<ServiceResult<LobbyData>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.kick_player",
-        name: "Kick Player",
+        op: 'db.lobby.kick_player',
+        name: 'Kick Player',
       },
       async () => {
         try {
@@ -954,15 +980,15 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             const error = new Error(`Lobby ${code} not found`) as LobbyError;
-            error.userMessage = "Lobby not found. Please check the code.";
+            error.userMessage = 'Lobby not found. Please check the code.';
             error.retryable = false;
-            error.type = "LOBBY_NOT_FOUND";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_NOT_FOUND';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_not_found",
-                method: "kickPlayer",
+                operation: 'lobby_service',
+                error_type: 'lobby_not_found',
+                method: 'kickPlayer',
               },
               extra: {
                 code,
@@ -978,15 +1004,15 @@ export class LobbyService {
             const error = new Error(
               `User ${hostUid} is not the host of lobby ${code}`
             ) as LobbyError;
-            error.userMessage = "Only the host can kick players.";
+            error.userMessage = 'Only the host can kick players.';
             error.retryable = false;
-            error.type = "PERMISSION_DENIED";
-            error.name = "LobbyError";
+            error.type = 'PERMISSION_DENIED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "permission_denied",
-                method: "kickPlayer",
+                operation: 'lobby_service',
+                error_type: 'permission_denied',
+                method: 'kickPlayer',
               },
               extra: {
                 hostUid,
@@ -1002,15 +1028,15 @@ export class LobbyService {
             const error = new Error(
               `Player ${targetUid} not found in lobby ${code}`
             ) as LobbyError;
-            error.userMessage = "Player not found in this lobby.";
+            error.userMessage = 'Player not found in this lobby.';
             error.retryable = false;
-            error.type = "VALIDATION_ERROR";
-            error.name = "LobbyError";
+            error.type = 'VALIDATION_ERROR';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "validation_error",
-                method: "kickPlayer",
+                operation: 'lobby_service',
+                error_type: 'validation_error',
+                method: 'kickPlayer',
               },
               extra: {
                 targetUid,
@@ -1026,15 +1052,15 @@ export class LobbyService {
             const error = new Error(
               `Host cannot kick themselves`
             ) as LobbyError;
-            error.userMessage = "You cannot kick yourself from the lobby.";
+            error.userMessage = 'You cannot kick yourself from the lobby.';
             error.retryable = false;
-            error.type = "VALIDATION_ERROR";
-            error.name = "LobbyError";
+            error.type = 'VALIDATION_ERROR';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "validation_error",
-                method: "kickPlayer",
+                operation: 'lobby_service',
+                error_type: 'validation_error',
+                method: 'kickPlayer',
               },
               extra: {
                 targetUid,
@@ -1063,7 +1089,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -1072,9 +1098,9 @@ export class LobbyService {
           // Report unknown errors to Sentry and create a new error
           Sentry.captureException(error, {
             tags: {
-              operation: "lobby_service",
-              error_type: "unknown_error",
-              method: "kickPlayer",
+              operation: 'lobby_service',
+              error_type: 'unknown_error',
+              method: 'kickPlayer',
             },
             extra: {
               originalError:
@@ -1088,10 +1114,10 @@ export class LobbyService {
           const newError = new Error(
             `Failed to kick player: ${error}`
           ) as LobbyError;
-          newError.userMessage = "Failed to kick player. Please try again.";
+          newError.userMessage = 'Failed to kick player. Please try again.';
           newError.retryable = true;
-          newError.type = "UNKNOWN_ERROR";
-          newError.name = "LobbyError";
+          newError.type = 'UNKNOWN_ERROR';
+          newError.name = 'LobbyError';
           throw newError;
         }
       }
@@ -1108,8 +1134,8 @@ export class LobbyService {
   ): Promise<ServiceResult<LobbyData>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.transfer_host",
-        name: "Transfer Host",
+        op: 'db.lobby.transfer_host',
+        name: 'Transfer Host',
       },
       async () => {
         try {
@@ -1118,9 +1144,9 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             throw this.createLobbyError(
-              "LOBBY_NOT_FOUND",
+              'LOBBY_NOT_FOUND',
               `Lobby ${code} not found`,
-              "Lobby not found. Please check the code.",
+              'Lobby not found. Please check the code.',
               false
             );
           }
@@ -1130,9 +1156,9 @@ export class LobbyService {
           // Validate current host permissions
           if (lobby.hostUid !== currentHostUid) {
             throw this.createLobbyError(
-              "PERMISSION_DENIED",
+              'PERMISSION_DENIED',
               `User ${currentHostUid} is not the host of lobby ${code}`,
-              "Only the current host can transfer host privileges.",
+              'Only the current host can transfer host privileges.',
               false
             );
           }
@@ -1140,9 +1166,9 @@ export class LobbyService {
           // Check if new host exists in lobby
           if (!lobby.players[newHostUid]) {
             throw this.createLobbyError(
-              "VALIDATION_ERROR",
+              'VALIDATION_ERROR',
               `Player ${newHostUid} not found in lobby ${code}`,
-              "Cannot transfer host to a player not in the lobby.",
+              'Cannot transfer host to a player not in the lobby.',
               false
             );
           }
@@ -1150,9 +1176,9 @@ export class LobbyService {
           // Prevent transferring to self
           if (newHostUid === currentHostUid) {
             throw this.createLobbyError(
-              "VALIDATION_ERROR",
+              'VALIDATION_ERROR',
               `Cannot transfer host to self`,
-              "You are already the host.",
+              'You are already the host.',
               false
             );
           }
@@ -1179,7 +1205,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -1187,9 +1213,9 @@ export class LobbyService {
 
           Sentry.captureException(error);
           throw this.createLobbyError(
-            "UNKNOWN_ERROR",
+            'UNKNOWN_ERROR',
             `Failed to transfer host: ${error}`,
-            "Failed to transfer host privileges. Please try again.",
+            'Failed to transfer host privileges. Please try again.',
             true
           );
         }
@@ -1205,8 +1231,8 @@ export class LobbyService {
   ): Promise<ServiceResult<LobbyData>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.transfer_host_auto",
-        name: "Auto Transfer Host",
+        op: 'db.lobby.transfer_host_auto',
+        name: 'Auto Transfer Host',
       },
       async () => {
         try {
@@ -1215,9 +1241,9 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             throw this.createLobbyError(
-              "LOBBY_NOT_FOUND",
+              'LOBBY_NOT_FOUND',
               `Lobby ${code} not found`,
-              "Lobby not found.",
+              'Lobby not found.',
               false
             );
           }
@@ -1227,9 +1253,9 @@ export class LobbyService {
 
           if (players.length === 0) {
             throw this.createLobbyError(
-              "VALIDATION_ERROR",
+              'VALIDATION_ERROR',
               `No players in lobby ${code}`,
-              "Cannot transfer host - no players in lobby.",
+              'Cannot transfer host - no players in lobby.',
               false
             );
           }
@@ -1284,9 +1310,9 @@ export class LobbyService {
 
           Sentry.captureException(error);
           throw this.createLobbyError(
-            "UNKNOWN_ERROR",
+            'UNKNOWN_ERROR',
             `Failed to auto-transfer host: ${error}`,
-            "Failed to transfer host privileges. Please try again.",
+            'Failed to transfer host privileges. Please try again.',
             true
           );
         }
@@ -1304,8 +1330,8 @@ export class LobbyService {
   ): Promise<ServiceResult<void>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.update_player_status",
-        name: "Update Player Status",
+        op: 'db.lobby.update_player_status',
+        name: 'Update Player Status',
       },
       async () => {
         try {
@@ -1314,9 +1340,9 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             throw this.createLobbyError(
-              "LOBBY_NOT_FOUND",
+              'LOBBY_NOT_FOUND',
               `Lobby ${code} not found`,
-              "Lobby not found. Please check the code.",
+              'Lobby not found. Please check the code.',
               false
             );
           }
@@ -1326,9 +1352,9 @@ export class LobbyService {
           // Check if player exists in lobby
           if (!lobby.players[playerUid]) {
             throw this.createLobbyError(
-              "VALIDATION_ERROR",
+              'VALIDATION_ERROR',
               `Player ${playerUid} not found in lobby ${code}`,
-              "Player not found in this lobby.",
+              'Player not found in this lobby.',
               false
             );
           }
@@ -1348,7 +1374,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -1356,9 +1382,9 @@ export class LobbyService {
 
           Sentry.captureException(error);
           throw this.createLobbyError(
-            "UNKNOWN_ERROR",
+            'UNKNOWN_ERROR',
             `Failed to update player status: ${error}`,
-            "Failed to update player status. Please try again.",
+            'Failed to update player status. Please try again.',
             true
           );
         }
@@ -1375,8 +1401,8 @@ export class LobbyService {
   ): Promise<ServiceResult<void>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.delete",
-        name: "Delete Lobby",
+        op: 'db.lobby.delete',
+        name: 'Delete Lobby',
       },
       async () => {
         try {
@@ -1396,9 +1422,9 @@ export class LobbyService {
           const playerCount = Object.keys(lobby.players || {}).length;
           if (playerCount > 0 && lobby.hostUid !== hostUid) {
             throw this.createLobbyError(
-              "PERMISSION_DENIED",
+              'PERMISSION_DENIED',
               `User ${hostUid} is not the host of lobby ${code}`,
-              "Only the host can delete the lobby.",
+              'Only the host can delete the lobby.',
               false
             );
           }
@@ -1419,7 +1445,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -1427,9 +1453,9 @@ export class LobbyService {
 
           Sentry.captureException(error);
           throw this.createLobbyError(
-            "UNKNOWN_ERROR",
+            'UNKNOWN_ERROR',
             `Failed to delete lobby: ${error}`,
-            "Failed to delete lobby. Please try again.",
+            'Failed to delete lobby. Please try again.',
             true
           );
         }
@@ -1446,8 +1472,8 @@ export class LobbyService {
   ): Promise<ServiceResult<void>> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.leave",
-        name: "Leave Lobby",
+        op: 'db.lobby.leave',
+        name: 'Leave Lobby',
       },
       async () => {
         try {
@@ -1504,9 +1530,9 @@ export class LobbyService {
 
           Sentry.captureException(error);
           throw this.createLobbyError(
-            "UNKNOWN_ERROR",
+            'UNKNOWN_ERROR',
             `Failed to leave lobby: ${error}`,
-            "Failed to leave lobby. Please try again.",
+            'Failed to leave lobby. Please try again.',
             true
           );
         }
@@ -1528,8 +1554,8 @@ export class LobbyService {
   > {
     return Sentry.startSpan(
       {
-        op: "db.game.start",
-        name: "Start Game",
+        op: 'db.game.start',
+        name: 'Start Game',
       },
       async () => {
         try {
@@ -1541,15 +1567,15 @@ export class LobbyService {
             const error = new Error(
               `Lobby ${lobbyCode} not found`
             ) as LobbyError;
-            error.userMessage = "Lobby not found. Please check the code.";
+            error.userMessage = 'Lobby not found. Please check the code.';
             error.retryable = false;
-            error.type = "LOBBY_NOT_FOUND";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_NOT_FOUND';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_not_found",
-                method: "startGame",
+                operation: 'lobby_service',
+                error_type: 'lobby_not_found',
+                method: 'startGame',
               },
               extra: {
                 lobbyCode,
@@ -1565,15 +1591,15 @@ export class LobbyService {
             const error = new Error(
               `User ${hostUid} is not the host of lobby ${lobbyCode}`
             ) as LobbyError;
-            error.userMessage = "Only the host can start the game.";
+            error.userMessage = 'Only the host can start the game.';
             error.retryable = false;
-            error.type = "PERMISSION_DENIED";
-            error.name = "LobbyError";
+            error.type = 'PERMISSION_DENIED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "permission_denied",
-                method: "startGame",
+                operation: 'lobby_service',
+                error_type: 'permission_denied',
+                method: 'startGame',
               },
               extra: {
                 hostUid,
@@ -1585,24 +1611,24 @@ export class LobbyService {
           }
 
           // Validate lobby status
-          if (lobby.status !== "waiting") {
+          if (lobby.status !== 'waiting') {
             const error = new Error(
               `Lobby ${lobbyCode} has status ${lobby.status}`
             ) as LobbyError;
-            error.userMessage = "Game has already started or ended.";
+            error.userMessage = 'Game has already started or ended.';
             error.retryable = false;
-            error.type = "LOBBY_ALREADY_STARTED";
-            error.name = "LobbyError";
+            error.type = 'LOBBY_ALREADY_STARTED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "lobby_already_started",
-                method: "startGame",
+                operation: 'lobby_service',
+                error_type: 'lobby_already_started',
+                method: 'startGame',
               },
               extra: {
                 lobbyCode,
                 currentStatus: lobby.status,
-                expectedStatus: "waiting",
+                expectedStatus: 'waiting',
               },
             });
             throw error;
@@ -1614,15 +1640,15 @@ export class LobbyService {
             const error = new Error(
               `Not enough players to start game. Need 3, have ${players.length}`
             ) as LobbyError;
-            error.userMessage = "Need at least 3 players to start the game.";
+            error.userMessage = 'Need at least 3 players to start the game.';
             error.retryable = false;
-            error.type = "VALIDATION_ERROR";
-            error.name = "LobbyError";
+            error.type = 'VALIDATION_ERROR';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "validation_error",
-                method: "startGame",
+                operation: 'lobby_service',
+                error_type: 'validation_error',
+                method: 'startGame',
               },
               extra: {
                 lobbyCode,
@@ -1647,14 +1673,14 @@ export class LobbyService {
 
           // Distribute meme cards to all players
           console.log(
-            "🃏 Starting card distribution for players:",
+            '🃏 Starting card distribution for players:',
             Object.keys(lobby.players)
           );
           const playerCards = await this.distributeMemeCards(lobby.players);
           console.log(
-            "🃏 Card distribution complete:",
+            '🃏 Card distribution complete:',
             Object.keys(playerCards).length,
-            "players"
+            'players'
           );
 
           // Create game state
@@ -1662,18 +1688,18 @@ export class LobbyService {
             currentRound: 1,
             totalRounds: lobby.settings.rounds,
             timeLeft: lobby.settings.timeLimit,
-            phase: "playing",
+            phase: 'playing',
             currentPrompt: currentSituation,
           };
 
           // Prepare database updates - start with transition phase
           const updates: Record<string, unknown> = {};
-          updates[`lobbies/${lobbyCode}/status`] = "started";
+          updates[`lobbies/${lobbyCode}/status`] = 'started';
           updates[`lobbies/${lobbyCode}/gameState`] = {
             roundNumber: 1,
             totalRounds: lobby.settings.rounds,
             timeLeft: lobby.settings.timeLimit,
-            phase: "transition",
+            phase: 'transition',
             phaseStartTime: serverTimestamp(),
             currentSituation,
             submissions: {},
@@ -1710,24 +1736,24 @@ export class LobbyService {
               cards
                 .map((c) => c.filename)
                 .slice(0, 3)
-                .join(", ") + "..."
+                .join(', ') + '...'
             );
           });
 
           // Ensure all players have their status reset
           Object.keys(lobby.players).forEach((playerUid) => {
             updates[`lobbies/${lobbyCode}/players/${playerUid}/status`] =
-              "waiting";
+              'waiting';
           });
 
           updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
 
-          console.log("🚀 Applying game start updates to Firebase...");
+          console.log('🚀 Applying game start updates to Firebase...');
 
           // Apply all updates atomically
           await update(ref(rtdb), updates);
 
-          console.log("✅ Game start updates applied successfully");
+          console.log('✅ Game start updates applied successfully');
 
           // Verify that cards were actually written to the database
           const verificationPromises = Object.keys(playerCards).map(
@@ -1755,7 +1781,7 @@ export class LobbyService {
 
           // Wait for all verifications to complete
           await Promise.all(verificationPromises);
-          console.log("✅ All player cards verified in database");
+          console.log('✅ All player cards verified in database');
 
           return {
             success: true,
@@ -1767,7 +1793,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -1776,9 +1802,9 @@ export class LobbyService {
           // Report unknown errors to Sentry and create a new error
           Sentry.captureException(error, {
             tags: {
-              operation: "lobby_service",
-              error_type: "unknown_error",
-              method: "startGame",
+              operation: 'lobby_service',
+              error_type: 'unknown_error',
+              method: 'startGame',
             },
             extra: {
               originalError:
@@ -1791,10 +1817,10 @@ export class LobbyService {
           const newError = new Error(
             `Failed to start game: ${error}`
           ) as LobbyError;
-          newError.userMessage = "Failed to start the game. Please try again.";
+          newError.userMessage = 'Failed to start the game. Please try again.';
           newError.retryable = true;
-          newError.type = "UNKNOWN_ERROR";
-          newError.name = "LobbyError";
+          newError.type = 'UNKNOWN_ERROR';
+          newError.name = 'LobbyError';
           throw newError;
         }
       }
@@ -1810,8 +1836,8 @@ export class LobbyService {
   ): Promise<ServiceResult<void>> {
     return Sentry.startSpan(
       {
-        op: "db.game.complete_transition",
-        name: "Complete Game Transition",
+        op: 'db.game.complete_transition',
+        name: 'Complete Game Transition',
       },
       async () => {
         try {
@@ -1821,9 +1847,9 @@ export class LobbyService {
 
           if (!lobbySnapshot.exists()) {
             throw this.createLobbyError(
-              "LOBBY_NOT_FOUND",
+              'LOBBY_NOT_FOUND',
               `Lobby ${lobbyCode} not found`,
-              "Lobby not found. Please check the code.",
+              'Lobby not found. Please check the code.',
               false
             );
           }
@@ -1836,15 +1862,15 @@ export class LobbyService {
               `User ${hostUid} is not the host of lobby ${lobbyCode}`
             ) as LobbyError;
             error.userMessage =
-              "Only the host can complete the game transition.";
+              'Only the host can complete the game transition.';
             error.retryable = false;
-            error.type = "PERMISSION_DENIED";
-            error.name = "LobbyError";
+            error.type = 'PERMISSION_DENIED';
+            error.name = 'LobbyError';
             Sentry.captureException(error, {
               tags: {
-                operation: "lobby_service",
-                error_type: "permission_denied",
-                method: "completeGameTransition",
+                operation: 'lobby_service',
+                error_type: 'permission_denied',
+                method: 'completeGameTransition',
               },
               extra: {
                 hostUid,
@@ -1857,7 +1883,7 @@ export class LobbyService {
 
           // Update game state to start the actual game
           const updates: Record<string, unknown> = {};
-          updates[`lobbies/${lobbyCode}/gameState/phase`] = "submission";
+          updates[`lobbies/${lobbyCode}/gameState/phase`] = 'submission';
           updates[`lobbies/${lobbyCode}/gameState/phaseStartTime`] =
             serverTimestamp();
 
@@ -1870,14 +1896,14 @@ export class LobbyService {
               lobby.gameState as Partial<
                 GameState & { currentSituation?: string }
               >
-            )?.currentSituation || "No situation available";
+            )?.currentSituation || 'No situation available';
 
           // Process AI submissions in the background
           aiBotService
             .processAIBotSubmissions(lobbyCode, lobby.players, situation)
             .catch((error) => {
               Sentry.captureException(error, {
-                tags: { operation: "ai_bot_submissions_background" },
+                tags: { operation: 'ai_bot_submissions_background' },
                 extra: { lobbyCode },
               });
             });
@@ -1886,8 +1912,8 @@ export class LobbyService {
           // Lightweight poll after 1s to read current submissions and trigger votes
           setTimeout(async () => {
             try {
-              const { ref, get } = await import("firebase/database");
-              const { rtdb } = await import("@/firebase/client");
+              const { ref, get } = await import('firebase/database');
+              const { rtdb } = await import('@/firebase/client');
               const subsSnap = await get(
                 ref(rtdb, `lobbies/${lobbyCode}/gameState/submissions`)
               );
@@ -1903,7 +1929,7 @@ export class LobbyService {
               );
             } catch (err) {
               Sentry.captureException(err, {
-                tags: { operation: "ai_bot_votes_background" },
+                tags: { operation: 'ai_bot_votes_background' },
                 extra: { lobbyCode },
               });
             }
@@ -1916,7 +1942,7 @@ export class LobbyService {
         } catch (error) {
           if (
             error instanceof Error &&
-            "type" in error &&
+            'type' in error &&
             (error as LobbyError).type
           ) {
             throw error;
@@ -1925,9 +1951,9 @@ export class LobbyService {
           // Report unknown errors to Sentry and create a new error
           Sentry.captureException(error, {
             tags: {
-              operation: "lobby_service",
-              error_type: "unknown_error",
-              method: "completeGameTransition",
+              operation: 'lobby_service',
+              error_type: 'unknown_error',
+              method: 'completeGameTransition',
             },
             extra: {
               originalError:
@@ -1941,10 +1967,10 @@ export class LobbyService {
             `Failed to complete game transition: ${error}`
           ) as LobbyError;
           newError.userMessage =
-            "Failed to complete game transition. Please try again.";
+            'Failed to complete game transition. Please try again.';
           newError.retryable = true;
-          newError.type = "UNKNOWN_ERROR";
-          newError.name = "LobbyError";
+          newError.type = 'UNKNOWN_ERROR';
+          newError.name = 'LobbyError';
           throw newError;
         }
       }
@@ -1959,10 +1985,10 @@ export class LobbyService {
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeouts
 
     try {
-      const response = await fetch("/api/situation", {
-        method: "POST",
+      const response = await fetch('/api/situation', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         signal: controller.signal,
       });
@@ -1973,11 +1999,11 @@ export class LobbyService {
         const error = new Error(`HTTP error! status: ${response.status}`);
         Sentry.captureException(error, {
           tags: {
-            operation: "ai_situation_generation",
+            operation: 'ai_situation_generation',
             status: response.status.toString(),
           },
           extra: {
-            url: "/api/situation",
+            url: '/api/situation',
             status: response.status,
             statusText: response.statusText,
           },
@@ -1990,11 +2016,11 @@ export class LobbyService {
         const error = new Error(data.error);
         Sentry.captureException(error, {
           tags: {
-            operation: "ai_situation_generation",
-            error_type: "ai_response_error",
+            operation: 'ai_situation_generation',
+            error_type: 'ai_response_error',
           },
           extra: {
-            url: "/api/situation",
+            url: '/api/situation',
             aiError: data.error,
             responseData: data,
           },
@@ -2005,17 +2031,17 @@ export class LobbyService {
       return data.situation;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === "AbortError") {
+      if (error instanceof Error && error.name === 'AbortError') {
         // Don't report timeout errors to Sentry as they're expected
       } else {
         // Report unexpected errors to Sentry
         Sentry.captureException(error, {
           tags: {
-            operation: "ai_situation_generation",
-            error_type: "unexpected_error",
+            operation: 'ai_situation_generation',
+            error_type: 'unexpected_error',
           },
           extra: {
-            url: "/api/situation",
+            url: '/api/situation',
             error: error instanceof Error ? error.message : String(error),
           },
         });
@@ -2030,20 +2056,20 @@ export class LobbyService {
   private getFallbackSituation(): string {
     const fallbackPrompts = [
       "When you realize it's Monday tomorrow",
-      "Trying to explain cryptocurrency to your parents",
-      "When the wifi goes down during an important meeting",
-      "Your reaction when someone spoils a movie",
-      "When you find out pineapple pizza is actually good",
+      'Trying to explain cryptocurrency to your parents',
+      'When the wifi goes down during an important meeting',
+      'Your reaction when someone spoils a movie',
+      'When you find out pineapple pizza is actually good',
       "When your friend says 'I have a great idea' at 3 AM",
-      "Trying to look busy when your boss walks by",
+      'Trying to look busy when your boss walks by',
       "When you accidentally like someone's old photo on social media",
-      "Your face when you see your bank balance",
+      'Your face when you see your bank balance',
       "When someone asks if you've been working out",
-      "Trying to remember where you put your keys",
+      'Trying to remember where you put your keys',
       "When you realize you've been talking to yourself",
-      "Your reaction to finding money in old clothes",
+      'Your reaction to finding money in old clothes',
       "When someone says 'we need to talk'",
-      "Trying to act natural when you see your ex",
+      'Trying to act natural when you see your ex',
     ];
 
     return fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
@@ -2056,7 +2082,7 @@ export class LobbyService {
     players: Record<string, PlayerData>
   ): Promise<Record<string, MemeCard[]>> {
     // Import the MemeCardPool class dynamically to avoid circular dependencies
-    const { MemeCardPool } = await import("@/lib/utils/meme-card-pool");
+    const { MemeCardPool } = await import('@/lib/utils/meme-card-pool');
 
     const cardPool = new MemeCardPool();
     const playerUids = Object.keys(players);
@@ -2112,11 +2138,11 @@ export class LobbyService {
 
       return playerCards;
     } catch (error) {
-      console.error("🃏 Card distribution failed:", error);
+      console.error('🃏 Card distribution failed:', error);
       throw this.createLobbyError(
-        "UNKNOWN_ERROR",
+        'UNKNOWN_ERROR',
         `Failed to distribute meme cards: ${error}`,
-        "Failed to distribute cards to players. Please try again.",
+        'Failed to distribute cards to players. Please try again.',
         true
       );
     }
@@ -2156,7 +2182,7 @@ export class LobbyService {
    * Returns an unsubscribe function to stop presence monitoring
    */
   initializePresence(lobbyCode: string, playerUid: string): () => void {
-    const connectedRef = ref(rtdb, ".info/connected");
+    const connectedRef = ref(rtdb, '.info/connected');
     const playerRef = ref(rtdb, `lobbies/${lobbyCode}/players/${playerUid}`);
 
     onValue(
@@ -2170,13 +2196,13 @@ export class LobbyService {
             // Ensure onDisconnect handler is registered first
             try {
               await onDisconnect(playerRef).update({
-                status: "disconnected",
+                status: 'disconnected',
                 lastSeen: now,
               });
             } catch (err) {
               Sentry.captureException(err, {
                 tags: {
-                  operation: "presence_onDisconnect_register",
+                  operation: 'presence_onDisconnect_register',
                   lobbyCode,
                 },
                 extra: { playerUid },
@@ -2185,20 +2211,20 @@ export class LobbyService {
 
             // Mark as connected/waiting now
             await update(playerRef, {
-              status: "waiting",
+              status: 'waiting',
               lastSeen: now,
             });
           }
         } catch (error) {
           Sentry.captureException(error, {
-            tags: { operation: "presence_update", lobbyCode },
+            tags: { operation: 'presence_update', lobbyCode },
             extra: { playerUid },
           });
         }
       },
       (error) => {
         Sentry.captureException(error, {
-          tags: { operation: "presence_listener", lobbyCode },
+          tags: { operation: 'presence_listener', lobbyCode },
           extra: { playerUid },
         });
       }
@@ -2215,8 +2241,8 @@ export class LobbyService {
   ): Promise<{ success: boolean; lobby?: unknown; error?: string }> {
     return Sentry.startSpan(
       {
-        op: "db.lobby.get",
-        name: "Get Lobby Data",
+        op: 'db.lobby.get',
+        name: 'Get Lobby Data',
       },
       async () => {
         try {
@@ -2224,7 +2250,7 @@ export class LobbyService {
           const lobbySnapshot = await get(lobbyRef);
 
           if (!lobbySnapshot.exists()) {
-            return { success: false, error: "Lobby not found" };
+            return { success: false, error: 'Lobby not found' };
           }
 
           const lobby = lobbySnapshot.val();
@@ -2236,11 +2262,176 @@ export class LobbyService {
             error:
               error instanceof Error
                 ? error.message
-                : "Failed to get lobby data",
+                : 'Failed to get lobby data',
           };
         }
       }
     );
+  }
+
+  // ===== BATTLE ROYALE SPECIFIC METHODS =====
+
+  /**
+   * Start automatic countdown for Battle Royale lobby when minimum players are present
+   */
+  async startAutoCountdown(lobbyCode: string): Promise<ServiceResult> {
+    return Sentry.startSpan(
+      {
+        op: 'db.lobby.start_auto_countdown',
+        name: 'Start Auto Countdown',
+      },
+      async () => {
+        try {
+          const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+          const snapshot = await get(lobbyRef);
+
+          if (!snapshot.exists()) {
+            throw this.createLobbyError(
+              'LOBBY_NOT_FOUND',
+              `Lobby ${lobbyCode} not found`,
+              'Lobby not found.'
+            );
+          }
+
+          const lobby = snapshot.val() as LobbyData;
+          const playerCount = Object.keys(lobby.players || {}).length;
+
+          // Only start countdown if we have minimum players and lobby is waiting
+          if (playerCount >= 3 && lobby.status === 'waiting') {
+            const countdownDuration = playerCount >= 8 ? 10 : 30; // 10s if full, 30s otherwise
+            const countdownEndTime = Date.now() + countdownDuration * 1000;
+
+            const updates: Record<string, unknown> = {};
+            updates[`lobbies/${lobbyCode}/autoCountdown`] = {
+              active: true,
+              duration: countdownDuration,
+              endTime: countdownEndTime,
+              startedAt: new Date().toISOString(),
+            };
+            updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+
+            await update(ref(rtdb), updates);
+
+            // Schedule automatic game start
+            setTimeout(async () => {
+              try {
+                await this.checkAndStartGame(lobbyCode);
+              } catch (error) {
+                Sentry.captureException(error, {
+                  tags: { operation: 'auto_game_start' },
+                  extra: { lobbyCode },
+                });
+              }
+            }, countdownDuration * 1000);
+
+            return {
+              success: true,
+              data: { countdownDuration, endTime: countdownEndTime },
+              timestamp: new Date().toISOString(),
+            };
+          }
+
+          return {
+            success: false,
+            error: 'Insufficient players or lobby not in waiting state',
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            'type' in error &&
+            (error as LobbyError).type
+          ) {
+            throw error;
+          }
+
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            'UNKNOWN_ERROR',
+            `Failed to start auto countdown: ${error}`,
+            'Failed to start countdown. Please try again.',
+            true
+          );
+        }
+      }
+    );
+  }
+
+  /**
+   * Cancel automatic countdown for Battle Royale lobby
+   */
+  async cancelAutoCountdown(lobbyCode: string): Promise<ServiceResult> {
+    return Sentry.startSpan(
+      {
+        op: 'db.lobby.cancel_auto_countdown',
+        name: 'Cancel Auto Countdown',
+      },
+      async () => {
+        try {
+          const updates: Record<string, unknown> = {};
+          updates[`lobbies/${lobbyCode}/autoCountdown`] = null;
+          updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+
+          await update(ref(rtdb), updates);
+
+          return {
+            success: true,
+            data: { message: 'Countdown cancelled' },
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            'UNKNOWN_ERROR',
+            `Failed to cancel auto countdown: ${error}`,
+            'Failed to cancel countdown. Please try again.',
+            true
+          );
+        }
+      }
+    );
+  }
+
+  /**
+   * Check if game should start automatically and start it
+   */
+  private async checkAndStartGame(lobbyCode: string): Promise<void> {
+    try {
+      const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+      const snapshot = await get(lobbyRef);
+
+      if (!snapshot.exists()) {
+        return; // Lobby no longer exists
+      }
+
+      const lobby = snapshot.val() as LobbyData;
+      const playerCount = Object.keys(lobby.players || {}).length;
+
+      // Only start if we still have minimum players and lobby is still waiting
+      if (playerCount >= 3 && lobby.status === 'waiting') {
+        // Start the game by updating lobby status
+        const updates: Record<string, unknown> = {};
+        updates[`lobbies/${lobbyCode}/status`] = 'starting';
+        updates[`lobbies/${lobbyCode}/autoCountdown`] = null;
+        updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+
+        await update(ref(rtdb), updates);
+
+        Sentry.addBreadcrumb({
+          message: 'Battle Royale game started automatically',
+          data: {
+            lobbyCode,
+            playerCount,
+          },
+          level: 'info',
+        });
+      }
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: { operation: 'check_and_start_game' },
+        extra: { lobbyCode },
+      });
+    }
   }
 }
 

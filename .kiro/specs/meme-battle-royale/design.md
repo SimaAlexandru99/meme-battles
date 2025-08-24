@@ -193,14 +193,14 @@ interface QueueEntry {
 
 interface QueuePreferences {
   maxWaitTime: number; // seconds
-  skillRangeFlexibility: "strict" | "medium" | "flexible";
+  skillRangeFlexibility: 'strict' | 'medium' | 'flexible';
   regionPreference?: string;
 }
 
 interface ConnectionInfo {
   region: string;
   latency: number;
-  connectionQuality: "poor" | "fair" | "good" | "excellent";
+  connectionQuality: 'poor' | 'fair' | 'good' | 'excellent';
 }
 
 interface MatchmakingResult {
@@ -238,9 +238,9 @@ interface SeasonStats {
 
 class MatchmakingService {
   private static instance: MatchmakingService;
-  private readonly QUEUE_PATH = "battleRoyaleQueue";
-  private readonly STATS_PATH = "battleRoyaleStats";
-  private readonly METRICS_PATH = "queueMetrics";
+  private readonly QUEUE_PATH = 'battleRoyaleQueue';
+  private readonly STATS_PATH = 'battleRoyaleStats';
+  private readonly METRICS_PATH = 'queueMetrics';
   private readonly MIN_PLAYERS_PER_MATCH = 3;
   private readonly MAX_PLAYERS_PER_MATCH = 8;
   private readonly OPTIMAL_PLAYERS_PER_MATCH = 6;
@@ -301,7 +301,7 @@ class MatchmakingService {
 ```typescript
 // Extensions to existing LobbyService for Battle Royale support
 interface BattleRoyaleLobbyParams extends CreateLobbyParams {
-  type: "battle_royale";
+  type: 'battle_royale';
   matchId: string;
   competitiveSettings: CompetitiveSettings;
   autoStart: boolean;
@@ -378,7 +378,7 @@ interface UseBattleRoyaleStatsReturn {
   rank: string;
   percentile: number;
   nextRankProgress: number;
-  recentPerformance: "improving" | "declining" | "stable";
+  recentPerformance: 'improving' | 'declining' | 'stable';
 }
 
 function useBattleRoyaleStats(playerUid?: string): UseBattleRoyaleStatsReturn;
@@ -414,9 +414,9 @@ components/
 
 ```typescript
 // Queue and Matchmaking Types
-type QueueStatus = "waiting" | "matching" | "matched" | "cancelled";
-type MatchQuality = "poor" | "fair" | "good" | "excellent";
-type SkillFlexibility = "strict" | "medium" | "flexible";
+type QueueStatus = 'waiting' | 'matching' | 'matched' | 'cancelled';
+type MatchQuality = 'poor' | 'fair' | 'good' | 'excellent';
+type SkillFlexibility = 'strict' | 'medium' | 'flexible';
 
 // Game Result Types
 interface GameResult {
@@ -428,7 +428,7 @@ interface GameResult {
   score: number;
   roundsWon: number;
   totalRounds: number;
-  gameMode: "battle_royale";
+  gameMode: 'battle_royale';
   duration: number; // seconds
   xpEarned: number;
   skillRatingChange: number;
@@ -475,7 +475,7 @@ interface Achievement {
   name: string;
   description: string;
   icon: string;
-  rarity: "common" | "rare" | "epic" | "legendary";
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
   unlockedAt?: string;
 }
 
@@ -531,14 +531,14 @@ class SkillRatingSystem {
 
 ```typescript
 type BattleRoyaleErrorType =
-  | "QUEUE_FULL"
-  | "ALREADY_IN_QUEUE"
-  | "MATCHMAKING_TIMEOUT"
-  | "INSUFFICIENT_PLAYERS"
-  | "SKILL_RATING_UNAVAILABLE"
-  | "REGION_UNAVAILABLE"
-  | "MATCH_CREATION_FAILED"
-  | "STATS_UPDATE_FAILED";
+  | 'QUEUE_FULL'
+  | 'ALREADY_IN_QUEUE'
+  | 'MATCHMAKING_TIMEOUT'
+  | 'INSUFFICIENT_PLAYERS'
+  | 'SKILL_RATING_UNAVAILABLE'
+  | 'REGION_UNAVAILABLE'
+  | 'MATCH_CREATION_FAILED'
+  | 'STATS_UPDATE_FAILED';
 
 interface BattleRoyaleError extends LobbyError {
   type: BattleRoyaleErrorType | LobbyErrorType;
@@ -554,23 +554,23 @@ const BATTLE_ROYALE_ERROR_STRATEGIES: Record<
   QUEUE_FULL: {
     retryable: true,
     maxRetries: 3,
-    backoffStrategy: "exponential",
-    userMessage: "Queue is currently full. Trying again...",
+    backoffStrategy: 'exponential',
+    userMessage: 'Queue is currently full. Trying again...',
     fallbackAction: () => suggestPrivateLobby(),
   },
   MATCHMAKING_TIMEOUT: {
     retryable: false,
     maxRetries: 0,
-    backoffStrategy: "linear",
+    backoffStrategy: 'linear',
     userMessage:
-      "Matchmaking is taking longer than expected. Try creating a private lobby or playing with AI.",
+      'Matchmaking is taking longer than expected. Try creating a private lobby or playing with AI.',
     fallbackAction: () => showAlternativeOptions(),
   },
   INSUFFICIENT_PLAYERS: {
     retryable: true,
     maxRetries: 5,
-    backoffStrategy: "linear",
-    userMessage: "Not enough players online right now. Expanding search...",
+    backoffStrategy: 'linear',
+    userMessage: 'Not enough players online right now. Expanding search...',
   },
 };
 ```
@@ -654,8 +654,8 @@ const BATTLE_ROYALE_ERROR_STRATEGIES: Record<
    ```typescript
    // Use indexed queries for fast queue operations
    const queueRef = query(
-     ref(rtdb, "battleRoyaleQueue"),
-     orderByChild("queuedAt"),
+     ref(rtdb, 'battleRoyaleQueue'),
+     orderByChild('queuedAt'),
      limitToFirst(50)
    );
 
