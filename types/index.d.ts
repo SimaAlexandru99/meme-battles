@@ -435,10 +435,30 @@ type LobbyErrorType =
   | "CODE_GENERATION_FAILED"
   | "UNKNOWN_ERROR";
 
+// Battle Royale specific error types
+type BattleRoyaleErrorType =
+  | "QUEUE_FULL"
+  | "ALREADY_IN_QUEUE"
+  | "MATCHMAKING_TIMEOUT"
+  | "INSUFFICIENT_PLAYERS"
+  | "SKILL_RATING_UNAVAILABLE"
+  | "REGION_UNAVAILABLE"
+  | "MATCH_CREATION_FAILED"
+  | "STATS_UPDATE_FAILED";
+
 interface LobbyError extends Error {
   type: LobbyErrorType;
   retryable: boolean;
   userMessage: string;
+}
+
+interface BattleRoyaleError extends Error {
+  type: BattleRoyaleErrorType | LobbyErrorType;
+  retryable: boolean;
+  userMessage: string;
+  queuePosition?: number;
+  estimatedWaitTime?: number;
+  alternativeOptions?: string[];
 }
 
 // Unsubscribe function type
@@ -494,4 +514,115 @@ interface PlayerData {
   isAI?: boolean;
   aiPersonalityId?: string;
   aiDifficulty?: "easy" | "medium" | "hard";
+}
+
+// Battle Royale Queue and Matchmaking Types
+interface QueueEntry {
+  playerUid: string;
+  displayName: string;
+  avatarId: string;
+  profileURL?: string;
+  skillRating: number;
+  xpLevel: number;
+  queuedAt: string;
+  estimatedWaitTime: number;
+  preferences: QueuePreferences;
+  connectionInfo: ConnectionInfo;
+}
+
+interface QueuePreferences {
+  maxWaitTime: number; // seconds
+  skillRangeFlexibility: "strict" | "medium" | "flexible";
+  regionPreference?: string;
+}
+
+interface ConnectionInfo {
+  region: string;
+  latency: number;
+  connectionQuality: "poor" | "fair" | "good" | "excellent";
+}
+
+interface MatchmakingResult {
+  matchId: string;
+  players: QueueEntry[];
+  averageSkillRating: number;
+  skillRatingRange: number;
+  matchQuality: number; // 0-1 score
+  estimatedGameDuration: number;
+}
+
+interface BattleRoyaleStats {
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  skillRating: number;
+  highestRating: number;
+  currentStreak: number;
+  longestWinStreak: number;
+  averagePosition: number;
+  totalXpEarned: number;
+  achievements: string[];
+  lastPlayed: string;
+  seasonStats: Record<string, SeasonStats>;
+}
+
+interface SeasonStats {
+  gamesPlayed: number;
+  wins: number;
+  skillRatingChange: number;
+  rank?: string;
+  percentile?: number;
+}
+
+interface GameResult {
+  lobbyCode: string;
+  matchId: string;
+  playerUid: string;
+  position: number; // 1st, 2nd, 3rd, etc.
+  totalPlayers: number;
+  score: number;
+  roundsWon: number;
+  totalRounds: number;
+  gameMode: "battle_royale";
+  duration: number; // seconds
+  xpEarned: number;
+  skillRatingChange: number;
+  achievements?: string[];
+}
+
+// Battle Royale Lobby Extensions
+interface BattleRoyaleLobbyParams extends CreateLobbyParams {
+  type: "battle_royale";
+  matchId: string;
+  competitiveSettings: CompetitiveSettings;
+  autoStart: boolean;
+  autoStartCountdown: number;
+}
+
+interface CompetitiveSettings extends GameSettings {
+  autoStart: boolean;
+  autoStartCountdown: number;
+  xpMultiplier: number;
+  rankingEnabled: boolean;
+}
+
+// Skill Rating System Types
+interface SkillRatingCalculation {
+  baseRating: number;
+  kFactor: number; // Volatility factor based on games played
+  positionMultiplier: number; // Bonus/penalty based on final position
+  opponentRatingAverage: number;
+  expectedScore: number;
+  actualScore: number;
+  ratingChange: number;
+}
+
+interface RankingTier {
+  name: string;
+  minRating: number;
+  maxRating: number;
+  color: string;
+  icon: string;
+  percentile: number;
 }

@@ -53,7 +53,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
   const currentUser = user || initialUserData;
   const [nickname, setNickname] = useState(currentUser?.name || "MemeLord");
   const [currentAvatar, setCurrentAvatar] = useState(
-    currentUser?.avatarId || "evil-doge",
+    currentUser?.avatarId || "evil-doge"
   );
   const [profileURL] = useState(currentUser?.profileURL || "");
 
@@ -89,7 +89,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setNickname(e.target.value);
     },
-    [],
+    []
   );
 
   const handleNicknameBlur = useCallback(async () => {
@@ -123,7 +123,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
         setCurrentAvatar(currentUser?.avatarId || "evil-doge");
       }
     },
-    [updateAvatar, currentUser?.avatarId, refresh],
+    [updateAvatar, currentUser?.avatarId, refresh]
   );
 
   return (
@@ -397,7 +397,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
 
   // State management for view transitions
   const [currentView, setCurrentView] = useState<"main" | "private-lobby">(
-    "main",
+    "main"
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -554,7 +554,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
                   try {
                     await joinLobby(code);
                     toast.success(
-                      "Joined lobby successfully! Redirecting to lobby...",
+                      "Joined lobby successfully! Redirecting to lobby..."
                     );
 
                     // Redirect to the lobby
@@ -568,13 +568,13 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
                   if (!user) {
                     toast.error("Please sign in to create a lobby");
                     throw new Error(
-                      "User must be authenticated to create a lobby",
+                      "User must be authenticated to create a lobby"
                     );
                   }
                   try {
                     const code = await createLobby();
                     toast.success(
-                      "Lobby created successfully! Redirecting to lobby...",
+                      "Lobby created successfully! Redirecting to lobby..."
                     );
 
                     // Redirect to the lobby
