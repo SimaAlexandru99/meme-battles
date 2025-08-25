@@ -1,10 +1,9 @@
-import { ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { Gamepad2, Users, Trophy, Sparkles } from "lucide-react";
+import { Gamepad2, Sparkles, Trophy, Users } from "lucide-react";
 import Link from "next/link";
-
-import { isAuthenticated, isAnonymousUser } from "@/lib/actions/auth.action";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { Logo } from "@/components/shared";
+import { isAnonymousUser, isAuthenticated } from "@/lib/actions/auth.action";
 
 const AuthLayout = async ({ children }: { children: ReactNode }) => {
   const isUserAuthenticated = await isAuthenticated();

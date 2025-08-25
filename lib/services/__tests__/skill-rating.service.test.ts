@@ -29,7 +29,7 @@ describe("SkillRatingSystem", () => {
       const result = skillRatingSystem.calculateRatingChange(
         currentRating,
         gameResult,
-        opponentRatings
+        opponentRatings,
       );
 
       expect(result.ratingChange).toBeGreaterThan(0);
@@ -58,7 +58,7 @@ describe("SkillRatingSystem", () => {
       const result = skillRatingSystem.calculateRatingChange(
         currentRating,
         gameResult,
-        opponentRatings
+        opponentRatings,
       );
 
       expect(result.ratingChange).toBeLessThan(0);
@@ -86,7 +86,7 @@ describe("SkillRatingSystem", () => {
       const result = skillRatingSystem.calculateRatingChange(
         currentRating,
         gameResult,
-        opponentRatings
+        opponentRatings,
       );
 
       expect(result.ratingChange).toBeDefined();
@@ -115,7 +115,7 @@ describe("SkillRatingSystem", () => {
         skillRatingSystem.calculateRatingChange(
           currentRating,
           gameResult,
-          opponentRatings
+          opponentRatings,
         );
       }).toThrow("Invalid game position");
     });
@@ -142,7 +142,7 @@ describe("SkillRatingSystem", () => {
         skillRatingSystem.calculateRatingChange(
           currentRating,
           gameResult,
-          opponentRatings
+          opponentRatings,
         );
       }).toThrow("No opponent ratings provided");
     });
@@ -232,7 +232,7 @@ describe("SkillRatingSystem", () => {
       const allRatings = [1000, 1100, 1200, 1300, 1400];
       const percentile = skillRatingSystem.calculatePercentile(
         1250,
-        allRatings
+        allRatings,
       );
       expect(percentile).toBe(60); // 3 out of 5 players have lower rating
     });
@@ -247,7 +247,7 @@ describe("SkillRatingSystem", () => {
       const allRatings = [1000, 1100, 1200, 1300, 1400];
       const percentile = skillRatingSystem.calculatePercentile(
         1500,
-        allRatings
+        allRatings,
       );
       expect(percentile).toBe(100);
     });
@@ -279,7 +279,7 @@ describe("SkillRatingSystem", () => {
         currentRating,
         opponentRatings,
         3, // Estimated 3rd place
-        6
+        6,
       );
 
       expect(estimates.bestCase).toBeGreaterThan(estimates.expected);
@@ -294,7 +294,7 @@ describe("SkillRatingSystem", () => {
         1200,
         [], // Empty opponent ratings should cause error
         3,
-        6
+        6,
       );
 
       expect(estimates.bestCase).toBe(0);

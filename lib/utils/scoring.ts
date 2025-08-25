@@ -37,7 +37,7 @@ export function calculateRoundScoring(
   votes: Record<string, string>,
   currentRoundNumber: number,
   existingScores: Record<string, number> = {},
-  playerStreaks: Record<string, PlayerStreak> = {}
+  playerStreaks: Record<string, PlayerStreak> = {},
 ): {
   roundScoring: RoundScoring[];
   updatedScores: Record<string, number>;
@@ -56,7 +56,7 @@ export function calculateRoundScoring(
   let winner: string | null = null;
   if (Object.keys(voteCounts).length > 0) {
     winner = Object.entries(voteCounts).reduce((prev, current) =>
-      current[1] > prev[1] ? current : prev
+      current[1] > prev[1] ? current : prev,
     )[0];
   }
 
@@ -159,7 +159,7 @@ export function calculateRoundScoring(
  */
 export function getLeaderboard(
   players: Player[],
-  scores: Record<string, number>
+  scores: Record<string, number>,
 ): Array<{
   playerId: string;
   playerName: string;

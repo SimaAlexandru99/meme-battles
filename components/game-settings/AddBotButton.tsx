@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import * as React from "react";
 import { RiRobotLine } from "react-icons/ri";
+import { Button } from "@/components/ui/button";
 import { AddBotDialog } from "./AddBotModal";
 import { buttonVariants, microInteractionVariants } from "./animations";
 

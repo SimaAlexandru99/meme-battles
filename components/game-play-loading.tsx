@@ -3,8 +3,8 @@
 import { motion } from "framer-motion";
 import { RiGamepadLine } from "react-icons/ri";
 import {
-  microInteractionVariants,
   loadingVariants,
+  microInteractionVariants,
 } from "@/lib/animations/private-lobby-variants";
 
 export function GamePlayLoading() {

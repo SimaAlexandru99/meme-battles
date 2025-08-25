@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { LobbyService } from "@/lib/services/lobby.service";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import * as Sentry from "@sentry/nextjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { LobbyService } from "@/lib/services/lobby.service";
 
 // Hook return interface
 interface UseLobbyManagementReturn {
@@ -38,7 +38,7 @@ interface UseLobbyManagementReturn {
  * Handles state management, real-time subscriptions, and all lobby operations
  */
 export function useLobbyManagement(
-  lobbyCode?: string
+  lobbyCode?: string,
 ): UseLobbyManagementReturn {
   // Core state
   const [lobby, setLobby] = useState<LobbyData | null>(null);
@@ -105,7 +105,7 @@ export function useLobbyManagement(
         }, 2000);
       }
     },
-    [lobbyCode, user?.id]
+    [lobbyCode, user?.id],
   );
 
   /**
@@ -133,7 +133,7 @@ export function useLobbyManagement(
               setConnectionStatus("disconnected");
               setError("Lobby no longer exists.");
             }
-          }
+          },
         );
 
         unsubscribeRef.current = unsubscribe;
@@ -142,7 +142,7 @@ export function useLobbyManagement(
         handleError(error, "subscribe_to_lobby");
       }
     },
-    [handleError]
+    [handleError],
   );
 
   /**
@@ -167,7 +167,7 @@ export function useLobbyManagement(
     async (settings?: Partial<GameSettings>): Promise<string> => {
       console.log(
         "useLobbyManagement.createLobby called with settings:",
-        settings
+        settings,
       );
       console.log("Current user:", user);
 
@@ -208,7 +208,7 @@ export function useLobbyManagement(
         throw error;
       }
     },
-    [user, subscribeToLobby, handleError]
+    [user, subscribeToLobby, handleError],
   );
 
   /**
@@ -248,7 +248,7 @@ export function useLobbyManagement(
         throw error;
       }
     },
-    [user, subscribeToLobby, handleError]
+    [user, subscribeToLobby, handleError],
   );
 
   /**
@@ -295,7 +295,7 @@ export function useLobbyManagement(
         const result = await lobbyService.current.updateLobbySettings(
           lobby.code,
           settings,
-          user.id
+          user.id,
         );
 
         if (!result.success) {
@@ -309,7 +309,7 @@ export function useLobbyManagement(
         throw error;
       }
     },
-    [user, lobby, isHost, handleError]
+    [user, lobby, isHost, handleError],
   );
 
   /**
@@ -381,7 +381,7 @@ export function useLobbyManagement(
     try {
       const result = await lobbyService.current.completeGameTransition(
         lobby.code,
-        user.id
+        user.id,
       );
 
       if (!result.success) {
@@ -412,7 +412,7 @@ export function useLobbyManagement(
         const result = await lobbyService.current.kickPlayer(
           lobby.code,
           playerUid,
-          user.id
+          user.id,
         );
 
         if (!result.success) {
@@ -426,7 +426,7 @@ export function useLobbyManagement(
         throw error;
       }
     },
-    [user, lobby, isHost, handleError]
+    [user, lobby, isHost, handleError],
   );
 
   /**
@@ -454,7 +454,7 @@ export function useLobbyManagement(
         const result = await lobbyService.current.addBot(
           lobby.code,
           user.id,
-          botConfig
+          botConfig,
         );
 
         console.log("Hook: Add bot result:", result);
@@ -471,7 +471,7 @@ export function useLobbyManagement(
         throw error;
       }
     },
-    [user, lobby, isHost, handleError]
+    [user, lobby, isHost, handleError],
   );
 
   /**
@@ -509,7 +509,7 @@ export function useLobbyManagement(
         await lobbyService.current.updatePlayerStatus(
           lobby.code,
           user.id,
-          "waiting"
+          "waiting",
         );
       } catch (error) {
         // Silently handle status update errors

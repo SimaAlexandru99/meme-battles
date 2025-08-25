@@ -5,7 +5,7 @@
  * and provides monitoring and logging for lobby lifecycle events.
  */
 
-import { ref, get, remove, update } from "firebase/database";
+import { get, ref, remove, update } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 
 export interface LobbyCleanupConfig {

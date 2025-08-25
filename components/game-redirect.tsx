@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { toast } from "sonner";
-import * as Sentry from "@sentry/nextjs";
 
 interface GameRedirectProps {
   lobbyCode: string;

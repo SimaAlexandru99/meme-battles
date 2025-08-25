@@ -151,11 +151,11 @@ export class ErrorToast {
         });
       } else {
         // Generic lobby error
-        this.showError(error, { onRetry });
+        ErrorToast.showError(error, { onRetry });
       }
     } else {
       // Generic error handling for non-lobby errors
-      this.showError(error, { onRetry });
+      ErrorToast.showError(error, { onRetry });
     }
 
     ErrorHandler.logError(error, {

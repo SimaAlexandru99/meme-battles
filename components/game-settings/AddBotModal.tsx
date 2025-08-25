@@ -1,17 +1,17 @@
+import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { RiAddLine, RiCloseLine, RiRobotLine } from "react-icons/ri";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -21,9 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RiRobotLine, RiCloseLine, RiAddLine } from "react-icons/ri";
-import { AVAILABLE_AI_PERSONALITIES } from "./types";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { AVAILABLE_AI_PERSONALITIES } from "./types";
 
 interface AddBotDialogProps {
   isOpen: boolean;

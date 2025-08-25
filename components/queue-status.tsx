@@ -1,26 +1,26 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Users,
-  Clock,
-  Trophy,
   AlertCircle,
-  RefreshCw,
+  Clock,
   Play,
+  RefreshCw,
+  Trophy,
+  Users,
   X,
   Zap,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  badgeVariants,
   buttonVariants,
   errorVariants,
   loadingVariants,
-  badgeVariants,
-} from '@/lib/animations/private-lobby-variants';
+} from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface QueueStatusProps {
   isInQueue: boolean;
@@ -77,7 +77,7 @@ export function QueueStatus({
     try {
       await onJoinQueue();
     } catch (error) {
-      console.error('Failed to join queue:', error);
+      console.error("Failed to join queue:", error);
     } finally {
       setIsJoining(false);
     }
@@ -91,7 +91,7 @@ export function QueueStatus({
     try {
       await onLeaveQueue();
     } catch (error) {
-      console.error('Failed to leave queue:', error);
+      console.error("Failed to leave queue:", error);
     } finally {
       setIsLeaving(false);
     }
@@ -102,7 +102,7 @@ export function QueueStatus({
     try {
       await onRetry();
     } catch (error) {
-      console.error('Retry failed:', error);
+      console.error("Retry failed:", error);
     }
   }, [onRetry]);
 
@@ -115,12 +115,12 @@ export function QueueStatus({
       if (queuePosition === 1) {
         return "You're next in line!";
       } else if (queuePosition <= 3) {
-        return 'Almost ready to battle!';
+        return "Almost ready to battle!";
       } else {
         return `Position ${queuePosition} in queue`;
       }
     }
-    return 'Ready to join the arena?';
+    return "Ready to join the arena?";
   }, [isInQueue, queuePosition]);
 
   // Get estimated wait time message
@@ -128,7 +128,7 @@ export function QueueStatus({
     if (!isInQueue) return null;
 
     if (estimatedWaitTime <= 30) {
-      return 'Match starting soon!';
+      return "Match starting soon!";
     } else if (estimatedWaitTime <= 60) {
       return `~${formatTime(estimatedWaitTime)} wait`;
     } else {
@@ -139,12 +139,12 @@ export function QueueStatus({
   return (
     <Card
       className={cn(
-        'relative overflow-hidden',
-        'bg-gradient-to-br from-slate-800/90 to-slate-700/90',
-        'border-slate-600/50 shadow-2xl',
-        'backdrop-blur-sm',
-        isInQueue && 'border-purple-500/30 shadow-purple-500/10',
-        className
+        "relative overflow-hidden",
+        "bg-gradient-to-br from-slate-800/90 to-slate-700/90",
+        "border-slate-600/50 shadow-2xl",
+        "backdrop-blur-sm",
+        isInQueue && "border-purple-500/30 shadow-purple-500/10",
+        className,
       )}
       role="region"
       aria-label="Battle Royale queue status"
@@ -152,8 +152,8 @@ export function QueueStatus({
       {/* Animated background gradient for queue state */}
       <div
         className={cn(
-          'absolute inset-0 opacity-0 transition-opacity duration-1000',
-          isInQueue && 'opacity-100'
+          "absolute inset-0 opacity-0 transition-opacity duration-1000",
+          isInQueue && "opacity-100",
         )}
         aria-hidden="true"
       >
@@ -290,13 +290,13 @@ export function QueueStatus({
                     onClick={handleJoinQueue}
                     disabled={!canJoinQueue || isAnyOperationInProgress}
                     className={cn(
-                      'bg-gradient-to-r from-purple-600 to-pink-600',
-                      'hover:from-purple-700 hover:to-pink-700',
-                      'text-white font-bangers text-lg tracking-wide',
-                      'px-8 py-3 rounded-full shadow-lg',
-                      'hover:shadow-purple-500/25 transition-all duration-300',
-                      'disabled:opacity-50 disabled:cursor-not-allowed',
-                      'min-w-[200px]'
+                      "bg-gradient-to-r from-purple-600 to-pink-600",
+                      "hover:from-purple-700 hover:to-pink-700",
+                      "text-white font-bangers text-lg tracking-wide",
+                      "px-8 py-3 rounded-full shadow-lg",
+                      "hover:shadow-purple-500/25 transition-all duration-300",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "min-w-[200px]",
                     )}
                     aria-label="Join Battle Royale queue"
                   >
@@ -332,13 +332,13 @@ export function QueueStatus({
                     disabled={isAnyOperationInProgress}
                     variant="outline"
                     className={cn(
-                      'border-red-500/30 text-red-300',
-                      'hover:bg-red-500/10 hover:border-red-400/50',
-                      'font-bangers text-lg tracking-wide',
-                      'px-8 py-3 rounded-full',
-                      'transition-all duration-300',
-                      'disabled:opacity-50 disabled:cursor-not-allowed',
-                      'min-w-[200px]'
+                      "border-red-500/30 text-red-300",
+                      "hover:bg-red-500/10 hover:border-red-400/50",
+                      "font-bangers text-lg tracking-wide",
+                      "px-8 py-3 rounded-full",
+                      "transition-all duration-300",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "min-w-[200px]",
                     )}
                     aria-label="Leave Battle Royale queue"
                   >

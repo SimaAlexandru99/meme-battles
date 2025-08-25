@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  RiTrophyLine,
-  RiStarLine,
-  RiFireLine,
-  RiCheckLine,
-} from "react-icons/ri";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import {
+  RiCheckLine,
+  RiFireLine,
+  RiStarLine,
+  RiTrophyLine,
+} from "react-icons/ri";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface ResultsPhaseProps {
   lobbyCode: string;
@@ -54,7 +54,7 @@ export function ResultsPhase({
     // Find winner (player with most votes)
     if (Object.keys(voteCounts).length > 0) {
       const winnerPlayerId = Object.entries(voteCounts).reduce(
-        (prev, current) => (current[1] > prev[1] ? current : prev)
+        (prev, current) => (current[1] > prev[1] ? current : prev),
       )[0];
       setWinner(winnerPlayerId);
     }
@@ -76,12 +76,12 @@ export function ResultsPhase({
       votes: Object.values(safeVotes).filter((vote) => vote === playerId)
         .length,
       submittedAt: new Date(submission.submittedAt),
-    })
+    }),
   );
 
   // Sort submissions by vote count (highest first)
   const sortedSubmissions = [...submissionArray].sort(
-    (a, b) => b.votes - a.votes
+    (a, b) => b.votes - a.votes,
   );
 
   return (
@@ -156,7 +156,7 @@ export function ResultsPhase({
                   "bg-slate-800/50 backdrop-blur-sm border border-slate-700/50",
                   "shadow-2xl shadow-purple-500/10",
                   winner === submission.playerId &&
-                    "ring-2 ring-yellow-500 border-yellow-500"
+                    "ring-2 ring-yellow-500 border-yellow-500",
                 )}
               >
                 <CardHeader className="pb-3">
@@ -196,7 +196,7 @@ export function ResultsPhase({
                         "text-sm font-bangers",
                         winner === submission.playerId
                           ? "bg-yellow-600 text-white border-yellow-500"
-                          : "bg-slate-600 text-white border-slate-500"
+                          : "bg-slate-600 text-white border-slate-500",
                       )}
                     >
                       {submission.votes} vote

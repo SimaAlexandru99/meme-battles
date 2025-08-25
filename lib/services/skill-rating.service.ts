@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Skill Rating System using modified Elo algorithm for multiplayer Battle Royale games
@@ -15,51 +15,51 @@ export class SkillRatingSystem {
   // Ranking tiers configuration
   private readonly RANKING_TIERS: RankingTier[] = [
     {
-      name: 'Bronze',
+      name: "Bronze",
       minRating: 100,
       maxRating: 799,
-      color: '#CD7F32',
-      icon: 'bronze',
+      color: "#CD7F32",
+      icon: "bronze",
       percentile: 0,
     },
     {
-      name: 'Silver',
+      name: "Silver",
       minRating: 800,
       maxRating: 1099,
-      color: '#C0C0C0',
-      icon: 'silver',
+      color: "#C0C0C0",
+      icon: "silver",
       percentile: 25,
     },
     {
-      name: 'Gold',
+      name: "Gold",
       minRating: 1100,
       maxRating: 1399,
-      color: '#FFD700',
-      icon: 'gold',
+      color: "#FFD700",
+      icon: "gold",
       percentile: 50,
     },
     {
-      name: 'Platinum',
+      name: "Platinum",
       minRating: 1400,
       maxRating: 1699,
-      color: '#E5E4E2',
-      icon: 'platinum',
+      color: "#E5E4E2",
+      icon: "platinum",
       percentile: 75,
     },
     {
-      name: 'Diamond',
+      name: "Diamond",
       minRating: 1700,
       maxRating: 2199,
-      color: '#B9F2FF',
-      icon: 'diamond',
+      color: "#B9F2FF",
+      icon: "diamond",
       percentile: 90,
     },
     {
-      name: 'Master',
+      name: "Master",
       minRating: 2200,
       maxRating: 3000,
-      color: '#FF6B6B',
-      icon: 'master',
+      color: "#FF6B6B",
+      icon: "master",
       percentile: 98,
     },
   ];
@@ -70,25 +70,25 @@ export class SkillRatingSystem {
   calculateRatingChange(
     currentRating: number,
     gameResult: GameResult,
-    opponentRatings: number[]
+    opponentRatings: number[],
   ): SkillRatingCalculation {
     return Sentry.startSpan(
       {
-        op: 'skill_rating.calculate_change',
-        name: 'Calculate Skill Rating Change',
+        op: "skill_rating.calculate_change",
+        name: "Calculate Skill Rating Change",
       },
       () => {
         try {
           // Validate inputs
           if (opponentRatings.length === 0) {
-            throw new Error('No opponent ratings provided');
+            throw new Error("No opponent ratings provided");
           }
 
           if (
             gameResult.position < 1 ||
             gameResult.position > gameResult.totalPlayers
           ) {
-            throw new Error('Invalid game position');
+            throw new Error("Invalid game position");
           }
 
           // Calculate K-factor based on player experience
@@ -97,7 +97,7 @@ export class SkillRatingSystem {
           // Calculate position multiplier (1st place gets bonus, last place gets penalty)
           const positionMultiplier = this.getPositionMultiplier(
             gameResult.position,
-            gameResult.totalPlayers
+            gameResult.totalPlayers,
           );
 
           // Calculate average opponent rating
@@ -108,13 +108,13 @@ export class SkillRatingSystem {
           // Calculate expected score using Elo formula adapted for multiplayer
           const expectedScore = this.calculateExpectedScore(
             currentRating,
-            opponentRatingAverage
+            opponentRatingAverage,
           );
 
           // Calculate actual score based on position (1st = 1.0, last = 0.0)
           const actualScore = this.calculateActualScore(
             gameResult.position,
-            gameResult.totalPlayers
+            gameResult.totalPlayers,
           );
 
           // Calculate base rating change
@@ -122,13 +122,13 @@ export class SkillRatingSystem {
 
           // Apply position multiplier and round to nearest integer
           const ratingChange = Math.round(
-            baseRatingChange * positionMultiplier
+            baseRatingChange * positionMultiplier,
           );
 
           // Ensure rating stays within bounds
           const newRating = Math.max(
             this.MIN_RATING,
-            Math.min(this.MAX_RATING, currentRating + ratingChange)
+            Math.min(this.MAX_RATING, currentRating + ratingChange),
           );
 
           const finalRatingChange = newRating - currentRating;
@@ -145,7 +145,7 @@ export class SkillRatingSystem {
 
           // Add breadcrumb for monitoring
           Sentry.addBreadcrumb({
-            message: 'Skill rating calculated',
+            message: "Skill rating calculated",
             data: {
               playerUid: gameResult.playerUid,
               oldRating: currentRating,
@@ -156,14 +156,14 @@ export class SkillRatingSystem {
               kFactor,
               positionMultiplier,
             },
-            level: 'info',
+            level: "info",
           });
 
           return calculation;
         } catch (error) {
           Sentry.captureException(error, {
             tags: {
-              operation: 'skill_rating_calculation',
+              operation: "skill_rating_calculation",
             },
             extra: {
               currentRating,
@@ -173,7 +173,7 @@ export class SkillRatingSystem {
           });
           throw error;
         }
-      }
+      },
     );
   }
 
@@ -201,7 +201,7 @@ export class SkillRatingSystem {
 
     // Apply exponential curve to reward top positions more
     // 1st place gets 1.5x multiplier, middle gets 1.0x, last gets 0.5x
-    const multiplier = 0.5 + Math.pow(normalizedPosition, 0.7) * 1.0;
+    const multiplier = 0.5 + normalizedPosition ** 0.7 * 1.0;
 
     return Math.max(0.3, Math.min(1.8, multiplier)); // Clamp between 0.3x and 1.8x
   }
@@ -211,12 +211,11 @@ export class SkillRatingSystem {
    */
   private calculateExpectedScore(
     playerRating: number,
-    opponentAverageRating: number
+    opponentAverageRating: number,
   ): number {
     // Standard Elo expected score formula
     const ratingDifference = opponentAverageRating - playerRating;
-    const expectedWinProbability =
-      1 / (1 + Math.pow(10, ratingDifference / 400));
+    const expectedWinProbability = 1 / (1 + 10 ** (ratingDifference / 400));
 
     // Adjust for multiplayer context
     // In a multiplayer game, "winning" means finishing in the top half
@@ -309,13 +308,13 @@ export class SkillRatingSystem {
     currentRating: number,
     opponentRatings: number[],
     estimatedPosition: number,
-    totalPlayers: number
+    totalPlayers: number,
   ): { bestCase: number; worstCase: number; expected: number } {
     try {
       // Create mock game results for different scenarios
       const mockGameResult: Partial<GameResult> = {
         totalPlayers,
-        playerUid: 'preview',
+        playerUid: "preview",
         position: estimatedPosition,
       };
 
@@ -324,7 +323,7 @@ export class SkillRatingSystem {
       const bestCase = this.calculateRatingChange(
         currentRating,
         bestCaseResult,
-        opponentRatings
+        opponentRatings,
       ).ratingChange;
 
       // Worst case: last place
@@ -335,7 +334,7 @@ export class SkillRatingSystem {
       const worstCase = this.calculateRatingChange(
         currentRating,
         worstCaseResult,
-        opponentRatings
+        opponentRatings,
       ).ratingChange;
 
       // Expected case: estimated position
@@ -346,7 +345,7 @@ export class SkillRatingSystem {
       const expected = this.calculateRatingChange(
         currentRating,
         expectedResult,
-        opponentRatings
+        opponentRatings,
       ).ratingChange;
 
       return { bestCase, worstCase, expected };

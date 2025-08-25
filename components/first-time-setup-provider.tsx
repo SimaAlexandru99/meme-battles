@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
+import * as Sentry from "@sentry/nextjs";
+import { useEffect, useState } from "react";
+import { useCurrentUser, useIsAnonymous } from "@/hooks/useCurrentUser";
 // Import types from global definitions
 import { isFirstTimeUser } from "@/lib/actions/auth.action";
-import { useCurrentUser, useIsAnonymous } from "@/hooks/useCurrentUser";
 import FirstTimeSetupDialog from "./first-time-setup-dialog";
-import * as Sentry from "@sentry/nextjs";
 
 interface FirstTimeSetupProviderProps {
   children: React.ReactNode;
@@ -43,7 +42,7 @@ export default function FirstTimeSetupProvider({
             } else {
               span.setAttribute("dialog.shown", false);
             }
-          }
+          },
         );
       } catch (error) {
         console.error("Error checking first-time user status:", error);

@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from "framer-motion";
 import {
+  Clock,
+  Globe,
   Search,
+  Target,
+  TrendingUp,
   Users,
   Zap,
-  Target,
-  Clock,
-  TrendingUp,
-  Globe,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import * as React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
-  lobbySectionVariants,
   badgeVariants,
+  lobbySectionVariants,
   microInteractionVariants,
-} from '@/lib/animations/private-lobby-variants';
+} from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface MatchmakingProgressProps {
   queuePosition: number;
@@ -29,7 +29,7 @@ interface MatchmakingProgressProps {
 }
 
 // Matchmaking phases based on queue position and time
-type MatchmakingPhase = 'waiting' | 'searching' | 'matching' | 'expanding';
+type MatchmakingPhase = "waiting" | "searching" | "matching" | "expanding";
 
 export function MatchmakingProgress({
   queuePosition,
@@ -42,13 +42,13 @@ export function MatchmakingProgress({
     const timeInQueueSeconds = Math.floor(timeInQueue / 1000);
 
     if (queuePosition > 5) {
-      return 'waiting';
+      return "waiting";
     } else if (queuePosition <= 3 && timeInQueueSeconds < 30) {
-      return 'searching';
+      return "searching";
     } else if (queuePosition <= 3 && timeInQueueSeconds < 60) {
-      return 'matching';
+      return "matching";
     } else {
-      return 'expanding';
+      return "expanding";
     }
   }, [queuePosition, timeInQueue]);
 
@@ -61,7 +61,7 @@ export function MatchmakingProgress({
     const timeInQueueSeconds = Math.floor(timeInQueue / 1000);
     const progress = Math.min(
       (timeInQueueSeconds / estimatedWaitTime) * 100,
-      95
+      95,
     );
 
     return Math.max(progress, 5); // Minimum 5% to show some progress
@@ -70,50 +70,50 @@ export function MatchmakingProgress({
   // Get phase-specific content
   const getPhaseContent = React.useCallback(() => {
     switch (currentPhase) {
-      case 'waiting':
+      case "waiting":
         return {
           icon: Clock,
-          title: 'In Queue',
-          description: 'Waiting for your turn to be matched',
-          color: 'text-blue-400',
-          bgColor: 'bg-blue-500/10',
-          borderColor: 'border-blue-500/20',
+          title: "In Queue",
+          description: "Waiting for your turn to be matched",
+          color: "text-blue-400",
+          bgColor: "bg-blue-500/10",
+          borderColor: "border-blue-500/20",
         };
-      case 'searching':
+      case "searching":
         return {
           icon: Search,
-          title: 'Searching',
-          description: 'Looking for players at your skill level',
-          color: 'text-yellow-400',
-          bgColor: 'bg-yellow-500/10',
-          borderColor: 'border-yellow-500/20',
+          title: "Searching",
+          description: "Looking for players at your skill level",
+          color: "text-yellow-400",
+          bgColor: "bg-yellow-500/10",
+          borderColor: "border-yellow-500/20",
         };
-      case 'matching':
+      case "matching":
         return {
           icon: Users,
-          title: 'Matching',
-          description: 'Found potential opponents, creating match',
-          color: 'text-green-400',
-          bgColor: 'bg-green-500/10',
-          borderColor: 'border-green-500/20',
+          title: "Matching",
+          description: "Found potential opponents, creating match",
+          color: "text-green-400",
+          bgColor: "bg-green-500/10",
+          borderColor: "border-green-500/20",
         };
-      case 'expanding':
+      case "expanding":
         return {
           icon: TrendingUp,
-          title: 'Expanding Search',
-          description: 'Widening skill range to find more players',
-          color: 'text-orange-400',
-          bgColor: 'bg-orange-500/10',
-          borderColor: 'border-orange-500/20',
+          title: "Expanding Search",
+          description: "Widening skill range to find more players",
+          color: "text-orange-400",
+          bgColor: "bg-orange-500/10",
+          borderColor: "border-orange-500/20",
         };
       default:
         return {
           icon: Search,
-          title: 'Matchmaking',
-          description: 'Finding your perfect match',
-          color: 'text-purple-400',
-          bgColor: 'bg-purple-500/10',
-          borderColor: 'border-purple-500/20',
+          title: "Matchmaking",
+          description: "Finding your perfect match",
+          color: "text-purple-400",
+          bgColor: "bg-purple-500/10",
+          borderColor: "border-purple-500/20",
         };
     }
   }, [currentPhase]);
@@ -154,7 +154,7 @@ export function MatchmakingProgress({
               duration: 1.5,
               repeat: Infinity,
               delay: i * 0.2,
-              ease: 'easeInOut',
+              ease: "easeInOut",
             }}
           />
         ))}
@@ -172,11 +172,11 @@ export function MatchmakingProgress({
     >
       <Card
         className={cn(
-          'relative overflow-hidden',
-          'bg-gradient-to-br from-slate-800/50 to-slate-700/50',
-          'border-slate-600/30 shadow-lg',
-          'backdrop-blur-sm',
-          phaseContent.borderColor
+          "relative overflow-hidden",
+          "bg-gradient-to-br from-slate-800/50 to-slate-700/50",
+          "border-slate-600/30 shadow-lg",
+          "backdrop-blur-sm",
+          phaseContent.borderColor,
         )}
         role="region"
         aria-label="Matchmaking progress"
@@ -185,20 +185,20 @@ export function MatchmakingProgress({
         {/* Animated background for current phase */}
         <div
           className={cn(
-            'absolute inset-0 opacity-20 transition-all duration-1000',
-            phaseContent.bgColor
+            "absolute inset-0 opacity-20 transition-all duration-1000",
+            phaseContent.bgColor,
           )}
           aria-hidden="true"
         >
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
             animate={{
-              x: ['-100%', '100%'],
+              x: ["-100%", "100%"],
             }}
             transition={{
               duration: 2,
               repeat: Infinity,
-              ease: 'linear',
+              ease: "linear",
             }}
           />
         </div>
@@ -211,14 +211,14 @@ export function MatchmakingProgress({
                 variants={microInteractionVariants}
                 whileHover="hover"
                 className={cn(
-                  'p-2 rounded-full',
+                  "p-2 rounded-full",
                   phaseContent.bgColor,
                   phaseContent.borderColor,
-                  'border'
+                  "border",
                 )}
               >
                 <phaseContent.icon
-                  className={cn('w-5 h-5', phaseContent.color)}
+                  className={cn("w-5 h-5", phaseContent.color)}
                   aria-hidden="true"
                 />
               </motion.div>
@@ -226,13 +226,13 @@ export function MatchmakingProgress({
               <div>
                 <h3
                   className={cn(
-                    'font-bangers text-lg tracking-wide flex items-center gap-2',
-                    phaseContent.color
+                    "font-bangers text-lg tracking-wide flex items-center gap-2",
+                    phaseContent.color,
                   )}
                 >
                   {phaseContent.title}
-                  {(currentPhase === 'searching' ||
-                    currentPhase === 'matching') && <AnimatedDots />}
+                  {(currentPhase === "searching" ||
+                    currentPhase === "matching") && <AnimatedDots />}
                 </h3>
                 <p className="text-slate-300 text-sm">
                   {phaseContent.description}
@@ -246,11 +246,11 @@ export function MatchmakingProgress({
               initial="initial"
               animate="animate"
               className={cn(
-                'px-3 py-1 rounded-full text-xs font-medium',
+                "px-3 py-1 rounded-full text-xs font-medium",
                 phaseContent.bgColor,
                 phaseContent.color,
-                'border',
-                phaseContent.borderColor
+                "border",
+                phaseContent.borderColor,
               )}
             >
               {currentPhase.charAt(0).toUpperCase() + currentPhase.slice(1)}
@@ -261,7 +261,7 @@ export function MatchmakingProgress({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-400">Progress</span>
-              <span className={cn('font-medium', phaseContent.color)}>
+              <span className={cn("font-medium", phaseContent.color)}>
                 {Math.round(progressPercentage)}%
               </span>
             </div>
@@ -275,9 +275,9 @@ export function MatchmakingProgress({
               {/* Animated progress indicator */}
               <motion.div
                 className={cn(
-                  'absolute top-0 left-0 h-full rounded-full',
-                  'bg-gradient-to-r from-purple-500 to-pink-500',
-                  'opacity-80'
+                  "absolute top-0 left-0 h-full rounded-full",
+                  "bg-gradient-to-r from-purple-500 to-pink-500",
+                  "opacity-80",
                 )}
                 style={{ width: `${progressPercentage}%` }}
                 animate={{
@@ -286,7 +286,7 @@ export function MatchmakingProgress({
                 transition={{
                   duration: 2,
                   repeat: Infinity,
-                  ease: 'easeInOut',
+                  ease: "easeInOut",
                 }}
               />
             </div>
@@ -341,7 +341,7 @@ export function MatchmakingProgress({
 
           {/* Skill Range Expansion Indicator */}
           <AnimatePresence>
-            {currentPhase === 'expanding' && (
+            {currentPhase === "expanding" && (
               <motion.div
                 variants={lobbySectionVariants}
                 initial="initial"

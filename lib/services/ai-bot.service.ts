@@ -33,7 +33,7 @@ export class AIBotService {
     situation: string,
     cards: MemeCard[],
     personalityId: string,
-    difficulty: "easy" | "medium" | "hard"
+    difficulty: "easy" | "medium" | "hard",
   ): Promise<AIBotDecision> {
     return Sentry.startSpan(
       {
@@ -44,7 +44,7 @@ export class AIBotService {
         try {
           // Get the bot's personality
           const personality = AVAILABLE_AI_PERSONALITIES.find(
-            (p) => p.id === personalityId
+            (p) => p.id === personalityId,
           );
 
           if (!personality) {
@@ -107,7 +107,7 @@ export class AIBotService {
             confidence: 25,
           };
         }
-      }
+      },
     );
   }
 
@@ -118,7 +118,7 @@ export class AIBotService {
     botId: string,
     cardId: string,
     reasoning: string,
-    confidence: number
+    confidence: number,
   ): Promise<AIBotSubmission> {
     return Sentry.startSpan(
       {
@@ -135,7 +135,7 @@ export class AIBotService {
         };
 
         return submission;
-      }
+      },
     );
   }
 
@@ -145,7 +145,7 @@ export class AIBotService {
   async processAIBotSubmissions(
     lobbyCode: string,
     players: Record<string, PlayerData>,
-    situation: string
+    situation: string,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -154,7 +154,7 @@ export class AIBotService {
       },
       async () => {
         const aiPlayers = Object.entries(players).filter(
-          ([, player]) => player.isAI
+          ([, player]) => player.isAI,
         );
 
         // Process each AI player with realistic delays
@@ -176,7 +176,7 @@ export class AIBotService {
             baseDelay * difficultyMultiplier + randomDelay + indexDelay;
 
           console.log(
-            `🤖 AI bot ${botId} will submit in ${Math.round(totalDelay / 1000)}s`
+            `🤖 AI bot ${botId} will submit in ${Math.round(totalDelay / 1000)}s`,
           );
 
           // Use setTimeout to add realistic delay
@@ -195,7 +195,7 @@ export class AIBotService {
                 situation,
                 botCards,
                 botPlayer.aiPersonalityId!,
-                botPlayer.aiDifficulty!
+                botPlayer.aiDifficulty!,
               );
 
               // Submit the card
@@ -203,7 +203,7 @@ export class AIBotService {
                 botId,
                 decision.selectedCardId,
                 decision.reasoning,
-                decision.confidence
+                decision.confidence,
               );
 
               // Save the submission to Firebase
@@ -219,7 +219,7 @@ export class AIBotService {
             }
           }, totalDelay);
         }
-      }
+      },
     );
   }
 
@@ -231,7 +231,7 @@ export class AIBotService {
     situation: string,
     submissions: { id: string; filename: string; url: string; alt: string }[],
     personalityId: string,
-    difficulty: "easy" | "medium" | "hard"
+    difficulty: "easy" | "medium" | "hard",
   ): Promise<{
     targetPlayerId: string;
     reasoning: string;
@@ -245,7 +245,7 @@ export class AIBotService {
       async () => {
         try {
           const personality = AVAILABLE_AI_PERSONALITIES.find(
-            (p) => p.id === personalityId
+            (p) => p.id === personalityId,
           );
           if (!personality) {
             throw new Error(`Unknown personality ID: ${personalityId}`);
@@ -309,7 +309,7 @@ export class AIBotService {
             confidence: 20,
           };
         }
-      }
+      },
     );
   }
 
@@ -319,7 +319,7 @@ export class AIBotService {
   private async saveBotVote(
     lobbyCode: string,
     botId: string,
-    targetPlayerId: string
+    targetPlayerId: string,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -331,9 +331,9 @@ export class AIBotService {
         const { rtdb } = await import("@/firebase/client");
         await set(
           ref(rtdb, `lobbies/${lobbyCode}/gameState/votes/${botId}`),
-          targetPlayerId
+          targetPlayerId,
         );
-      }
+      },
     );
   }
 
@@ -344,7 +344,7 @@ export class AIBotService {
     lobbyCode: string,
     players: Record<string, PlayerData>,
     submissions: Record<string, { cardId: string; cardName: string }>,
-    situation: string
+    situation: string,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -375,7 +375,7 @@ export class AIBotService {
               situation,
               filtered,
               bot.aiPersonalityId!,
-              bot.aiDifficulty!
+              bot.aiDifficulty!,
             );
 
             // decision.targetPlayerId corresponds to playerId of submission
@@ -387,7 +387,7 @@ export class AIBotService {
             });
           }
         }
-      }
+      },
     );
   }
   /**
@@ -396,7 +396,7 @@ export class AIBotService {
   private async saveBotSubmission(
     lobbyCode: string,
     botId: string,
-    submission: AIBotSubmission
+    submission: AIBotSubmission,
   ): Promise<void> {
     return Sentry.startSpan(
       {
@@ -431,7 +431,7 @@ export class AIBotService {
           console.error(`Error saving bot submission for ${botId}:`, error);
           throw error;
         }
-      }
+      },
     );
   }
 }

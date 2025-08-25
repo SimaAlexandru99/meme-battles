@@ -1,10 +1,10 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useMatchmakingQueue } from '../use-matchmaking-queue';
-import { MatchmakingService } from '@/lib/services/matchmaking.service';
-import { useCurrentUser } from '../useCurrentUser';
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { MatchmakingService } from "@/lib/services/matchmaking.service";
+import { useMatchmakingQueue } from "../use-matchmaking-queue";
+import { useCurrentUser } from "../useCurrentUser";
 
 // Mock Firebase Realtime Database
-jest.mock('firebase/database', () => ({
+jest.mock("firebase/database", () => ({
   getDatabase: jest.fn(),
   ref: jest.fn(),
   set: jest.fn(),
@@ -18,14 +18,14 @@ jest.mock('firebase/database', () => ({
 }));
 
 // Mock Firebase client
-jest.mock('@/firebase/client', () => ({
+jest.mock("@/firebase/client", () => ({
   rtdb: {},
 }));
 
 // Mock dependencies
-jest.mock('@/lib/services/matchmaking.service');
-jest.mock('../useCurrentUser');
-jest.mock('@sentry/nextjs', () => ({
+jest.mock("@/lib/services/matchmaking.service");
+jest.mock("../useCurrentUser");
+jest.mock("@sentry/nextjs", () => ({
   captureException: jest.fn(),
   addBreadcrumb: jest.fn(),
   startSpan: jest.fn((config, callback) => callback()),
@@ -42,31 +42,31 @@ const mockMatchmakingService = {
 };
 
 const mockUser = {
-  id: 'test-user-id',
-  name: 'Test User',
-  email: 'test@example.com',
-  avatarId: 'test-avatar',
-  profileURL: 'https://example.com/profile.jpg',
+  id: "test-user-id",
+  name: "Test User",
+  email: "test@example.com",
+  avatarId: "test-avatar",
+  profileURL: "https://example.com/profile.jpg",
   xp: 100,
-  provider: 'google',
-  role: 'user',
+  provider: "google",
+  role: "user",
   isAnonymous: false,
   setupCompleted: true,
-  createdAt: '2025-01-01T00:00:00.000Z',
-  lastLoginAt: '2025-01-08T00:00:00.000Z',
-  plan: 'free' as const,
+  createdAt: "2025-01-01T00:00:00.000Z",
+  lastLoginAt: "2025-01-08T00:00:00.000Z",
+  plan: "free" as const,
 };
 
-describe('useMatchmakingQueue', () => {
+describe("useMatchmakingQueue", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (MatchmakingService.getInstance as jest.Mock).mockReturnValue(
-      mockMatchmakingService
+      mockMatchmakingService,
     );
     (useCurrentUser as jest.Mock).mockReturnValue({ user: mockUser });
   });
 
-  it('should initialize with default state', () => {
+  it("should initialize with default state", () => {
     const { result } = renderHook(() => useMatchmakingQueue());
 
     expect(result.current.isInQueue).toBe(false);
@@ -75,17 +75,17 @@ describe('useMatchmakingQueue', () => {
     expect(result.current.queueSize).toBe(0);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(null);
-    expect(result.current.connectionStatus).toBe('disconnected');
+    expect(result.current.connectionStatus).toBe("disconnected");
     expect(result.current.matchFound).toBe(false);
     expect(result.current.lobbyCode).toBe(null);
     expect(result.current.canJoinQueue).toBe(true);
     expect(result.current.timeInQueue).toBe(0);
   });
 
-  it('should join queue successfully', async () => {
+  it("should join queue successfully", async () => {
     mockMatchmakingService.addPlayerToQueue.mockResolvedValue({
       success: true,
-      data: { playerUid: 'test-user-id' },
+      data: { playerUid: "test-user-id" },
     });
 
     const { result } = renderHook(() => useMatchmakingQueue());
@@ -96,22 +96,22 @@ describe('useMatchmakingQueue', () => {
 
     expect(mockMatchmakingService.addPlayerToQueue).toHaveBeenCalledWith(
       expect.objectContaining({
-        playerUid: 'test-user-id',
-        displayName: 'Test User',
-        avatarId: 'test-avatar',
-        profileURL: 'https://example.com/profile.jpg',
+        playerUid: "test-user-id",
+        displayName: "Test User",
+        avatarId: "test-avatar",
+        profileURL: "https://example.com/profile.jpg",
         xpLevel: 100,
-      })
+      }),
     );
 
     expect(result.current.isInQueue).toBe(true);
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('should handle join queue error', async () => {
-    const errorMessage = 'Queue is full';
+  it("should handle join queue error", async () => {
+    const errorMessage = "Queue is full";
     mockMatchmakingService.addPlayerToQueue.mockRejectedValue(
-      new Error(errorMessage)
+      new Error(errorMessage),
     );
 
     const { result } = renderHook(() => useMatchmakingQueue());
@@ -129,14 +129,14 @@ describe('useMatchmakingQueue', () => {
     expect(result.current.isInQueue).toBe(false);
   });
 
-  it('should leave queue successfully', async () => {
+  it("should leave queue successfully", async () => {
     mockMatchmakingService.addPlayerToQueue.mockResolvedValue({
       success: true,
-      data: { playerUid: 'test-user-id' },
+      data: { playerUid: "test-user-id" },
     });
     mockMatchmakingService.removePlayerFromQueue.mockResolvedValue({
       success: true,
-      data: { message: 'Successfully removed from queue' },
+      data: { message: "Successfully removed from queue" },
     });
 
     const { result } = renderHook(() => useMatchmakingQueue());
@@ -154,17 +154,17 @@ describe('useMatchmakingQueue', () => {
     });
 
     expect(mockMatchmakingService.removePlayerFromQueue).toHaveBeenCalledWith(
-      'test-user-id'
+      "test-user-id",
     );
     expect(result.current.isInQueue).toBe(false);
     expect(result.current.queuePosition).toBe(-1);
     expect(result.current.timeInQueue).toBe(0);
   });
 
-  it('should update preferences successfully', async () => {
+  it("should update preferences successfully", async () => {
     mockMatchmakingService.addPlayerToQueue.mockResolvedValue({
       success: true,
-      data: { playerUid: 'test-user-id' },
+      data: { playerUid: "test-user-id" },
     });
     mockMatchmakingService.updateQueuePreferences.mockResolvedValue({
       success: true,
@@ -185,15 +185,15 @@ describe('useMatchmakingQueue', () => {
     });
 
     expect(mockMatchmakingService.updateQueuePreferences).toHaveBeenCalledWith(
-      'test-user-id',
-      { maxWaitTime: 180 }
+      "test-user-id",
+      { maxWaitTime: 180 },
     );
     expect(mockMatchmakingService.getEstimatedWaitTime).toHaveBeenCalledWith(
-      'test-user-id'
+      "test-user-id",
     );
   });
 
-  it('should clear error state', () => {
+  it("should clear error state", () => {
     const { result } = renderHook(() => useMatchmakingQueue());
 
     // Simulate an error state
@@ -206,7 +206,7 @@ describe('useMatchmakingQueue', () => {
     expect(result.current.error).toBe(null);
   });
 
-  it('should prevent joining queue when user is not authenticated', async () => {
+  it("should prevent joining queue when user is not authenticated", async () => {
     (useCurrentUser as jest.Mock).mockReturnValue({ user: null });
 
     const { result } = renderHook(() => useMatchmakingQueue());
@@ -218,16 +218,16 @@ describe('useMatchmakingQueue', () => {
         await result.current.joinQueue();
       } catch (error) {
         expect(error).toEqual(
-          new Error('User must be authenticated to join the queue')
+          new Error("User must be authenticated to join the queue"),
         );
       }
     });
   });
 
-  it('should prevent joining queue when already in queue', async () => {
+  it("should prevent joining queue when already in queue", async () => {
     mockMatchmakingService.addPlayerToQueue.mockResolvedValue({
       success: true,
-      data: { playerUid: 'test-user-id' },
+      data: { playerUid: "test-user-id" },
     });
 
     const { result } = renderHook(() => useMatchmakingQueue());
@@ -245,23 +245,23 @@ describe('useMatchmakingQueue', () => {
       try {
         await result.current.joinQueue();
       } catch (error) {
-        expect(error).toEqual(new Error('Already in queue'));
+        expect(error).toEqual(new Error("Already in queue"));
       }
     });
   });
 
-  it('should handle subscription setup', async () => {
+  it("should handle subscription setup", async () => {
     const mockUnsubscribe = jest.fn();
     mockMatchmakingService.subscribeToQueue.mockReturnValue(mockUnsubscribe);
     mockMatchmakingService.subscribeToQueuePosition.mockReturnValue(
-      mockUnsubscribe
+      mockUnsubscribe,
     );
     mockMatchmakingService.subscribeToMatchFound.mockReturnValue(
-      mockUnsubscribe
+      mockUnsubscribe,
     );
     mockMatchmakingService.addPlayerToQueue.mockResolvedValue({
       success: true,
-      data: { playerUid: 'test-user-id' },
+      data: { playerUid: "test-user-id" },
     });
 
     const { result } = renderHook(() => useMatchmakingQueue());
@@ -272,10 +272,10 @@ describe('useMatchmakingQueue', () => {
 
     expect(mockMatchmakingService.subscribeToQueue).toHaveBeenCalled();
     expect(
-      mockMatchmakingService.subscribeToQueuePosition
-    ).toHaveBeenCalledWith('test-user-id');
+      mockMatchmakingService.subscribeToQueuePosition,
+    ).toHaveBeenCalledWith("test-user-id");
     expect(mockMatchmakingService.subscribeToMatchFound).toHaveBeenCalledWith(
-      'test-user-id'
+      "test-user-id",
     );
   });
 });

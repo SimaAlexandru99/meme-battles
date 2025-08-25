@@ -4,21 +4,20 @@ import { motion } from "framer-motion";
 import {
   Bot,
   Eye,
-  Shield,
-  Zap,
-  MessageCircle,
-  Volume2,
-  Palette,
-  Trophy,
   Info,
+  MessageCircle,
+  Palette,
+  Shield,
+  Trophy,
+  Volume2,
+  Zap,
 } from "lucide-react";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import type React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import React from "react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
 interface AdvancedSetting {
   id: string;

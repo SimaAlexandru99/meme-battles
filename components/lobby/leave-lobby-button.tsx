@@ -1,9 +1,9 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { RiAlertLine, RiArrowLeftLine } from "react-icons/ri";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,12 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   buttonVariants,
   errorVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface LeaveLobbyButtonProps {
   lobbyCode: string;
@@ -128,7 +128,7 @@ export function LeaveLobbyButton({
             "font-bangers tracking-wide transition-all duration-200",
             "focus-visible:ring-2 focus-visible:ring-red-500/50",
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
+            "disabled:opacity-50 disabled:cursor-not-allowed",
           )}
           aria-label={isLeaving ? "Leaving lobby..." : "Leave lobby"}
           aria-describedby="leave-lobby-description"

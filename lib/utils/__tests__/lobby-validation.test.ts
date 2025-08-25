@@ -3,12 +3,12 @@
  */
 
 import {
-  validateLobbyCode,
-  validateGameSettings,
-  validateDisplayName,
+  GAME_SETTINGS_CONSTRAINTS,
   isValidLobbyData,
   isValidPlayerData,
-  GAME_SETTINGS_CONSTRAINTS,
+  validateDisplayName,
+  validateGameSettings,
+  validateLobbyCode,
 } from "../lobby-validation";
 
 describe("Lobby Validation", () => {

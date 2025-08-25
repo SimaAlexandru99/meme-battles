@@ -1,10 +1,10 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useBattleRoyaleStats } from '../use-battle-royale-stats';
-import { MatchmakingService } from '@/lib/services/matchmaking.service';
-import { useCurrentUser } from '../useCurrentUser';
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { MatchmakingService } from "@/lib/services/matchmaking.service";
+import { useBattleRoyaleStats } from "../use-battle-royale-stats";
+import { useCurrentUser } from "../useCurrentUser";
 
 // Mock Firebase Realtime Database
-jest.mock('firebase/database', () => ({
+jest.mock("firebase/database", () => ({
   getDatabase: jest.fn(),
   ref: jest.fn(),
   set: jest.fn(),
@@ -18,14 +18,14 @@ jest.mock('firebase/database', () => ({
 }));
 
 // Mock Firebase client
-jest.mock('@/firebase/client', () => ({
+jest.mock("@/firebase/client", () => ({
   rtdb: {},
 }));
 
 // Mock dependencies
-jest.mock('@/lib/services/matchmaking.service');
-jest.mock('../useCurrentUser');
-jest.mock('@sentry/nextjs', () => ({
+jest.mock("@/lib/services/matchmaking.service");
+jest.mock("../useCurrentUser");
+jest.mock("@sentry/nextjs", () => ({
   captureException: jest.fn(),
   addBreadcrumb: jest.fn(),
 }));
@@ -37,19 +37,19 @@ const mockMatchmakingService = {
 };
 
 const mockUser = {
-  id: 'test-user-id',
-  name: 'Test User',
-  email: 'test@example.com',
-  avatarId: 'test-avatar',
-  profileURL: 'https://example.com/profile.jpg',
+  id: "test-user-id",
+  name: "Test User",
+  email: "test@example.com",
+  avatarId: "test-avatar",
+  profileURL: "https://example.com/profile.jpg",
   xp: 100,
-  provider: 'google',
-  role: 'user',
+  provider: "google",
+  role: "user",
   isAnonymous: false,
   setupCompleted: true,
-  createdAt: '2025-01-01T00:00:00.000Z',
-  lastLoginAt: '2025-01-08T00:00:00.000Z',
-  plan: 'free' as const,
+  createdAt: "2025-01-01T00:00:00.000Z",
+  lastLoginAt: "2025-01-08T00:00:00.000Z",
+  plan: "free" as const,
 };
 
 const mockStats: BattleRoyaleStats = {
@@ -63,10 +63,10 @@ const mockStats: BattleRoyaleStats = {
   longestWinStreak: 4,
   averagePosition: 4.2,
   totalXpEarned: 850,
-  achievements: ['first_win', 'five_games'],
-  lastPlayed: '2025-01-08T10:00:00.000Z',
+  achievements: ["first_win", "five_games"],
+  lastPlayed: "2025-01-08T10:00:00.000Z",
   seasonStats: {
-    '2025_season_1': {
+    "2025_season_1": {
       gamesPlayed: 25,
       wins: 8,
       skillRatingChange: -50,
@@ -75,39 +75,39 @@ const mockStats: BattleRoyaleStats = {
 };
 
 const mockRankingTier = {
-  name: 'Silver',
+  name: "Silver",
   minRating: 1000,
   maxRating: 1299,
-  color: '#C0C0C0',
-  icon: 'silver-badge',
+  color: "#C0C0C0",
+  icon: "silver-badge",
   percentile: 35,
 };
 
-describe('useBattleRoyaleStats', () => {
+describe("useBattleRoyaleStats", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (MatchmakingService.getInstance as jest.Mock).mockReturnValue(
-      mockMatchmakingService
+      mockMatchmakingService,
     );
     (useCurrentUser as jest.Mock).mockReturnValue({ user: mockUser });
   });
 
-  it('should initialize with default state', () => {
+  it("should initialize with default state", () => {
     const { result } = renderHook(() => useBattleRoyaleStats());
 
     expect(result.current.stats).toBe(null);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(null);
-    expect(result.current.rank).toBe('Unranked');
+    expect(result.current.rank).toBe("Unranked");
     expect(result.current.percentile).toBe(0);
     expect(result.current.nextRankProgress).toBe(0);
-    expect(result.current.recentPerformance).toBe('stable');
+    expect(result.current.recentPerformance).toBe("stable");
   });
 
-  it('should fetch and display player stats', async () => {
+  it("should fetch and display player stats", async () => {
     mockMatchmakingService.getPlayerStats.mockResolvedValue(mockStats);
     mockMatchmakingService.getPlayerRankingTier.mockResolvedValue(
-      mockRankingTier
+      mockRankingTier,
     );
     mockMatchmakingService.calculatePlayerPercentile.mockResolvedValue(65);
 
@@ -117,16 +117,16 @@ describe('useBattleRoyaleStats', () => {
       expect(result.current.stats).toEqual(mockStats);
     });
 
-    expect(result.current.rank).toBe('Silver');
+    expect(result.current.rank).toBe("Silver");
     expect(result.current.percentile).toBe(65);
-    expect(result.current.recentPerformance).toBe('improving'); // Current streak > 0
+    expect(result.current.recentPerformance).toBe("improving"); // Current streak > 0
   });
 
-  it('should handle stats for specific player UID', async () => {
-    const targetPlayerUid = 'other-player-id';
+  it("should handle stats for specific player UID", async () => {
+    const targetPlayerUid = "other-player-id";
     mockMatchmakingService.getPlayerStats.mockResolvedValue(mockStats);
     mockMatchmakingService.getPlayerRankingTier.mockResolvedValue(
-      mockRankingTier
+      mockRankingTier,
     );
     mockMatchmakingService.calculatePlayerPercentile.mockResolvedValue(45);
 
@@ -134,14 +134,14 @@ describe('useBattleRoyaleStats', () => {
 
     await waitFor(() => {
       expect(mockMatchmakingService.getPlayerStats).toHaveBeenCalledWith(
-        targetPlayerUid
+        targetPlayerUid,
       );
     });
 
     expect(result.current.stats).toEqual(mockStats);
   });
 
-  it('should handle null stats for new players', async () => {
+  it("should handle null stats for new players", async () => {
     mockMatchmakingService.getPlayerStats.mockResolvedValue(null);
 
     const { result } = renderHook(() => useBattleRoyaleStats());
@@ -150,13 +150,13 @@ describe('useBattleRoyaleStats', () => {
       expect(result.current.stats).toBe(null);
     });
 
-    expect(result.current.rank).toBe('Unranked');
+    expect(result.current.rank).toBe("Unranked");
     expect(result.current.percentile).toBe(0);
     expect(result.current.nextRankProgress).toBe(0);
-    expect(result.current.recentPerformance).toBe('stable');
+    expect(result.current.recentPerformance).toBe("stable");
   });
 
-  it('should calculate next rank progress correctly', async () => {
+  it("should calculate next rank progress correctly", async () => {
     const statsWithProgress = {
       ...mockStats,
       skillRating: 1150, // Silver tier (1000-1299)
@@ -164,7 +164,7 @@ describe('useBattleRoyaleStats', () => {
 
     mockMatchmakingService.getPlayerStats.mockResolvedValue(statsWithProgress);
     mockMatchmakingService.getPlayerRankingTier.mockResolvedValue(
-      mockRankingTier
+      mockRankingTier,
     );
     mockMatchmakingService.calculatePlayerPercentile.mockResolvedValue(65);
 
@@ -178,7 +178,7 @@ describe('useBattleRoyaleStats', () => {
     expect(result.current.nextRankProgress).toBeCloseTo(50.17, 1);
   });
 
-  it('should analyze recent performance trends', async () => {
+  it("should analyze recent performance trends", async () => {
     // Test declining performance
     const decliningStats = {
       ...mockStats,
@@ -188,21 +188,21 @@ describe('useBattleRoyaleStats', () => {
 
     mockMatchmakingService.getPlayerStats.mockResolvedValue(decliningStats);
     mockMatchmakingService.getPlayerRankingTier.mockResolvedValue(
-      mockRankingTier
+      mockRankingTier,
     );
     mockMatchmakingService.calculatePlayerPercentile.mockResolvedValue(30);
 
     const { result } = renderHook(() => useBattleRoyaleStats());
 
     await waitFor(() => {
-      expect(result.current.recentPerformance).toBe('declining');
+      expect(result.current.recentPerformance).toBe("declining");
     });
   });
 
-  it('should refresh stats on demand', async () => {
+  it("should refresh stats on demand", async () => {
     mockMatchmakingService.getPlayerStats.mockResolvedValue(mockStats);
     mockMatchmakingService.getPlayerRankingTier.mockResolvedValue(
-      mockRankingTier
+      mockRankingTier,
     );
     mockMatchmakingService.calculatePlayerPercentile.mockResolvedValue(65);
 
@@ -222,10 +222,10 @@ describe('useBattleRoyaleStats', () => {
     expect(mockMatchmakingService.getPlayerStats).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle errors gracefully', async () => {
-    const errorMessage = 'Failed to fetch stats';
+  it("should handle errors gracefully", async () => {
+    const errorMessage = "Failed to fetch stats";
     mockMatchmakingService.getPlayerStats.mockRejectedValue(
-      new Error(errorMessage)
+      new Error(errorMessage),
     );
 
     const { result } = renderHook(() => useBattleRoyaleStats());
@@ -238,10 +238,10 @@ describe('useBattleRoyaleStats', () => {
     expect(result.current.stats).toBe(null);
   });
 
-  it('should use caching mechanism', async () => {
+  it("should use caching mechanism", async () => {
     mockMatchmakingService.getPlayerStats.mockResolvedValue(mockStats);
     mockMatchmakingService.getPlayerRankingTier.mockResolvedValue(
-      mockRankingTier
+      mockRankingTier,
     );
     mockMatchmakingService.calculatePlayerPercentile.mockResolvedValue(65);
 
@@ -260,13 +260,13 @@ describe('useBattleRoyaleStats', () => {
     expect(mockMatchmakingService.getPlayerStats).not.toHaveBeenCalled();
   });
 
-  it('should handle no user gracefully', () => {
+  it("should handle no user gracefully", () => {
     (useCurrentUser as jest.Mock).mockReturnValue({ user: null });
 
     const { result } = renderHook(() => useBattleRoyaleStats());
 
     expect(result.current.stats).toBe(null);
-    expect(result.current.rank).toBe('Unranked');
+    expect(result.current.rank).toBe("Unranked");
     expect(mockMatchmakingService.getPlayerStats).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { Variants } from "framer-motion";
+import type { Variants } from "framer-motion";
 
 // Animation variants for existing game cards exiting
 export const cardExitVariants: Variants = {

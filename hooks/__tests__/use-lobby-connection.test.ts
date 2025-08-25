@@ -1,6 +1,6 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { useLobbyConnection } from "../use-lobby-connection";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { onValue } from "firebase/database";
+import { useLobbyConnection } from "../use-lobby-connection";
 
 // Mock Firebase client
 jest.mock("@/firebase/client", () => ({

@@ -1,0 +1,26 @@
+{
+  "recommendations": [
+    // Essential for Biome
+    "biomejs.biome",
+
+    // Next.js and React
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "formulahendry.auto-rename-tag",
+
+    // Testing
+    "orta.vscode-jest",
+
+    // Git and utilities
+    "eamodio.gitlens",
+    "ms-vscode.vscode-json",
+
+    // Firebase
+    "toba.vsfire"
+  ],
+  "unwantedRecommendations": [
+    // Disable conflicting formatters
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-eslint"
+  ]
+}

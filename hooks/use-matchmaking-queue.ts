@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { MatchmakingService } from '@/lib/services/matchmaking.service';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { MatchmakingService } from "@/lib/services/matchmaking.service";
 
 // Hook return interface
 export interface UseMatchmakingQueueReturn {
@@ -43,7 +43,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>('disconnected');
+    useState<ConnectionStatus>("disconnected");
 
   // Match state
   const [matchFound, setMatchFound] = useState(false);
@@ -80,10 +80,10 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
    */
   const handleError = useCallback(
     (error: unknown, operation: string) => {
-      let errorMessage = 'An unexpected error occurred. Please try again.';
+      let errorMessage = "An unexpected error occurred. Please try again.";
       let shouldRetry = false;
 
-      if (error instanceof Error && 'type' in error) {
+      if (error instanceof Error && "type" in error) {
         const battleRoyaleError = error as BattleRoyaleError;
         errorMessage =
           battleRoyaleError.userMessage || battleRoyaleError.message;
@@ -99,7 +99,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       Sentry.captureException(error, {
         tags: {
           operation,
-          userId: user?.id || 'anonymous',
+          userId: user?.id || "anonymous",
           isInQueue: isInQueue.toString(),
         },
       });
@@ -112,7 +112,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         }, 2000);
       }
     },
-    [user?.id, isInQueue]
+    [user?.id, isInQueue],
   );
 
   /**
@@ -140,7 +140,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       clearInterval(timeUpdateIntervalRef.current);
       timeUpdateIntervalRef.current = null;
     }
-    setConnectionStatus('disconnected');
+    setConnectionStatus("disconnected");
   }, []);
 
   /**
@@ -152,14 +152,14 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       if (!playerUid) return;
 
       cleanup(); // Clean up existing subscriptions
-      setConnectionStatus('connecting');
+      setConnectionStatus("connecting");
 
       try {
         // Subscribe to overall queue updates for queue size
         queueSubscriptionRef.current =
           matchmakingService.current.subscribeToQueue((queueData) => {
             setQueueSize(queueData.length);
-            setConnectionStatus('connected');
+            setConnectionStatus("connected");
             setError(null);
           });
 
@@ -176,7 +176,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
                 setIsInQueue(false);
                 setQueueStartTime(null);
               }
-            }
+            },
           );
 
         // Subscribe to match found notifications
@@ -190,7 +190,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
               setQueueStartTime(null);
 
               Sentry.addBreadcrumb({
-                message: 'Match found',
+                message: "Match found",
                 data: {
                   playerUid,
                   lobbyCode: foundLobbyCode,
@@ -198,16 +198,16 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
                     ? Date.now() - queueStartTime.getTime()
                     : 0,
                 },
-                level: 'info',
+                level: "info",
               });
-            }
+            },
           );
       } catch (error) {
-        setConnectionStatus('disconnected');
-        handleError(error, 'setup_queue_subscriptions');
+        setConnectionStatus("disconnected");
+        handleError(error, "setup_queue_subscriptions");
       }
     },
-    [cleanup, handleError, queueStartTime]
+    [cleanup, handleError, queueStartTime],
   );
 
   /**
@@ -217,11 +217,11 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
   const joinQueue = useCallback(
     async (preferences?: Partial<QueuePreferences>): Promise<void> => {
       if (!user) {
-        throw new Error('User must be authenticated to join the queue');
+        throw new Error("User must be authenticated to join the queue");
       }
 
       if (isInQueue) {
-        throw new Error('Already in queue');
+        throw new Error("Already in queue");
       }
 
       setIsLoading(true);
@@ -234,7 +234,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         const queueEntry: QueueEntry = {
           playerUid: user.id,
           displayName: user.name,
-          avatarId: user.avatarId || 'default',
+          avatarId: user.avatarId || "default",
           profileURL: user.profileURL,
           skillRating: 1200, // Default rating, will be fetched from stats
           xpLevel: user.xp || 0,
@@ -242,13 +242,13 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
           estimatedWaitTime: 60, // Will be calculated by service
           preferences: {
             maxWaitTime: 120,
-            skillRangeFlexibility: 'medium',
+            skillRangeFlexibility: "medium",
             ...preferences,
           },
           connectionInfo: {
-            region: 'us-east', // Default region
+            region: "us-east", // Default region
             latency: 25,
-            connectionQuality: 'good',
+            connectionQuality: "good",
           },
         };
 
@@ -256,7 +256,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
           await matchmakingService.current.addPlayerToQueue(queueEntry);
 
         if (!result.success) {
-          throw new Error(result.error || 'Failed to join queue');
+          throw new Error(result.error || "Failed to join queue");
         }
 
         // Set up real-time subscriptions
@@ -274,19 +274,19 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         }, 1000);
 
         Sentry.addBreadcrumb({
-          message: 'Successfully joined matchmaking queue',
+          message: "Successfully joined matchmaking queue",
           data: {
             playerUid: user.id,
             preferences,
           },
-          level: 'info',
+          level: "info",
         });
       } catch (error) {
-        handleError(error, 'join_queue');
+        handleError(error, "join_queue");
         throw error;
       }
     },
-    [user, isInQueue, setupSubscriptions, handleError, queueStartTime]
+    [user, isInQueue, setupSubscriptions, handleError, queueStartTime],
   );
 
   /**
@@ -303,11 +303,11 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
 
     try {
       const result = await matchmakingService.current.removePlayerFromQueue(
-        user.id
+        user.id,
       );
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to leave queue');
+        throw new Error(result.error || "Failed to leave queue");
       }
 
       // Clean up subscriptions and state
@@ -321,15 +321,15 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       setIsLoading(false);
 
       Sentry.addBreadcrumb({
-        message: 'Successfully left matchmaking queue',
+        message: "Successfully left matchmaking queue",
         data: {
           playerUid: user.id,
           timeInQueue,
         },
-        level: 'info',
+        level: "info",
       });
     } catch (error) {
-      handleError(error, 'leave_queue');
+      handleError(error, "leave_queue");
       throw error;
     }
   }, [user, isInQueue, cleanup, handleError, timeInQueue]);
@@ -341,7 +341,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
   const updatePreferences = useCallback(
     async (preferences: Partial<QueuePreferences>): Promise<void> => {
       if (!user || !isInQueue) {
-        throw new Error('Must be in queue to update preferences');
+        throw new Error("Must be in queue to update preferences");
       }
 
       setIsLoading(true);
@@ -350,11 +350,11 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       try {
         const result = await matchmakingService.current.updateQueuePreferences(
           user.id,
-          preferences
+          preferences,
         );
 
         if (!result.success) {
-          throw new Error(result.error || 'Failed to update preferences');
+          throw new Error(result.error || "Failed to update preferences");
         }
 
         // Update estimated wait time
@@ -365,19 +365,19 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         setIsLoading(false);
 
         Sentry.addBreadcrumb({
-          message: 'Updated queue preferences',
+          message: "Updated queue preferences",
           data: {
             playerUid: user.id,
             preferences,
           },
-          level: 'info',
+          level: "info",
         });
       } catch (error) {
-        handleError(error, 'update_preferences');
+        handleError(error, "update_preferences");
         throw error;
       }
     },
-    [user, isInQueue, handleError]
+    [user, isInQueue, handleError],
   );
 
   /**
@@ -409,12 +409,12 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
     const updateWaitTime = async () => {
       try {
         const waitTime = await matchmakingService.current.getEstimatedWaitTime(
-          user.id
+          user.id,
         );
         setEstimatedWaitTime(waitTime);
       } catch (error) {
         // Silently handle wait time update errors
-        console.warn('Failed to update estimated wait time:', error);
+        console.warn("Failed to update estimated wait time:", error);
       }
     };
 

@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback } from "react";
+import { RiChat1Line, RiSendPlaneLine } from "react-icons/ri";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { RiChat1Line, RiSendPlaneLine } from "react-icons/ri";
 
 interface ChatPanelProps {
   messages: ChatMessage[];

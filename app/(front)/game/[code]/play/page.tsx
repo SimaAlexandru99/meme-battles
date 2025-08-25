@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/actions/auth.action";
 import { GamePlay } from "@/components/game-play";
 import { GameRedirect } from "@/components/game-redirect";
+import { getCurrentUser } from "@/lib/actions/auth.action";
 
 interface GamePlayPageProps {
   params: Promise<{

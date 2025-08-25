@@ -1,5 +1,5 @@
-import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
+import { toast } from "sonner";
 
 /**
  * Service for handling smooth transitions from lobby to game interface

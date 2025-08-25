@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
 import * as Sentry from "@sentry/nextjs";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import { ErrorHandler } from "@/lib/utils/error-handler";
 
 interface ErrorBoundaryState {

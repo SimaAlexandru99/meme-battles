@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { MatchmakingService } from '@/lib/services/matchmaking.service';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { MatchmakingService } from "@/lib/services/matchmaking.service";
 
 // Hook return interface
 export interface UseMatchmakingSubscriptionsReturn {
@@ -35,7 +35,7 @@ export interface UseMatchmakingSubscriptionsReturn {
 export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn {
   // Connection state
   const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>('disconnected');
+    useState<ConnectionStatus>("disconnected");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [retryCount, setRetryCount] = useState(0);
   const [lastSeen, setLastSeen] = useState<Date | null>(null);
@@ -75,8 +75,8 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
    */
   const calculateRetryDelay = useCallback((attempt: number): number => {
     const exponentialDelay = Math.min(
-      BASE_RETRY_DELAY * Math.pow(2, attempt),
-      MAX_RETRY_DELAY
+      BASE_RETRY_DELAY * 2 ** attempt,
+      MAX_RETRY_DELAY,
     );
     // Add jitter (±25% of the delay)
     const jitter = exponentialDelay * 0.25 * (Math.random() - 0.5);
@@ -88,13 +88,13 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
    */
   const handleSubscriptionError = useCallback(
     (error: unknown, subscriptionType: string) => {
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
 
       Sentry.captureException(error, {
         tags: {
-          operation: 'matchmaking_subscription',
+          operation: "matchmaking_subscription",
           subscription_type: subscriptionType,
-          userId: user?.id || 'anonymous',
+          userId: user?.id || "anonymous",
         },
       });
 
@@ -102,14 +102,14 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
       if (retryCount < MAX_RETRY_ATTEMPTS && isOnline) {
         const delay = calculateRetryDelay(retryCount);
         setRetryCount((prev) => prev + 1);
-        setConnectionStatus('reconnecting');
+        setConnectionStatus("reconnecting");
 
         reconnectTimeoutRef.current = setTimeout(() => {
           reconnect();
         }, delay);
       }
     },
-    [user?.id, retryCount, isOnline, calculateRetryDelay]
+    [user?.id, retryCount, isOnline, calculateRetryDelay],
   );
 
   /**
@@ -154,15 +154,15 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
 
       // If we haven't received a heartbeat in the timeout period, consider connection lost
       if (timeSinceLastHeartbeat > CONNECTION_TIMEOUT) {
-        if (connectionStatus === 'connected') {
-          setConnectionStatus('disconnected');
+        if (connectionStatus === "connected") {
+          setConnectionStatus("disconnected");
           Sentry.addBreadcrumb({
-            message: 'Matchmaking connection lost - heartbeat timeout',
+            message: "Matchmaking connection lost - heartbeat timeout",
             data: {
               timeSinceLastHeartbeat,
               timeout: CONNECTION_TIMEOUT,
             },
-            level: 'warning',
+            level: "warning",
           });
         }
       }
@@ -177,7 +177,7 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
       queueSubscriptionRef.current();
     }
 
-    setConnectionStatus('connecting');
+    setConnectionStatus("connecting");
 
     try {
       queueSubscriptionRef.current =
@@ -189,14 +189,14 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
           setQueueData(queueEntries);
           setQueueSize(queueEntries.length);
 
-          if (connectionStatus !== 'connected') {
-            setConnectionStatus('connected');
+          if (connectionStatus !== "connected") {
+            setConnectionStatus("connected");
             setRetryCount(0);
 
             Sentry.addBreadcrumb({
-              message: 'Queue subscription established',
+              message: "Queue subscription established",
               data: { queueSize: queueEntries.length },
-              level: 'info',
+              level: "info",
             });
           }
         });
@@ -204,7 +204,7 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
       // Start heartbeat monitoring
       startHeartbeat();
     } catch (error) {
-      handleSubscriptionError(error, 'queue');
+      handleSubscriptionError(error, "queue");
     }
   }, [connectionStatus, handleSubscriptionError, startHeartbeat]);
 
@@ -231,17 +231,17 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
               setPlayerPosition(position);
 
               Sentry.addBreadcrumb({
-                message: 'Queue position updated',
+                message: "Queue position updated",
                 data: { playerUid, position },
-                level: 'debug',
+                level: "debug",
               });
-            }
+            },
           );
       } catch (error) {
-        handleSubscriptionError(error, 'queue_position');
+        handleSubscriptionError(error, "queue_position");
       }
     },
-    [handleSubscriptionError]
+    [handleSubscriptionError],
   );
 
   /**
@@ -268,17 +268,17 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
               setMatchLobbyCode(lobbyCode);
 
               Sentry.addBreadcrumb({
-                message: 'Match found notification received',
+                message: "Match found notification received",
                 data: { playerUid, lobbyCode },
-                level: 'info',
+                level: "info",
               });
-            }
+            },
           );
       } catch (error) {
-        handleSubscriptionError(error, 'match_found');
+        handleSubscriptionError(error, "match_found");
       }
     },
-    [handleSubscriptionError]
+    [handleSubscriptionError],
   );
 
   /**
@@ -286,7 +286,7 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
    */
   const unsubscribeAll = useCallback(() => {
     cleanup();
-    setConnectionStatus('disconnected');
+    setConnectionStatus("disconnected");
     setLastSeen(null);
     setRetryCount(0);
     lastHeartbeatRef.current = null;
@@ -299,8 +299,8 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
     setMatchLobbyCode(null);
 
     Sentry.addBreadcrumb({
-      message: 'All matchmaking subscriptions unsubscribed',
-      level: 'info',
+      message: "All matchmaking subscriptions unsubscribed",
+      level: "info",
     });
   }, [cleanup]);
 
@@ -309,11 +309,11 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
    */
   const reconnect = useCallback(() => {
     setRetryCount(0);
-    setConnectionStatus('connecting');
+    setConnectionStatus("connecting");
 
     Sentry.addBreadcrumb({
-      message: 'Manual matchmaking reconnection initiated',
-      level: 'info',
+      message: "Manual matchmaking reconnection initiated",
+      level: "info",
     });
 
     // Reestablish all active subscriptions
@@ -338,12 +338,12 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
       setIsOnline(true);
 
       Sentry.addBreadcrumb({
-        message: 'Network came online',
-        level: 'info',
+        message: "Network came online",
+        level: "info",
       });
 
       // Automatically reconnect when coming back online
-      if (connectionStatus === 'disconnected') {
+      if (connectionStatus === "disconnected") {
         setRetryCount(0);
         reconnect();
       }
@@ -351,21 +351,21 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
 
     const handleOffline = () => {
       setIsOnline(false);
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
       cleanup();
 
       Sentry.addBreadcrumb({
-        message: 'Network went offline',
-        level: 'warning',
+        message: "Network went offline",
+        level: "warning",
       });
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, [cleanup, reconnect, connectionStatus]);
 
@@ -374,12 +374,12 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
    */
   useEffect(() => {
     if (
-      connectionStatus === 'disconnected' &&
+      connectionStatus === "disconnected" &&
       isOnline &&
       retryCount < MAX_RETRY_ATTEMPTS
     ) {
       const delay = calculateRetryDelay(retryCount);
-      setConnectionStatus('reconnecting');
+      setConnectionStatus("reconnecting");
 
       reconnectTimeoutRef.current = setTimeout(() => {
         setRetryCount((prev) => prev + 1);

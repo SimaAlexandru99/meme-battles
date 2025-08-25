@@ -1,7 +1,7 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { useLobbyManagement } from "../use-lobby-management";
-import { LobbyService } from "@/lib/services/lobby.service";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { LobbyService } from "@/lib/services/lobby.service";
+import { useLobbyManagement } from "../use-lobby-management";
 
 // Mock Firebase client
 jest.mock("@/firebase/client", () => ({

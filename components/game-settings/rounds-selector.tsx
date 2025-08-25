@@ -1,10 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { RotateCcw, Trophy, Clock, Users } from "lucide-react";
-
-import { Card, CardContent } from "@/components/ui/card";
+import { Clock, RotateCcw, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 
 interface RoundsOption {

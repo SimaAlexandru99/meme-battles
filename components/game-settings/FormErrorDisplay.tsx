@@ -1,11 +1,11 @@
 "use client";
 
-import * as React from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { AlertCircle, X } from "lucide-react";
-import { GameSettingsValidationErrors } from "./types";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 import { messageVariants, microInteractionVariants } from "./animations";
+import type { GameSettingsValidationErrors } from "./types";
 
 interface FormErrorDisplayProps {
   errors: GameSettingsValidationErrors;

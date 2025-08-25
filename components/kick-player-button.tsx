@@ -1,9 +1,9 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { RiUserUnfollowLine } from "react-icons/ri";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,12 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   buttonVariants,
   errorVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface KickPlayerButtonProps {
   lobbyCode: string;

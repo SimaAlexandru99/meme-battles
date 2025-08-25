@@ -1,7 +1,7 @@
-import { LobbyService } from "../lobby.service";
-import { get, set, update, remove, ref } from "firebase/database";
 import * as Sentry from "@sentry/nextjs";
 import type { DataSnapshot } from "firebase/database";
+import { get, ref, remove, set, update } from "firebase/database";
+import { LobbyService } from "../lobby.service";
 
 // Mock Firebase
 jest.mock("firebase/database", () => ({

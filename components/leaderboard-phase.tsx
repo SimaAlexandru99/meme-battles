@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Flame, Star, Crown, Medal, Target } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnimatePresence, motion } from "framer-motion";
+import { Crown, Flame, Medal, Star, Target, Trophy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
   calculateRoundScoring,
-  getLeaderboard,
   formatScoreBreakdown,
+  getLeaderboard,
   type PlayerStreak,
 } from "@/lib/utils/scoring";
 
@@ -64,7 +64,7 @@ export function LeaderboardPhase({
       votes,
       roundNumber,
       {}, // Don't pass existing scores to get just this round's points
-      playerStreaks || {}
+      playerStreaks || {},
     );
     return result.roundScoring;
   }, [players, submissions, votes, roundNumber, playerStreaks]);
@@ -84,7 +84,7 @@ export function LeaderboardPhase({
 
   // Find current user's position change (simplified - would need historical data for real change)
   const currentUserLeaderboardEntry = leaderboard.find(
-    (entry) => entry.playerId === currentUser.id
+    (entry) => entry.playerId === currentUser.id,
   );
 
   const isGameEnd = roundNumber >= totalRounds;
@@ -127,7 +127,7 @@ export function LeaderboardPhase({
                 "font-bangers px-3 sm:px-4 py-2 shadow-lg border",
                 timeLeft <= 5
                   ? "bg-red-600 border-red-400 text-white animate-pulse"
-                  : "bg-green-600 border-green-400 text-white"
+                  : "bg-green-600 border-green-400 text-white",
               )}
             >
               <Target className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -163,7 +163,7 @@ export function LeaderboardPhase({
             "px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bangers transition-all duration-300 shadow-lg border-2",
             showRoundDetails
               ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-400 shadow-purple-500/30"
-              : "bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500"
+              : "bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500",
           )}
         >
           <Trophy className="w-4 h-4 inline mr-2" />
@@ -175,7 +175,7 @@ export function LeaderboardPhase({
             "px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bangers transition-all duration-300 shadow-lg border-2",
             !showRoundDetails
               ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-blue-400 shadow-blue-500/30"
-              : "bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500"
+              : "bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-600/50 hover:border-slate-500",
           )}
         >
           <Crown className="w-4 h-4 inline mr-2" />
@@ -217,7 +217,7 @@ export function LeaderboardPhase({
                           ? "bg-yellow-500/20 border border-yellow-500/30"
                           : "bg-slate-700/30 border border-slate-600/30",
                         scoring.playerId === currentUser.id &&
-                          "ring-2 ring-blue-500/50"
+                          "ring-2 ring-blue-500/50",
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -230,7 +230,7 @@ export function LeaderboardPhase({
                               "font-bangers text-lg",
                               scoring.isWinner
                                 ? "text-yellow-300"
-                                : "text-white"
+                                : "text-white",
                             )}
                           >
                             {scoring.playerName}
@@ -253,7 +253,7 @@ export function LeaderboardPhase({
                         <div
                           className={cn(
                             "font-bangers text-xl",
-                            scoring.isWinner ? "text-yellow-300" : "text-white"
+                            scoring.isWinner ? "text-yellow-300" : "text-white",
                           )}
                         >
                           +{scoring.roundScore}
@@ -317,7 +317,7 @@ export function LeaderboardPhase({
                             "bg-gradient-to-r from-orange-600/20 to-orange-700/20 border border-orange-600/30",
                           entry.rank > 3 &&
                             "bg-slate-700/30 border border-slate-600/30",
-                          isCurrentUser && "ring-2 ring-blue-500/50"
+                          isCurrentUser && "ring-2 ring-blue-500/50",
                         )}
                       >
                         <div className="flex items-center gap-4">
@@ -332,7 +332,7 @@ export function LeaderboardPhase({
                               entry.rank === 3 &&
                                 "bg-gradient-to-br from-orange-500 to-orange-700 text-white border-orange-400 shadow-orange-500/30",
                               entry.rank > 3 &&
-                                "bg-gradient-to-br from-slate-600 to-slate-800 text-white border-slate-500 shadow-slate-600/20"
+                                "bg-gradient-to-br from-slate-600 to-slate-800 text-white border-slate-500 shadow-slate-600/20",
                             )}
                           >
                             {entry.rank === 1 && (
@@ -382,7 +382,7 @@ export function LeaderboardPhase({
                               entry.rank === 1 && "text-yellow-300",
                               entry.rank === 2 && "text-slate-300",
                               entry.rank === 3 && "text-orange-300",
-                              entry.rank > 3 && "text-white"
+                              entry.rank > 3 && "text-white",
                             )}
                           >
                             {entry.totalScore}

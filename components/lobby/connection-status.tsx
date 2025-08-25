@@ -1,18 +1,17 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Wifi,
-  WifiOff,
   AlertCircle,
-  RefreshCw,
   CheckCircle,
   Loader2,
+  RefreshCw,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 type ConnectionStatusType =
   | "connected"

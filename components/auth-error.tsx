@@ -1,12 +1,12 @@
 "use client";
 
-import * as React from "react";
 import { motion } from "framer-motion";
-import { RiRefreshLine, RiHomeLine, RiUserLine } from "react-icons/ri";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { RiHomeLine, RiRefreshLine, RiUserLine } from "react-icons/ri";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 interface AuthErrorProps {
   error: string;

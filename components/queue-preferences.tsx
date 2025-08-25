@@ -1,44 +1,44 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 import {
-  Settings,
   Clock,
-  Target,
   Globe,
   Info,
-  Save,
   RotateCcw,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+  Save,
+  Settings,
+  Target,
+} from "lucide-react";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/tooltip";
 import {
   buttonVariants,
   lobbySectionVariants,
   microInteractionVariants,
-} from '@/lib/animations/private-lobby-variants';
-import type { QueuePreferences } from '@/types';
+} from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
+import type { QueuePreferences } from "@/types";
 
 interface QueuePreferencesProps {
   onUpdatePreferences: (
-    preferences: Partial<QueuePreferences>
+    preferences: Partial<QueuePreferences>,
   ) => Promise<void>;
   isInQueue: boolean;
   isLoading: boolean;
@@ -54,10 +54,10 @@ export function QueuePreferences({
   // Local state for preferences
   const [maxWaitTime, setMaxWaitTime] = React.useState<number>(120); // 2 minutes default
   const [skillRangeFlexibility, setSkillRangeFlexibility] = React.useState<
-    'strict' | 'medium' | 'flexible'
-  >('medium');
+    "strict" | "medium" | "flexible"
+  >("medium");
   const [regionPreference, setRegionPreference] =
-    React.useState<string>('auto');
+    React.useState<string>("auto");
 
   // Track if preferences have been modified
   const [hasChanges, setHasChanges] = React.useState(false);
@@ -67,10 +67,10 @@ export function QueuePreferences({
   const defaultPreferences = React.useMemo(
     () => ({
       maxWaitTime: 120,
-      skillRangeFlexibility: 'medium' as const,
-      regionPreference: 'auto',
+      skillRangeFlexibility: "medium" as const,
+      regionPreference: "auto",
     }),
-    []
+    [],
   );
 
   // Track changes to enable/disable save button
@@ -104,12 +104,12 @@ export function QueuePreferences({
       await onUpdatePreferences({
         maxWaitTime,
         skillRangeFlexibility,
-        ...(regionPreference !== 'auto' && { regionPreference }),
+        ...(regionPreference !== "auto" && { regionPreference }),
       });
 
       setHasChanges(false);
     } catch (error) {
-      console.error('Failed to update preferences:', error);
+      console.error("Failed to update preferences:", error);
     } finally {
       setIsSaving(false);
     }
@@ -145,17 +145,17 @@ export function QueuePreferences({
   const getSkillFlexibilityDescription = React.useCallback(
     (flexibility: string): string => {
       switch (flexibility) {
-        case 'strict':
-          return 'Only match with players very close to your skill level';
-        case 'medium':
-          return 'Balance between skill matching and wait time';
-        case 'flexible':
-          return 'Prioritize faster matches over perfect skill matching';
+        case "strict":
+          return "Only match with players very close to your skill level";
+        case "medium":
+          return "Balance between skill matching and wait time";
+        case "flexible":
+          return "Prioritize faster matches over perfect skill matching";
         default:
-          return 'Balance between skill matching and wait time';
+          return "Balance between skill matching and wait time";
       }
     },
-    []
+    [],
   );
 
   return (
@@ -169,10 +169,10 @@ export function QueuePreferences({
       >
         <Card
           className={cn(
-            'relative overflow-hidden',
-            'bg-gradient-to-br from-slate-800/70 to-slate-700/70',
-            'border-slate-600/40 shadow-lg',
-            'backdrop-blur-sm'
+            "relative overflow-hidden",
+            "bg-gradient-to-br from-slate-800/70 to-slate-700/70",
+            "border-slate-600/40 shadow-lg",
+            "backdrop-blur-sm",
           )}
           role="region"
           aria-label="Queue preferences settings"
@@ -253,7 +253,7 @@ export function QueuePreferences({
 
               <Select
                 value={skillRangeFlexibility}
-                onValueChange={(value: 'strict' | 'medium' | 'flexible') =>
+                onValueChange={(value: "strict" | "medium" | "flexible") =>
                   setSkillRangeFlexibility(value)
                 }
                 disabled={isLoading}
@@ -335,9 +335,9 @@ export function QueuePreferences({
                   onClick={handleSavePreferences}
                   disabled={!hasChanges || isSaving || isLoading}
                   className={cn(
-                    'w-full bg-purple-600 hover:bg-purple-700',
-                    'text-white font-bangers tracking-wide',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    "w-full bg-purple-600 hover:bg-purple-700",
+                    "text-white font-bangers tracking-wide",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
                   )}
                 >
                   {isSaving ? (
@@ -347,7 +347,7 @@ export function QueuePreferences({
                         transition={{
                           duration: 1,
                           repeat: Infinity,
-                          ease: 'linear',
+                          ease: "linear",
                         }}
                         className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
                       />
@@ -356,7 +356,7 @@ export function QueuePreferences({
                   ) : (
                     <>
                       <Save className="w-4 h-4 mr-2" />
-                      {isInQueue ? 'Update Live' : 'Save Preferences'}
+                      {isInQueue ? "Update Live" : "Save Preferences"}
                     </>
                   )}
                 </Button>
@@ -372,9 +372,9 @@ export function QueuePreferences({
                   disabled={!hasChanges || isLoading}
                   variant="outline"
                   className={cn(
-                    'border-slate-600 text-slate-300',
-                    'hover:bg-slate-700/50 hover:border-slate-500',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    "border-slate-600 text-slate-300",
+                    "hover:bg-slate-700/50 hover:border-slate-500",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
                   )}
                 >
                   <RotateCcw className="w-4 h-4" />

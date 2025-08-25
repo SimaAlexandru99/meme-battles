@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import { AlertTriangle, Home, RefreshCw, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,10 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AlertTriangle, Home, RefreshCw, Users } from "lucide-react";
 import { ErrorHandler } from "@/lib/utils/error-handler";
 import { ErrorBoundary } from "./error-boundary";
-import { useRouter } from "next/navigation";
 
 interface LobbyErrorFallbackProps {
   error: Error;

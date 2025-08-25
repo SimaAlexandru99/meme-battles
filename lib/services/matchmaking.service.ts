@@ -1,18 +1,18 @@
+import * as Sentry from "@sentry/nextjs";
 import {
-  ref,
-  set,
   get,
-  update,
-  onValue,
   off,
-  query,
+  onValue,
   orderByChild,
+  query,
+  ref,
   serverTimestamp,
-} from 'firebase/database';
-import { rtdb } from '@/firebase/client';
-import * as Sentry from '@sentry/nextjs';
-import { LobbyService } from './lobby.service';
-import { SkillRatingSystem } from './skill-rating.service';
+  set,
+  update,
+} from "firebase/database";
+import { rtdb } from "@/firebase/client";
+import { LobbyService } from "./lobby.service";
+import { SkillRatingSystem } from "./skill-rating.service";
 
 /**
  * Enhanced service for managing Battle Royale matchmaking operations
@@ -20,10 +20,10 @@ import { SkillRatingSystem } from './skill-rating.service';
  */
 export class MatchmakingService {
   private static instance: MatchmakingService;
-  private readonly QUEUE_PATH = 'battleRoyaleQueue';
-  private readonly STATS_PATH = 'battleRoyaleStats';
-  private readonly METRICS_PATH = 'queueMetrics';
-  private readonly HISTORY_PATH = 'matchmakingHistory';
+  private readonly QUEUE_PATH = "battleRoyaleQueue";
+  private readonly STATS_PATH = "battleRoyaleStats";
+  private readonly METRICS_PATH = "queueMetrics";
+  private readonly HISTORY_PATH = "matchmakingHistory";
   private readonly MIN_PLAYERS_PER_MATCH = 3;
   private readonly MAX_PLAYERS_PER_MATCH = 8;
   private readonly OPTIMAL_PLAYERS_PER_MATCH = 6;
@@ -58,13 +58,13 @@ export class MatchmakingService {
       queuePosition?: number;
       estimatedWaitTime?: number;
       alternativeOptions?: string[];
-    }
+    },
   ): BattleRoyaleError {
     const error = new Error(message) as BattleRoyaleError;
     error.type = type;
     error.userMessage = userMessage;
     error.retryable = retryable;
-    error.name = 'BattleRoyaleError';
+    error.name = "BattleRoyaleError";
 
     if (additionalData) {
       error.queuePosition = additionalData.queuePosition;
@@ -75,7 +75,7 @@ export class MatchmakingService {
     // Automatically report to Sentry for monitoring
     Sentry.captureException(error, {
       tags: {
-        operation: 'matchmaking_service',
+        operation: "matchmaking_service",
         error_type: type,
         retryable: retryable.toString(),
       },
@@ -97,7 +97,7 @@ export class MatchmakingService {
   private async retryOperation<T>(
     operation: () => Promise<T>,
     operationName: string,
-    maxRetries: number = this.MAX_RETRY_ATTEMPTS
+    maxRetries: number = this.MAX_RETRY_ATTEMPTS,
   ): Promise<T> {
     let lastError: Error;
 
@@ -125,7 +125,7 @@ export class MatchmakingService {
             delay,
             error: lastError.message,
           },
-          level: 'info',
+          level: "info",
         });
 
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -141,39 +141,39 @@ export class MatchmakingService {
   async addPlayerToQueue(playerData: QueueEntry): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.add_to_queue',
-        name: 'Add Player to Queue',
+        op: "db.matchmaking.add_to_queue",
+        name: "Add Player to Queue",
       },
       async () => {
         try {
           // Add breadcrumb for queue join start
           Sentry.addBreadcrumb({
-            message: 'Starting queue join',
+            message: "Starting queue join",
             data: {
               playerUid: playerData.playerUid,
               displayName: playerData.displayName,
               skillRating: playerData.skillRating,
               xpLevel: playerData.xpLevel,
             },
-            level: 'info',
+            level: "info",
           });
 
           // Check if player is already in queue
           const existingEntry = await this.retryOperation(async () => {
             const queueRef = ref(
               rtdb,
-              `${this.QUEUE_PATH}/${playerData.playerUid}`
+              `${this.QUEUE_PATH}/${playerData.playerUid}`,
             );
             const snapshot = await get(queueRef);
             return snapshot.exists() ? snapshot.val() : null;
-          }, 'check_existing_queue_entry');
+          }, "check_existing_queue_entry");
 
           if (existingEntry) {
             throw this.createBattleRoyaleError(
-              'ALREADY_IN_QUEUE',
+              "ALREADY_IN_QUEUE",
               `Player ${playerData.playerUid} is already in queue`,
-              'You are already in the matchmaking queue.',
-              false
+              "You are already in the matchmaking queue.",
+              false,
             );
           }
 
@@ -182,7 +182,7 @@ export class MatchmakingService {
             ...playerData,
             queuedAt: new Date().toISOString(),
             estimatedWaitTime: await this.calculateEstimatedWaitTime(
-              playerData.skillRating
+              playerData.skillRating,
             ),
           };
 
@@ -193,19 +193,19 @@ export class MatchmakingService {
             updates[`${this.METRICS_PATH}/lastUpdated`] = serverTimestamp();
 
             await update(ref(rtdb), updates);
-          }, 'add_player_to_queue');
+          }, "add_player_to_queue");
 
           // Update queue metrics
           await this.updateQueueMetrics();
 
           Sentry.addBreadcrumb({
-            message: 'Player added to queue successfully',
+            message: "Player added to queue successfully",
             data: {
               playerUid: playerData.playerUid,
               queuePosition: await this.getQueuePosition(playerData.playerUid),
               estimatedWaitTime: queueEntry.estimatedWaitTime,
             },
-            level: 'info',
+            level: "info",
           });
 
           return {
@@ -216,7 +216,7 @@ export class MatchmakingService {
         } catch (error) {
           if (
             error instanceof Error &&
-            'type' in error &&
+            "type" in error &&
             (error as BattleRoyaleError).type
           ) {
             throw error;
@@ -224,13 +224,13 @@ export class MatchmakingService {
 
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'UNKNOWN_ERROR',
+            "UNKNOWN_ERROR",
             `Failed to add player to queue: ${error}`,
-            'Failed to join the matchmaking queue. Please try again.',
-            true
+            "Failed to join the matchmaking queue. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -240,8 +240,8 @@ export class MatchmakingService {
   async removePlayerFromQueue(playerUid: string): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.remove_from_queue',
-        name: 'Remove Player from Queue',
+        op: "db.matchmaking.remove_from_queue",
+        name: "Remove Player from Queue",
       },
       async () => {
         try {
@@ -250,13 +250,13 @@ export class MatchmakingService {
             const queueRef = ref(rtdb, `${this.QUEUE_PATH}/${playerUid}`);
             const snapshot = await get(queueRef);
             return snapshot.exists() ? snapshot.val() : null;
-          }, 'check_queue_entry_exists');
+          }, "check_queue_entry_exists");
 
           if (!queueEntry) {
             // Player not in queue, return success (idempotent operation)
             return {
               success: true,
-              data: { message: 'Player was not in queue' },
+              data: { message: "Player was not in queue" },
               timestamp: new Date().toISOString(),
             };
           }
@@ -268,35 +268,35 @@ export class MatchmakingService {
             updates[`${this.METRICS_PATH}/lastUpdated`] = serverTimestamp();
 
             await update(ref(rtdb), updates);
-          }, 'remove_player_from_queue');
+          }, "remove_player_from_queue");
 
           // Update queue metrics
           await this.updateQueueMetrics();
 
           Sentry.addBreadcrumb({
-            message: 'Player removed from queue successfully',
+            message: "Player removed from queue successfully",
             data: {
               playerUid,
               timeInQueue: Date.now() - new Date(queueEntry.queuedAt).getTime(),
             },
-            level: 'info',
+            level: "info",
           });
 
           return {
             success: true,
-            data: { message: 'Successfully removed from queue' },
+            data: { message: "Successfully removed from queue" },
             timestamp: new Date().toISOString(),
           };
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'UNKNOWN_ERROR',
+            "UNKNOWN_ERROR",
             `Failed to remove player from queue: ${error}`,
-            'Failed to leave the matchmaking queue. Please try again.',
-            true
+            "Failed to leave the matchmaking queue. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -306,8 +306,8 @@ export class MatchmakingService {
   async getQueuePosition(playerUid: string): Promise<number> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.get_queue_position',
-        name: 'Get Queue Position',
+        op: "db.matchmaking.get_queue_position",
+        name: "Get Queue Position",
       },
       async () => {
         try {
@@ -325,7 +325,7 @@ export class MatchmakingService {
           // Query all players who joined before this player
           const queueRef = query(
             ref(rtdb, this.QUEUE_PATH),
-            orderByChild('queuedAt')
+            orderByChild("queuedAt"),
           );
 
           const queueSnapshot = await get(queueRef);
@@ -348,13 +348,13 @@ export class MatchmakingService {
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'NETWORK_ERROR',
+            "NETWORK_ERROR",
             `Failed to get queue position: ${error}`,
-            'Unable to get your queue position. Please try again.',
-            true
+            "Unable to get your queue position. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -382,7 +382,7 @@ export class MatchmakingService {
    * Calculate estimated wait time based on skill rating and current queue state
    */
   private async calculateEstimatedWaitTime(
-    skillRating: number
+    skillRating: number,
   ): Promise<number> {
     try {
       // Get current queue metrics
@@ -431,12 +431,12 @@ export class MatchmakingService {
    */
   async updateQueuePreferences(
     playerUid: string,
-    preferences: Partial<QueuePreferences>
+    preferences: Partial<QueuePreferences>,
   ): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.update_preferences',
-        name: 'Update Queue Preferences',
+        op: "db.matchmaking.update_preferences",
+        name: "Update Queue Preferences",
       },
       async () => {
         try {
@@ -446,10 +446,10 @@ export class MatchmakingService {
 
           if (!snapshot.exists()) {
             throw this.createBattleRoyaleError(
-              'VALIDATION_ERROR',
+              "VALIDATION_ERROR",
               `Player ${playerUid} is not in queue`,
-              'You must be in the queue to update preferences.',
-              false
+              "You must be in the queue to update preferences.",
+              false,
             );
           }
 
@@ -468,7 +468,7 @@ export class MatchmakingService {
               await this.calculateEstimatedWaitTime(currentEntry.skillRating);
 
             await update(ref(rtdb), updates);
-          }, 'update_queue_preferences');
+          }, "update_queue_preferences");
 
           return {
             success: true,
@@ -478,7 +478,7 @@ export class MatchmakingService {
         } catch (error) {
           if (
             error instanceof Error &&
-            'type' in error &&
+            "type" in error &&
             (error as BattleRoyaleError).type
           ) {
             throw error;
@@ -486,13 +486,13 @@ export class MatchmakingService {
 
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'UNKNOWN_ERROR',
+            "UNKNOWN_ERROR",
             `Failed to update queue preferences: ${error}`,
-            'Failed to update your preferences. Please try again.',
-            true
+            "Failed to update your preferences. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -515,7 +515,7 @@ export class MatchmakingService {
         currentQueueSize,
         averageWaitTime,
         lastUpdated: serverTimestamp(),
-        peakHours: ['19:00', '20:00', '21:00'], // Static for now, could be dynamic
+        peakHours: ["19:00", "20:00", "21:00"], // Static for now, could be dynamic
       };
 
       const metricsRef = ref(rtdb, this.METRICS_PATH);
@@ -523,7 +523,7 @@ export class MatchmakingService {
     } catch (error) {
       // Don't throw on metrics update failure, just log
       Sentry.captureException(error, {
-        tags: { operation: 'update_queue_metrics' },
+        tags: { operation: "update_queue_metrics" },
       });
     }
   }
@@ -553,11 +553,11 @@ export class MatchmakingService {
    * Subscribe to queue updates for real-time position tracking
    */
   subscribeToQueue(
-    callback: (queueData: QueueEntry[]) => void
+    callback: (queueData: QueueEntry[]) => void,
   ): UnsubscribeFunction {
     const queueRef = query(
       ref(rtdb, this.QUEUE_PATH),
-      orderByChild('queuedAt')
+      orderByChild("queuedAt"),
     );
 
     const unsubscribe = onValue(
@@ -575,12 +575,12 @@ export class MatchmakingService {
       },
       (error) => {
         Sentry.captureException(error, {
-          tags: { operation: 'queue_subscription' },
+          tags: { operation: "queue_subscription" },
         });
-      }
+      },
     );
 
-    return () => off(queueRef, 'value', unsubscribe);
+    return () => off(queueRef, "value", unsubscribe);
   }
 
   /**
@@ -588,12 +588,12 @@ export class MatchmakingService {
    */
   subscribeToQueuePosition(
     playerUid: string,
-    callback: (position: number) => void
+    callback: (position: number) => void,
   ): UnsubscribeFunction {
     // Subscribe to the entire queue to calculate position
     return this.subscribeToQueue((queueData) => {
       const playerEntry = queueData.find(
-        (entry) => entry.playerUid === playerUid
+        (entry) => entry.playerUid === playerUid,
       );
 
       if (!playerEntry) {
@@ -620,7 +620,7 @@ export class MatchmakingService {
    */
   subscribeToMatchFound(
     playerUid: string,
-    callback: (lobbyCode: string) => void
+    callback: (lobbyCode: string) => void,
   ): UnsubscribeFunction {
     // Monitor if player is removed from queue (indicating match found)
     const playerQueueRef = ref(rtdb, `${this.QUEUE_PATH}/${playerUid}`);
@@ -652,25 +652,25 @@ export class MatchmakingService {
       },
       (error) => {
         Sentry.captureException(error, {
-          tags: { operation: 'match_found_subscription' },
+          tags: { operation: "match_found_subscription" },
         });
-      }
+      },
     );
 
-    return () => off(playerQueueRef, 'value', unsubscribe);
+    return () => off(playerQueueRef, "value", unsubscribe);
   }
 
   /**
    * Find recent lobby for a player (placeholder implementation)
    */
   private async findRecentLobbyForPlayer(
-    playerUid: string
+    playerUid: string,
   ): Promise<string | null> {
     // This is a simplified placeholder implementation
     // In practice, you'd maintain a mapping of player -> lobby assignments
     try {
       // Check recent lobbies for this player
-      const lobbiesRef = ref(rtdb, 'lobbies');
+      const lobbiesRef = ref(rtdb, "lobbies");
       const snapshot = await get(lobbiesRef);
 
       if (!snapshot.exists()) {
@@ -705,12 +705,12 @@ export class MatchmakingService {
    */
   async updatePlayerStats(
     playerUid: string,
-    gameResult: GameResult
+    gameResult: GameResult,
   ): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.update_stats',
-        name: 'Update Player Stats',
+        op: "db.matchmaking.update_stats",
+        name: "Update Player Stats",
       },
       async () => {
         try {
@@ -743,7 +743,7 @@ export class MatchmakingService {
           // Get opponent ratings for skill rating calculation
           const opponentRatings = await this.getOpponentRatings(
             gameResult.lobbyCode,
-            playerUid
+            playerUid,
           );
 
           // Calculate new skill rating
@@ -751,7 +751,7 @@ export class MatchmakingService {
             this.skillRatingSystem.calculateRatingChange(
               currentStats.skillRating,
               gameResult,
-              opponentRatings
+              opponentRatings,
             );
 
           // Update stats
@@ -768,19 +768,19 @@ export class MatchmakingService {
               currentStats.skillRating + ratingCalculation.ratingChange,
             highestRating: Math.max(
               currentStats.highestRating,
-              currentStats.skillRating + ratingCalculation.ratingChange
+              currentStats.skillRating + ratingCalculation.ratingChange,
             ),
             currentStreak: isWin ? currentStats.currentStreak + 1 : 0,
             longestWinStreak: isWin
               ? Math.max(
                   currentStats.longestWinStreak,
-                  currentStats.currentStreak + 1
+                  currentStats.currentStreak + 1,
                 )
               : currentStats.longestWinStreak,
             averagePosition: this.calculateNewAveragePosition(
               currentStats.averagePosition,
               currentStats.gamesPlayed,
-              gameResult.position
+              gameResult.position,
             ),
             totalXpEarned: currentStats.totalXpEarned + gameResult.xpEarned,
             lastPlayed: new Date().toISOString(),
@@ -798,10 +798,10 @@ export class MatchmakingService {
             ] = gameResult;
 
             await update(ref(rtdb), updates);
-          }, 'update_player_stats');
+          }, "update_player_stats");
 
           Sentry.addBreadcrumb({
-            message: 'Player stats updated successfully',
+            message: "Player stats updated successfully",
             data: {
               playerUid,
               oldRating: currentStats.skillRating,
@@ -810,7 +810,7 @@ export class MatchmakingService {
               position: gameResult.position,
               isWin,
             },
-            level: 'info',
+            level: "info",
           });
 
           return {
@@ -821,13 +821,13 @@ export class MatchmakingService {
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'STATS_UPDATE_FAILED',
+            "STATS_UPDATE_FAILED",
             `Failed to update player stats: ${error}`,
-            'Failed to update your statistics. Your progress may not be saved.',
-            true
+            "Failed to update your statistics. Your progress may not be saved.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -855,7 +855,7 @@ export class MatchmakingService {
    */
   async calculateSkillRating(
     playerUid: string,
-    gameResult: GameResult
+    gameResult: GameResult,
   ): Promise<number> {
     try {
       const currentStats = await this.getPlayerStats(playerUid);
@@ -864,23 +864,23 @@ export class MatchmakingService {
 
       const opponentRatings = await this.getOpponentRatings(
         gameResult.lobbyCode,
-        playerUid
+        playerUid,
       );
 
       const calculation = this.skillRatingSystem.calculateRatingChange(
         currentRating,
         gameResult,
-        opponentRatings
+        opponentRatings,
       );
 
       return currentRating + calculation.ratingChange;
     } catch (error) {
       Sentry.captureException(error);
       throw this.createBattleRoyaleError(
-        'SKILL_RATING_UNAVAILABLE',
+        "SKILL_RATING_UNAVAILABLE",
         `Failed to calculate skill rating: ${error}`,
-        'Unable to calculate your skill rating. Please try again.',
-        true
+        "Unable to calculate your skill rating. Please try again.",
+        true,
       );
     }
   }
@@ -909,7 +909,7 @@ export class MatchmakingService {
 
       return this.skillRatingSystem.calculatePercentile(
         playerRating,
-        allRatings
+        allRatings,
       );
     } catch (error) {
       Sentry.captureException(error);
@@ -922,7 +922,7 @@ export class MatchmakingService {
    */
   private async getOpponentRatings(
     lobbyCode: string,
-    playerUid: string
+    playerUid: string,
   ): Promise<number[]> {
     try {
       const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
@@ -988,7 +988,7 @@ export class MatchmakingService {
   private calculateNewAveragePosition(
     currentAverage: number,
     gamesPlayed: number,
-    newPosition: number
+    newPosition: number,
   ): number {
     if (gamesPlayed === 0) {
       return newPosition;
@@ -1013,15 +1013,15 @@ export class MatchmakingService {
   async findMatches(): Promise<MatchmakingResult[]> {
     return Sentry.startSpan(
       {
-        op: 'matchmaking.find_matches',
-        name: 'Find Matches',
+        op: "matchmaking.find_matches",
+        name: "Find Matches",
       },
       async () => {
         try {
           // Get all queued players sorted by queue time (FIFO)
           const queueRef = query(
             ref(rtdb, this.QUEUE_PATH),
-            orderByChild('queuedAt')
+            orderByChild("queuedAt"),
           );
           const snapshot = await get(queueRef);
 
@@ -1040,7 +1040,7 @@ export class MatchmakingService {
 
           // Sort players by skill rating for sliding window approach
           const playersBySkill = [...queuedPlayers].sort(
-            (a, b) => a.skillRating - b.skillRating
+            (a, b) => a.skillRating - b.skillRating,
           );
 
           // Find optimal player groups using sliding window
@@ -1072,30 +1072,30 @@ export class MatchmakingService {
           }
 
           Sentry.addBreadcrumb({
-            message: 'Matches found',
+            message: "Matches found",
             data: {
               totalQueuedPlayers: queuedPlayers.length,
               matchesFound: matchmakingResults.length,
               averageMatchQuality:
                 matchmakingResults.reduce(
                   (sum, match) => sum + match.matchQuality,
-                  0
+                  0,
                 ) / matchmakingResults.length || 0,
             },
-            level: 'info',
+            level: "info",
           });
 
           return matchmakingResults;
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'MATCHMAKING_TIMEOUT',
+            "MATCHMAKING_TIMEOUT",
             `Failed to find matches: ${error}`,
-            'Matchmaking is currently unavailable. Please try again.',
-            true
+            "Matchmaking is currently unavailable. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -1114,22 +1114,20 @@ export class MatchmakingService {
       skillRatings.reduce((sum, rating) => sum + rating, 0) /
       skillRatings.length;
     const skillVariance =
-      skillRatings.reduce(
-        (sum, rating) => sum + Math.pow(rating - avgRating, 2),
-        0
-      ) / skillRatings.length;
+      skillRatings.reduce((sum, rating) => sum + (rating - avgRating) ** 2, 0) /
+      skillRatings.length;
     const skillBalance = Math.max(0, 1 - skillVariance / 100000); // Normalize variance
 
     // Connection quality (30% weight)
     const connectionQualities = players.map((p) => {
       switch (p.connectionInfo.connectionQuality) {
-        case 'excellent':
+        case "excellent":
           return 1.0;
-        case 'good':
+        case "good":
           return 0.8;
-        case 'fair':
+        case "fair":
           return 0.6;
-        case 'poor':
+        case "poor":
           return 0.3;
         default:
           return 0.5;
@@ -1149,7 +1147,7 @@ export class MatchmakingService {
     // Player count bonus (10% weight)
     const playerCountBonus = Math.min(
       1,
-      players.length / this.OPTIMAL_PLAYERS_PER_MATCH
+      players.length / this.OPTIMAL_PLAYERS_PER_MATCH,
     );
 
     // Calculate weighted score
@@ -1188,7 +1186,7 @@ export class MatchmakingService {
       const group = this.createOptimalGroup(
         sortedPlayers,
         currentIndex,
-        groupSize
+        groupSize,
       );
 
       if (group.length >= this.MIN_PLAYERS_PER_MATCH) {
@@ -1208,7 +1206,7 @@ export class MatchmakingService {
   private createOptimalGroup(
     players: QueueEntry[],
     startIndex: number,
-    targetSize: number
+    targetSize: number,
   ): QueueEntry[] {
     const group: QueueEntry[] = [];
     const basePlayer = players[startIndex];
@@ -1239,10 +1237,10 @@ export class MatchmakingService {
   private shouldIncludePlayerInGroup(
     basePlayer: QueueEntry,
     candidate: QueueEntry,
-    currentGroup: QueueEntry[]
+    currentGroup: QueueEntry[],
   ): boolean {
     const skillDifference = Math.abs(
-      basePlayer.skillRating - candidate.skillRating
+      basePlayer.skillRating - candidate.skillRating,
     );
     const maxSkillDifference = this.getMaxSkillDifference(basePlayer);
 
@@ -1254,7 +1252,7 @@ export class MatchmakingService {
     // Check connection quality compatibility
     const connectionCompatible = this.areConnectionsCompatible(
       basePlayer,
-      candidate
+      candidate,
     );
     if (!connectionCompatible) {
       return false;
@@ -1278,13 +1276,13 @@ export class MatchmakingService {
     // Base skill range based on flexibility preference
     let baseRange: number;
     switch (player.preferences.skillRangeFlexibility) {
-      case 'strict':
+      case "strict":
         baseRange = 100;
         break;
-      case 'medium':
+      case "medium":
         baseRange = 200;
         break;
-      case 'flexible':
+      case "flexible":
         baseRange = 400;
         break;
       default:
@@ -1302,16 +1300,16 @@ export class MatchmakingService {
    */
   private areConnectionsCompatible(
     player1: QueueEntry,
-    player2: QueueEntry
+    player2: QueueEntry,
   ): boolean {
     // Check region compatibility
     if (player1.connectionInfo.region !== player2.connectionInfo.region) {
       // Allow cross-region if both have good connections
       const bothGoodConnections =
-        (player1.connectionInfo.connectionQuality === 'excellent' ||
-          player1.connectionInfo.connectionQuality === 'good') &&
-        (player2.connectionInfo.connectionQuality === 'excellent' ||
-          player2.connectionInfo.connectionQuality === 'good');
+        (player1.connectionInfo.connectionQuality === "excellent" ||
+          player1.connectionInfo.connectionQuality === "good") &&
+        (player2.connectionInfo.connectionQuality === "excellent" ||
+          player2.connectionInfo.connectionQuality === "good");
 
       if (!bothGoodConnections) {
         return false;
@@ -1320,7 +1318,7 @@ export class MatchmakingService {
 
     // Check latency difference
     const latencyDifference = Math.abs(
-      player1.connectionInfo.latency - player2.connectionInfo.latency
+      player1.connectionInfo.latency - player2.connectionInfo.latency,
     );
     return latencyDifference <= 100; // Max 100ms latency difference
   }
@@ -1336,10 +1334,8 @@ export class MatchmakingService {
       skillRatings.reduce((sum, rating) => sum + rating, 0) /
       skillRatings.length;
     const variance =
-      skillRatings.reduce(
-        (sum, rating) => sum + Math.pow(rating - avgRating, 2),
-        0
-      ) / skillRatings.length;
+      skillRatings.reduce((sum, rating) => sum + (rating - avgRating) ** 2, 0) /
+      skillRatings.length;
 
     // Lower variance = better balance
     return Math.max(0, 1 - variance / 50000);
@@ -1350,7 +1346,7 @@ export class MatchmakingService {
    */
   private shouldExpandSkillRange(
     waitTime: number,
-    preferences: QueuePreferences
+    preferences: QueuePreferences,
   ): boolean {
     const waitMinutes = waitTime / (60 * 1000);
     const maxWaitMinutes = preferences.maxWaitTime / 60;
@@ -1365,7 +1361,7 @@ export class MatchmakingService {
   private calculateAverageSkillRating(players: QueueEntry[]): number {
     const totalRating = players.reduce(
       (sum, player) => sum + player.skillRating,
-      0
+      0,
     );
     return Math.round(totalRating / players.length);
   }
@@ -1411,12 +1407,12 @@ export class MatchmakingService {
    * Implements task 2.2 requirements for automatic lobby creation
    */
   async createBattleRoyaleLobby(
-    match: MatchmakingResult
+    match: MatchmakingResult,
   ): Promise<ServiceResult<string>> {
     return Sentry.startSpan(
       {
-        op: 'matchmaking.create_lobby',
-        name: 'Create Battle Royale Lobby',
+        op: "matchmaking.create_lobby",
+        name: "Create Battle Royale Lobby",
       },
       async () => {
         try {
@@ -1433,11 +1429,11 @@ export class MatchmakingService {
             rounds: 8,
             timeLimit: 45,
             categories: [
-              'general',
-              'reaction',
-              'wholesome',
-              'gaming',
-              'pop_culture',
+              "general",
+              "reaction",
+              "wholesome",
+              "gaming",
+              "pop_culture",
             ],
             autoStart: true,
             autoStartCountdown: 30,
@@ -1453,7 +1449,7 @@ export class MatchmakingService {
             hostProfileURL: hostPlayer.profileURL,
             maxPlayers: 8,
             settings: competitiveSettings,
-            type: 'battle_royale',
+            type: "battle_royale",
             matchId: match.matchId,
             competitiveSettings,
             autoStart: true,
@@ -1465,10 +1461,10 @@ export class MatchmakingService {
 
           if (!lobbyResult.success || !lobbyResult.data) {
             throw this.createBattleRoyaleError(
-              'MATCH_CREATION_FAILED',
-              'Failed to create Battle Royale lobby',
-              'Failed to create your match. Please try joining the queue again.',
-              true
+              "MATCH_CREATION_FAILED",
+              "Failed to create Battle Royale lobby",
+              "Failed to create your match. Please try joining the queue again.",
+              true,
             );
           }
 
@@ -1479,7 +1475,7 @@ export class MatchmakingService {
 
           // Remove players from queue (batch operation)
           await this.batchRemovePlayersFromQueue(
-            match.players.map((p) => p.playerUid)
+            match.players.map((p) => p.playerUid),
           );
 
           // Store match history
@@ -1489,7 +1485,7 @@ export class MatchmakingService {
           await this.updateQueueMetrics();
 
           Sentry.addBreadcrumb({
-            message: 'Battle Royale lobby created successfully',
+            message: "Battle Royale lobby created successfully",
             data: {
               lobbyCode,
               matchId: match.matchId,
@@ -1497,7 +1493,7 @@ export class MatchmakingService {
               averageSkillRating: match.averageSkillRating,
               matchQuality: match.matchQuality,
             },
-            level: 'info',
+            level: "info",
           });
 
           return {
@@ -1508,7 +1504,7 @@ export class MatchmakingService {
         } catch (error) {
           if (
             error instanceof Error &&
-            'type' in error &&
+            "type" in error &&
             (error as BattleRoyaleError).type
           ) {
             throw error;
@@ -1516,13 +1512,13 @@ export class MatchmakingService {
 
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'MATCH_CREATION_FAILED',
+            "MATCH_CREATION_FAILED",
             `Failed to create Battle Royale lobby: ${error}`,
-            'Failed to create your match. Please try joining the queue again.',
-            true
+            "Failed to create your match. Please try joining the queue again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -1531,7 +1527,7 @@ export class MatchmakingService {
    */
   private async addPlayersToLobby(
     lobbyCode: string,
-    players: QueueEntry[]
+    players: QueueEntry[],
   ): Promise<void> {
     // Add players one by one using existing joinLobby method
     for (const player of players) {
@@ -1558,7 +1554,7 @@ export class MatchmakingService {
       } catch (error) {
         // Log error but continue with other players
         Sentry.captureException(error, {
-          tags: { operation: 'add_player_to_battle_royale_lobby' },
+          tags: { operation: "add_player_to_battle_royale_lobby" },
           extra: { lobbyCode, playerUid: player.playerUid },
         });
       }
@@ -1570,7 +1566,7 @@ export class MatchmakingService {
    */
   private async storeMatchHistory(
     match: MatchmakingResult,
-    lobbyCode: string
+    lobbyCode: string,
   ): Promise<void> {
     try {
       const matchHistory = {
@@ -1589,7 +1585,7 @@ export class MatchmakingService {
     } catch (error) {
       // Don't throw on history storage failure, just log
       Sentry.captureException(error, {
-        tags: { operation: 'store_match_history' },
+        tags: { operation: "store_match_history" },
       });
     }
   }
@@ -1601,12 +1597,12 @@ export class MatchmakingService {
    * Removes players who have been inactive for more than the specified timeout
    */
   async cleanupDisconnectedPlayers(
-    timeoutMinutes: number = 5
+    timeoutMinutes: number = 5,
   ): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.cleanup_queue',
-        name: 'Cleanup Disconnected Players',
+        op: "db.matchmaking.cleanup_queue",
+        name: "Cleanup Disconnected Players",
       },
       async () => {
         try {
@@ -1642,12 +1638,12 @@ export class MatchmakingService {
           }
 
           Sentry.addBreadcrumb({
-            message: 'Queue cleanup completed',
+            message: "Queue cleanup completed",
             data: {
               removedPlayers: playersToRemove.length,
               timeoutMinutes,
             },
-            level: 'info',
+            level: "info",
           });
 
           return {
@@ -1658,13 +1654,13 @@ export class MatchmakingService {
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'UNKNOWN_ERROR',
+            "UNKNOWN_ERROR",
             `Failed to cleanup queue: ${error}`,
-            'Failed to cleanup the queue. Some disconnected players may remain.',
-            true
+            "Failed to cleanup the queue. Some disconnected players may remain.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -1672,12 +1668,12 @@ export class MatchmakingService {
    * Batch remove multiple players from queue
    */
   async batchRemovePlayersFromQueue(
-    playerUids: string[]
+    playerUids: string[],
   ): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
-        op: 'db.matchmaking.batch_remove',
-        name: 'Batch Remove Players from Queue',
+        op: "db.matchmaking.batch_remove",
+        name: "Batch Remove Players from Queue",
       },
       async () => {
         try {
@@ -1699,7 +1695,7 @@ export class MatchmakingService {
           // Execute batch removal
           await this.retryOperation(async () => {
             await update(ref(rtdb), updates);
-          }, 'batch_remove_players');
+          }, "batch_remove_players");
 
           // Update queue metrics
           await this.updateQueueMetrics();
@@ -1712,13 +1708,13 @@ export class MatchmakingService {
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'UNKNOWN_ERROR',
+            "UNKNOWN_ERROR",
             `Failed to batch remove players: ${error}`,
-            'Failed to remove players from queue. Please try again.',
-            true
+            "Failed to remove players from queue. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -1762,22 +1758,22 @@ export class MatchmakingService {
         skillRatings.length;
 
       const playersBySkillRange: Record<string, number> = {
-        'Bronze (100-799)': 0,
-        'Silver (800-1099)': 0,
-        'Gold (1100-1399)': 0,
-        'Platinum (1400-1699)': 0,
-        'Diamond (1700-2199)': 0,
-        'Master (2200+)': 0,
+        "Bronze (100-799)": 0,
+        "Silver (800-1099)": 0,
+        "Gold (1100-1399)": 0,
+        "Platinum (1400-1699)": 0,
+        "Diamond (1700-2199)": 0,
+        "Master (2200+)": 0,
       };
 
       players.forEach((player) => {
         const rating = player.skillRating;
-        if (rating < 800) playersBySkillRange['Bronze (100-799)']++;
-        else if (rating < 1100) playersBySkillRange['Silver (800-1099)']++;
-        else if (rating < 1400) playersBySkillRange['Gold (1100-1399)']++;
-        else if (rating < 1700) playersBySkillRange['Platinum (1400-1699)']++;
-        else if (rating < 2200) playersBySkillRange['Diamond (1700-2199)']++;
-        else playersBySkillRange['Master (2200+)']++;
+        if (rating < 800) playersBySkillRange["Bronze (100-799)"]++;
+        else if (rating < 1100) playersBySkillRange["Silver (800-1099)"]++;
+        else if (rating < 1400) playersBySkillRange["Gold (1100-1399)"]++;
+        else if (rating < 1700) playersBySkillRange["Platinum (1400-1699)"]++;
+        else if (rating < 2200) playersBySkillRange["Diamond (1700-2199)"]++;
+        else playersBySkillRange["Master (2200+)"]++;
       });
 
       // Connection quality distribution
@@ -1797,7 +1793,7 @@ export class MatchmakingService {
       return {
         currentQueueSize,
         averageWaitTime,
-        peakHours: ['19:00', '20:00', '21:00'], // Static for now
+        peakHours: ["19:00", "20:00", "21:00"], // Static for now
         playersBySkillRange,
         averageSkillRating,
         connectionQualityDistribution,
@@ -1860,7 +1856,7 @@ export class MatchmakingService {
    */
   async validateAndUpdateQueuePreferences(
     playerUid: string,
-    preferences: Partial<QueuePreferences>
+    preferences: Partial<QueuePreferences>,
   ): Promise<ServiceResult> {
     try {
       // Validate preferences
@@ -1869,26 +1865,26 @@ export class MatchmakingService {
       if (preferences.maxWaitTime !== undefined) {
         if (preferences.maxWaitTime < 30 || preferences.maxWaitTime > 600) {
           validationErrors.push(
-            'Max wait time must be between 30 seconds and 10 minutes'
+            "Max wait time must be between 30 seconds and 10 minutes",
           );
         }
       }
 
       if (preferences.skillRangeFlexibility !== undefined) {
-        const validFlexibilities = ['strict', 'medium', 'flexible'];
+        const validFlexibilities = ["strict", "medium", "flexible"];
         if (!validFlexibilities.includes(preferences.skillRangeFlexibility)) {
           validationErrors.push(
-            'Skill range flexibility must be strict, medium, or flexible'
+            "Skill range flexibility must be strict, medium, or flexible",
           );
         }
       }
 
       if (validationErrors.length > 0) {
         throw this.createBattleRoyaleError(
-          'VALIDATION_ERROR',
-          `Invalid queue preferences: ${validationErrors.join(', ')}`,
-          `Invalid preferences: ${validationErrors.join(', ')}`,
-          false
+          "VALIDATION_ERROR",
+          `Invalid queue preferences: ${validationErrors.join(", ")}`,
+          `Invalid preferences: ${validationErrors.join(", ")}`,
+          false,
         );
       }
 
@@ -1897,7 +1893,7 @@ export class MatchmakingService {
     } catch (error) {
       if (
         error instanceof Error &&
-        'type' in error &&
+        "type" in error &&
         (error as BattleRoyaleError).type
       ) {
         throw error;
@@ -1905,10 +1901,10 @@ export class MatchmakingService {
 
       Sentry.captureException(error);
       throw this.createBattleRoyaleError(
-        'UNKNOWN_ERROR',
+        "UNKNOWN_ERROR",
         `Failed to validate and update preferences: ${error}`,
-        'Failed to update your preferences. Please try again.',
-        true
+        "Failed to update your preferences. Please try again.",
+        true,
       );
     }
   }
@@ -1921,7 +1917,7 @@ export class MatchmakingService {
       queueSize: number;
       averageWaitTime: number;
       recentMatches: number;
-    }) => void
+    }) => void,
   ): UnsubscribeFunction {
     const metricsRef = ref(rtdb, this.METRICS_PATH);
 
@@ -1951,12 +1947,12 @@ export class MatchmakingService {
       },
       (error) => {
         Sentry.captureException(error, {
-          tags: { operation: 'queue_metrics_subscription' },
+          tags: { operation: "queue_metrics_subscription" },
         });
-      }
+      },
     );
 
-    return () => off(metricsRef, 'value', unsubscribe);
+    return () => off(metricsRef, "value", unsubscribe);
   }
 
   // ===== EXISTING LOBBY FILLING METHODS =====
@@ -1971,8 +1967,8 @@ export class MatchmakingService {
   }> {
     return Sentry.startSpan(
       {
-        op: 'matchmaking.fill_existing_lobbies',
-        name: 'Fill Existing Lobbies',
+        op: "matchmaking.fill_existing_lobbies",
+        name: "Fill Existing Lobbies",
       },
       async () => {
         try {
@@ -1987,7 +1983,7 @@ export class MatchmakingService {
           // Sort lobbies by creation time (oldest first) to fill them fairly
           availableLobbies.sort(
             (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
           );
 
           for (const lobby of availableLobbies) {
@@ -2000,7 +1996,7 @@ export class MatchmakingService {
             const compatiblePlayers = this.findCompatiblePlayersForLobby(
               remainingPlayers,
               lobby,
-              availableSlots
+              availableSlots,
             );
 
             if (compatiblePlayers.length > 0) {
@@ -2008,7 +2004,7 @@ export class MatchmakingService {
                 // Add players to the existing lobby
                 await this.addPlayersToExistingLobby(
                   lobby.code,
-                  compatiblePlayers
+                  compatiblePlayers,
                 );
 
                 filledLobbies.push({
@@ -2020,26 +2016,26 @@ export class MatchmakingService {
                 remainingPlayers = remainingPlayers.filter(
                   (player) =>
                     !compatiblePlayers.some(
-                      (cp) => cp.playerUid === player.playerUid
-                    )
+                      (cp) => cp.playerUid === player.playerUid,
+                    ),
                 );
 
                 // Check if lobby should start countdown after adding players
                 await this.checkAutoCountdownTrigger(lobby.code);
 
                 Sentry.addBreadcrumb({
-                  message: 'Players added to existing lobby',
+                  message: "Players added to existing lobby",
                   data: {
                     lobbyCode: lobby.code,
                     playersAdded: compatiblePlayers.length,
                     remainingSlots: availableSlots - compatiblePlayers.length,
                   },
-                  level: 'info',
+                  level: "info",
                 });
               } catch (error) {
                 // Log error but continue with other lobbies
                 Sentry.captureException(error, {
-                  tags: { operation: 'add_players_to_existing_lobby' },
+                  tags: { operation: "add_players_to_existing_lobby" },
                   extra: {
                     lobbyCode: lobby.code,
                     playerCount: compatiblePlayers.length,
@@ -2056,13 +2052,13 @@ export class MatchmakingService {
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'MATCHMAKING_TIMEOUT',
+            "MATCHMAKING_TIMEOUT",
             `Failed to fill existing lobbies: ${error}`,
-            'Failed to find available matches. Please try again.',
-            true
+            "Failed to find available matches. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 
@@ -2080,7 +2076,7 @@ export class MatchmakingService {
     }>
   > {
     try {
-      const lobbiesRef = ref(rtdb, 'lobbies');
+      const lobbiesRef = ref(rtdb, "lobbies");
       const snapshot = await get(lobbiesRef);
 
       if (!snapshot.exists()) {
@@ -2102,8 +2098,8 @@ export class MatchmakingService {
 
         // Only consider Battle Royale lobbies in waiting status
         if (
-          lobby.type === 'battle_royale' &&
-          lobby.status === 'waiting' &&
+          lobby.type === "battle_royale" &&
+          lobby.status === "waiting" &&
           lobby.players
         ) {
           const currentPlayerCount = Object.keys(lobby.players).length;
@@ -2112,7 +2108,7 @@ export class MatchmakingService {
           if (hasAvailableSlots) {
             // Calculate average skill rating of current players
             const playerStats = await Promise.all(
-              Object.keys(lobby.players).map((uid) => this.getPlayerStats(uid))
+              Object.keys(lobby.players).map((uid) => this.getPlayerStats(uid)),
             );
 
             const skillRatings = playerStats
@@ -2154,7 +2150,7 @@ export class MatchmakingService {
       averageSkillRating: number;
       currentPlayerCount: number;
     },
-    maxPlayers: number
+    maxPlayers: number,
   ): QueueEntry[] {
     const compatiblePlayers: QueueEntry[] = [];
 
@@ -2179,11 +2175,11 @@ export class MatchmakingService {
 
       // Check skill rating compatibility
       const skillDifference = Math.abs(
-        player.skillRating - lobby.averageSkillRating
+        player.skillRating - lobby.averageSkillRating,
       );
       const maxSkillDifference = this.getMaxSkillDifferenceForLobby(
         player,
-        lobby
+        lobby,
       );
 
       if (skillDifference <= maxSkillDifference) {
@@ -2208,7 +2204,7 @@ export class MatchmakingService {
    */
   private getMaxSkillDifferenceForLobby(
     player: QueueEntry,
-    lobby: { averageSkillRating: number; currentPlayerCount: number }
+    lobby: { averageSkillRating: number; currentPlayerCount: number },
   ): number {
     const waitTime = Date.now() - new Date(player.queuedAt).getTime();
     const waitMinutes = waitTime / (60 * 1000);
@@ -2216,13 +2212,13 @@ export class MatchmakingService {
     // Base skill range based on player preferences
     let baseRange: number;
     switch (player.preferences.skillRangeFlexibility) {
-      case 'strict':
+      case "strict":
         baseRange = 150; // Slightly more flexible for existing lobbies
         break;
-      case 'medium':
+      case "medium":
         baseRange = 250;
         break;
-      case 'flexible':
+      case "flexible":
         baseRange = 450;
         break;
       default:
@@ -2247,10 +2243,8 @@ export class MatchmakingService {
       skillRatings.reduce((sum, rating) => sum + rating, 0) /
       skillRatings.length;
     const variance =
-      skillRatings.reduce(
-        (sum, rating) => sum + Math.pow(rating - avgRating, 2),
-        0
-      ) / skillRatings.length;
+      skillRatings.reduce((sum, rating) => sum + (rating - avgRating) ** 2, 0) /
+      skillRatings.length;
 
     // Convert variance to balance score (0-1, higher is better)
     return Math.max(0, Math.min(1, 1 - variance / 100000));
@@ -2261,7 +2255,7 @@ export class MatchmakingService {
    */
   private async addPlayersToExistingLobby(
     lobbyCode: string,
-    players: QueueEntry[]
+    players: QueueEntry[],
   ): Promise<void> {
     for (const player of players) {
       const joinParams: JoinLobbyParams = {
@@ -2279,7 +2273,7 @@ export class MatchmakingService {
       } catch (error) {
         // Log error but don't throw - continue with other players
         Sentry.captureException(error, {
-          tags: { operation: 'add_player_to_existing_lobby' },
+          tags: { operation: "add_player_to_existing_lobby" },
           extra: { lobbyCode, playerUid: player.playerUid },
         });
 
@@ -2303,7 +2297,7 @@ export class MatchmakingService {
       const playerCount = Object.keys(lobby.players || {}).length;
 
       // Trigger countdown if we have minimum players and no countdown is active
-      if (playerCount >= 3 && lobby.status === 'waiting') {
+      if (playerCount >= 3 && lobby.status === "waiting") {
         const hasActiveCountdown = lobby.autoCountdown?.active;
 
         if (!hasActiveCountdown) {
@@ -2313,7 +2307,7 @@ export class MatchmakingService {
     } catch (error) {
       // Don't throw on countdown trigger failure, just log
       Sentry.captureException(error, {
-        tags: { operation: 'check_auto_countdown_trigger' },
+        tags: { operation: "check_auto_countdown_trigger" },
         extra: { lobbyCode },
       });
     }
@@ -2335,15 +2329,15 @@ export class MatchmakingService {
   > {
     return Sentry.startSpan(
       {
-        op: 'matchmaking.process',
-        name: 'Process Matchmaking',
+        op: "matchmaking.process",
+        name: "Process Matchmaking",
       },
       async () => {
         try {
           // Get all queued players
           const queueRef = query(
             ref(rtdb, this.QUEUE_PATH),
-            orderByChild('queuedAt')
+            orderByChild("queuedAt"),
           );
           const snapshot = await get(queueRef);
 
@@ -2391,7 +2385,7 @@ export class MatchmakingService {
                 }
               } catch (error) {
                 Sentry.captureException(error, {
-                  tags: { operation: 'create_new_match' },
+                  tags: { operation: "create_new_match" },
                   extra: { matchId: match.matchId },
                 });
               }
@@ -2401,18 +2395,18 @@ export class MatchmakingService {
           const totalPlayersMatched =
             filledLobbies.reduce(
               (sum, lobby) => sum + lobby.playersAdded.length,
-              0
+              0,
             ) + newMatches.reduce((sum, match) => sum + match.players, 0);
 
           Sentry.addBreadcrumb({
-            message: 'Matchmaking process completed',
+            message: "Matchmaking process completed",
             data: {
               totalQueuedPlayers: queuedPlayers.length,
               filledLobbies: filledLobbies.length,
               newMatches: newMatches.length,
               totalPlayersMatched,
             },
-            level: 'info',
+            level: "info",
           });
 
           return {
@@ -2430,13 +2424,13 @@ export class MatchmakingService {
         } catch (error) {
           Sentry.captureException(error);
           throw this.createBattleRoyaleError(
-            'MATCHMAKING_TIMEOUT',
+            "MATCHMAKING_TIMEOUT",
             `Failed to process matchmaking: ${error}`,
-            'Matchmaking is currently unavailable. Please try again.',
-            true
+            "Matchmaking is currently unavailable. Please try again.",
+            true,
           );
         }
-      }
+      },
     );
   }
 }

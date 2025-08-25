@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { ref, onValue } from "firebase/database";
-import { rtdb } from "@/firebase/client";
 import * as Sentry from "@sentry/nextjs";
+import { onValue, ref } from "firebase/database";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { rtdb } from "@/firebase/client";
 
 // Hook return interface
 interface UseLobbyConnectionReturn {
@@ -50,7 +50,7 @@ export function useLobbyConnection(
    */
   const calculateRetryDelay = useCallback((attempt: number): number => {
     const exponentialDelay = Math.min(
-      BASE_RETRY_DELAY * Math.pow(2, attempt),
+      BASE_RETRY_DELAY * 2 ** attempt,
       MAX_RETRY_DELAY,
     );
     // Add jitter (±25% of the delay)

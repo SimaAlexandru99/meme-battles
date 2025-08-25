@@ -1,7 +1,7 @@
 "use client";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { useAdLocalization } from "@/lib/use-ad-localization";
-import React from "react";
 
 // AdBannerProps interface is defined in types/index.d.ts
 
@@ -103,7 +103,7 @@ export default function AdBanner({
               const slot = googletag.defineSlot(
                 slotData.googleAdId!,
                 [160, 600],
-                slotData.containerId
+                slotData.containerId,
               );
 
               if (slot) {

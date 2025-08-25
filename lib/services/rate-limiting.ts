@@ -5,7 +5,7 @@
  * for Firebase Cloud Functions-based rate limiting if database rules are not enough.
  */
 
-import { ref, get, set } from "firebase/database";
+import { get, ref, set } from "firebase/database";
 import { rtdb } from "@/firebase/client";
 
 export interface RateLimitConfig {

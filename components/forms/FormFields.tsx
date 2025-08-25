@@ -1,19 +1,18 @@
 "use client";
-import { Controller, FieldValues } from "react-hook-form";
-import { useState } from "react";
 
 import { Eye, EyeOff } from "lucide-react";
-
+import { useState } from "react";
+import { Controller, type FieldValues } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 import {
+  FormControl,
+  FormDescription,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -23,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 const allowedInputModes = [
   "none",

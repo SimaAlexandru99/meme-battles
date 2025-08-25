@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Bangers } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/providers/theme-provider";
-import { SWRProvider } from "@/providers/swr-provider";
-import { InvitationLink } from "@/components/invitation-link";
 import { Suspense } from "react";
+import { InvitationLink } from "@/components/invitation-link";
+import { Toaster } from "@/components/ui/sonner";
+import { SWRProvider } from "@/providers/swr-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 const bangers = Bangers({
   weight: "400",

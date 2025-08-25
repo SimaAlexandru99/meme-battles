@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { signInAsGuest } from "@/firebase/client";
 import { signInAsGuest as signInAsGuestAction } from "@/lib/actions/auth.action";
 

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { MatchmakingService } from '@/lib/services/matchmaking.service';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { MatchmakingService } from "@/lib/services/matchmaking.service";
 
 // Hook return interface
 export interface UseBattleRoyaleStatsReturn {
@@ -16,7 +16,7 @@ export interface UseBattleRoyaleStatsReturn {
   rank: string;
   percentile: number;
   nextRankProgress: number;
-  recentPerformance: 'improving' | 'declining' | 'stable';
+  recentPerformance: "improving" | "declining" | "stable";
 }
 
 /**
@@ -24,7 +24,7 @@ export interface UseBattleRoyaleStatsReturn {
  * Implements player statistics state management with real-time updates
  */
 export function useBattleRoyaleStats(
-  playerUid?: string
+  playerUid?: string,
 ): UseBattleRoyaleStatsReturn {
   // Core state
   const [stats, setStats] = useState<BattleRoyaleStats | null>(null);
@@ -32,12 +32,12 @@ export function useBattleRoyaleStats(
   const [error, setError] = useState<string | null>(null);
 
   // Derived state
-  const [rank, setRank] = useState<string>('Unranked');
+  const [rank, setRank] = useState<string>("Unranked");
   const [percentile, setPercentile] = useState<number>(0);
   const [nextRankProgress, setNextRankProgress] = useState<number>(0);
   const [recentPerformance, setRecentPerformance] = useState<
-    'improving' | 'declining' | 'stable'
-  >('stable');
+    "improving" | "declining" | "stable"
+  >("stable");
 
   // Service and user references
   const matchmakingService = useRef(MatchmakingService.getInstance());
@@ -59,7 +59,7 @@ export function useBattleRoyaleStats(
    */
   const handleError = useCallback(
     (error: unknown, operation: string) => {
-      let errorMessage = 'Failed to load statistics. Please try again.';
+      let errorMessage = "Failed to load statistics. Please try again.";
 
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -72,11 +72,11 @@ export function useBattleRoyaleStats(
       Sentry.captureException(error, {
         tags: {
           operation,
-          playerUid: targetPlayerUid || 'unknown',
+          playerUid: targetPlayerUid || "unknown",
         },
       });
     },
-    [targetPlayerUid]
+    [targetPlayerUid],
   );
 
   /**
@@ -90,14 +90,14 @@ export function useBattleRoyaleStats(
         // Get ranking tier
         const rankingTier =
           await matchmakingService.current.getPlayerRankingTier(
-            targetPlayerUid
+            targetPlayerUid,
           );
         setRank(rankingTier.name);
 
         // Calculate percentile
         const playerPercentile =
           await matchmakingService.current.calculatePlayerPercentile(
-            targetPlayerUid
+            targetPlayerUid,
           );
         setPercentile(playerPercentile);
 
@@ -126,25 +126,25 @@ export function useBattleRoyaleStats(
             statsData.skillRating > statsData.skillRating * 0.95; // Simplified check
 
           if (isOnWinStreak && hasGoodWinRate) {
-            setRecentPerformance('improving');
+            setRecentPerformance("improving");
           } else if (statsData.currentStreak === 0 && statsData.winRate < 0.4) {
-            setRecentPerformance('declining');
+            setRecentPerformance("declining");
           } else {
-            setRecentPerformance('stable');
+            setRecentPerformance("stable");
           }
         } else {
-          setRecentPerformance('stable');
+          setRecentPerformance("stable");
         }
       } catch (error) {
-        console.warn('Failed to calculate derived data:', error);
+        console.warn("Failed to calculate derived data:", error);
         // Set defaults on error
-        setRank('Unranked');
+        setRank("Unranked");
         setPercentile(0);
         setNextRankProgress(0);
-        setRecentPerformance('stable');
+        setRecentPerformance("stable");
       }
     },
-    [targetPlayerUid]
+    [targetPlayerUid],
   );
 
   /**
@@ -197,29 +197,29 @@ export function useBattleRoyaleStats(
           await calculateDerivedData(playerStats);
         } else {
           // Reset derived data for new players
-          setRank('Unranked');
+          setRank("Unranked");
           setPercentile(0);
           setNextRankProgress(0);
-          setRecentPerformance('stable');
+          setRecentPerformance("stable");
         }
 
         setIsLoading(false);
 
         Sentry.addBreadcrumb({
-          message: 'Successfully fetched Battle Royale stats',
+          message: "Successfully fetched Battle Royale stats",
           data: {
             playerUid: targetPlayerUid,
             hasStats: !!playerStats,
             gamesPlayed: playerStats?.gamesPlayed || 0,
             skillRating: playerStats?.skillRating || 0,
           },
-          level: 'info',
+          level: "info",
         });
       } catch (error) {
-        handleError(error, 'fetch_battle_royale_stats');
+        handleError(error, "fetch_battle_royale_stats");
       }
     },
-    [targetPlayerUid, isCacheValid, calculateDerivedData, handleError]
+    [targetPlayerUid, isCacheValid, calculateDerivedData, handleError],
   );
 
   /**
@@ -247,7 +247,7 @@ export function useBattleRoyaleStats(
           setupPeriodicRefresh(); // Schedule next refresh
         }
       },
-      2 * 60 * 1000
+      2 * 60 * 1000,
     ); // 2 minutes
   }, [targetPlayerUid, fetchStats]);
 
@@ -268,10 +268,10 @@ export function useBattleRoyaleStats(
       setupPeriodicRefresh();
     } else {
       setStats(null);
-      setRank('Unranked');
+      setRank("Unranked");
       setPercentile(0);
       setNextRankProgress(0);
-      setRecentPerformance('stable');
+      setRecentPerformance("stable");
       cleanup();
     }
 

@@ -1,42 +1,42 @@
 "use client";
 
-import React, { memo, useCallback, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useHover, useKeyPress, useIdle, useTitle } from "react-haiku";
-import { Button } from "@/components/ui/button";
-import {
-  RiGlobalLine,
-  RiFireLine,
-  RiGroupLine,
-  RiDiceLine,
-  RiUserLine,
-  RiLogoutBoxLine,
-  RiDiscordLine,
-  RiNotificationLine,
-  RiArrowDownLine,
-} from "react-icons/ri";
-import Particles from "@/components/ui/particles-background";
+import * as Sentry from "@sentry/nextjs";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { memo, useCallback, useState } from "react";
+import { useHover, useIdle, useKeyPress, useTitle } from "react-haiku";
+import {
+  RiArrowDownLine,
+  RiDiceLine,
+  RiDiscordLine,
+  RiFireLine,
+  RiGlobalLine,
+  RiGroupLine,
+  RiLogoutBoxLine,
+  RiNotificationLine,
+  RiUserLine,
+} from "react-icons/ri";
+import { toast } from "sonner";
+import { PrivateLobbySection } from "@/components/private-lobby-section";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import ProfilePicker from "./profile-picker";
-import GameCard from "./game-card";
-import { PrivateLobbySection } from "@/components/private-lobby-section";
-import {
-  cardExitVariants,
-  buttonVariants,
-  microInteractionVariants,
-  lobbyEnterVariants,
-} from "@/lib/animations/private-lobby-variants";
-import { toast } from "sonner";
-import { signOut } from "@/lib/actions/auth.action";
-import { useUpdateProfile } from "@/hooks/useUpdateProfile";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useLobbyManagement } from "@/hooks/use-lobby-management";
+import Particles from "@/components/ui/particles-background";
 import { generateGuestDisplayName } from "@/firebase/client";
-import * as Sentry from "@sentry/nextjs";
-import { useRouter } from "next/navigation";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { signOut } from "@/lib/actions/auth.action";
+import {
+  buttonVariants,
+  cardExitVariants,
+  lobbyEnterVariants,
+  microInteractionVariants,
+} from "@/lib/animations/private-lobby-variants";
+import GameCard from "./game-card";
+import ProfilePicker from "./profile-picker";
 
 interface AvatarSetupCardProps {
   initialUserData?: User | null;
@@ -53,7 +53,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
   const currentUser = user || initialUserData;
   const [nickname, setNickname] = useState(currentUser?.name || "MemeLord");
   const [currentAvatar, setCurrentAvatar] = useState(
-    currentUser?.avatarId || "evil-doge"
+    currentUser?.avatarId || "evil-doge",
   );
   const [profileURL] = useState(currentUser?.profileURL || "");
 
@@ -89,7 +89,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setNickname(e.target.value);
     },
-    []
+    [],
   );
 
   const handleNicknameBlur = useCallback(async () => {
@@ -123,7 +123,7 @@ const AvatarSetupCard = memo(function AvatarSetupCard({
         setCurrentAvatar(currentUser?.avatarId || "evil-doge");
       }
     },
-    [updateAvatar, currentUser?.avatarId, refresh]
+    [updateAvatar, currentUser?.avatarId, refresh],
   );
 
   return (
@@ -397,7 +397,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
 
   // State management for view transitions
   const [currentView, setCurrentView] = useState<"main" | "private-lobby">(
-    "main"
+    "main",
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -554,7 +554,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
                   try {
                     await joinLobby(code);
                     toast.success(
-                      "Joined lobby successfully! Redirecting to lobby..."
+                      "Joined lobby successfully! Redirecting to lobby...",
                     );
 
                     // Redirect to the lobby
@@ -568,13 +568,13 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
                   if (!user) {
                     toast.error("Please sign in to create a lobby");
                     throw new Error(
-                      "User must be authenticated to create a lobby"
+                      "User must be authenticated to create a lobby",
                     );
                   }
                   try {
                     const code = await createLobby();
                     toast.success(
-                      "Lobby created successfully! Redirecting to lobby..."
+                      "Lobby created successfully! Redirecting to lobby...",
                     );
 
                     // Redirect to the lobby

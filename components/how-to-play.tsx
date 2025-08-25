@@ -1,6 +1,24 @@
 "use client";
 
+import type { UseEmblaCarouselType } from "embla-carousel-react";
+import {
+  ChevronRight,
+  Download,
+  Gamepad2,
+  Share2,
+  Star,
+  Trophy,
+  Users,
+} from "lucide-react";
 import * as React from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,24 +33,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Users,
-  Gamepad2,
-  Star,
-  Trophy,
-  Share2,
-  Download,
-  ChevronRight,
-} from "lucide-react";
-import type { UseEmblaCarouselType } from "embla-carousel-react";
 
 const tutorialSteps = [
   {

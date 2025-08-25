@@ -1,10 +1,10 @@
 type FormType =
-  | 'sign-in'
-  | 'sign-up'
-  | 'forgot-password'
-  | 'reset-password'
-  | 'verify-email'
-  | 'resend-verification';
+  | "sign-in"
+  | "sign-up"
+  | "forgot-password"
+  | "reset-password"
+  | "verify-email"
+  | "resend-verification";
 
 interface SignInParams {
   email: string;
@@ -35,7 +35,7 @@ interface User {
 }
 
 // User Plan 2 types Free and Pro
-type UserPlan = 'free' | 'pro';
+type UserPlan = "free" | "pro";
 
 // Form option types
 interface SelectOption {
@@ -78,7 +78,7 @@ interface FormFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
   placeholder?: string;
-  type?: 'text' | 'email' | 'password' | 'textarea' | 'number' | 'url';
+  type?: "text" | "email" | "password" | "textarea" | "number" | "url";
   description?: string;
   className?: string;
   textareaClassName?: string;
@@ -110,9 +110,9 @@ interface AdSlotData {
   pokiAdId?: string;
 }
 
-type AdNetwork = 'google' | 'poki';
+type AdNetwork = "google" | "poki";
 
-type AdLoadingState = 'idle' | 'loading' | 'loaded' | 'error';
+type AdLoadingState = "idle" | "loading" | "loaded" | "error";
 
 interface AdNetworkConfig {
   network: AdNetwork;
@@ -147,7 +147,7 @@ interface GoogleAdsWindow extends Window {
     defineSlot: (
       adUnitPath: string,
       size: [number, number],
-      div: string
+      div: string,
     ) => GoogleAdSlot | null;
     pubads: () => GooglePubAds;
     enableServices: () => void;
@@ -169,15 +169,15 @@ interface AvatarState {
 }
 
 type AvatarAction =
-  | { type: 'SET_NICKNAME'; payload: string }
-  | { type: 'SET_CURRENT_AVATAR'; payload: string }
-  | { type: 'SET_PROFILE_URL'; payload: string | undefined }
-  | { type: 'SET_IS_LOADING'; payload: boolean }
+  | { type: "SET_NICKNAME"; payload: string }
+  | { type: "SET_CURRENT_AVATAR"; payload: string }
+  | { type: "SET_PROFILE_URL"; payload: string | undefined }
+  | { type: "SET_IS_LOADING"; payload: boolean }
   | {
-      type: 'UPDATE_USER_DATA';
+      type: "UPDATE_USER_DATA";
       payload: { name?: string; avatarId?: string; profileURL?: string };
     }
-  | { type: 'RESET_STATE' };
+  | { type: "RESET_STATE" };
 
 // Ad localization interface
 interface UseAdLocalizationOptions {
@@ -200,12 +200,12 @@ interface ProfilePickerProps {
   currentAvatar?: string;
   profileURL?: string;
   onAvatarChange?: (avatarId: string, avatarSrc: string) => void;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
   isUpdating?: boolean;
 }
 interface AdBannerProps {
-  position: 'left' | 'right';
+  position: "left" | "right";
   adId: string;
   upgradeUrl?: string;
   removeAdsText?: string;
@@ -246,14 +246,14 @@ interface Player {
   name: string;
   avatar: string;
   score: number;
-  status: 'waiting' | 'playing' | 'submitted' | 'winner';
+  status: "waiting" | "playing" | "submitted" | "winner";
   cards: MemeCard[];
   selectedCard?: MemeCard;
   isCurrentPlayer?: boolean;
   // AI-specific properties
   isAI?: boolean;
   aiPersonalityId?: string;
-  aiDifficulty?: 'easy' | 'medium' | 'hard';
+  aiDifficulty?: "easy" | "medium" | "hard";
   // Presence and metadata
   isOnline?: boolean;
   lastSeen?: string;
@@ -267,19 +267,19 @@ interface ChatMessage {
   playerName: string;
   message: string;
   timestamp: Date;
-  type: 'chat' | 'system' | 'action';
+  type: "chat" | "system" | "action";
 }
 
 interface GameState {
   phase:
-    | 'waiting'
-    | 'transition'
-    | 'countdown'
-    | 'submission'
-    | 'voting'
-    | 'results'
-    | 'leaderboard'
-    | 'game_over';
+    | "waiting"
+    | "transition"
+    | "countdown"
+    | "submission"
+    | "voting"
+    | "results"
+    | "leaderboard"
+    | "game_over";
   timeLeft: number;
   currentSituation: string;
   submissions: Record<
@@ -300,13 +300,13 @@ interface GameState {
 }
 
 // Lobby Management Types - Core Data Interfaces
-type LobbyStatus = 'waiting' | 'starting' | 'started' | 'ended';
-type PlayerStatus = 'waiting' | 'ready' | 'disconnected';
+type LobbyStatus = "waiting" | "starting" | "started" | "ended";
+type PlayerStatus = "waiting" | "ready" | "disconnected";
 type ConnectionStatus =
-  | 'connected'
-  | 'connecting'
-  | 'disconnected'
-  | 'reconnecting';
+  | "connected"
+  | "connecting"
+  | "disconnected"
+  | "reconnecting";
 
 // Core lobby data interface matching Firebase Realtime Database schema
 interface LobbyData {
@@ -322,7 +322,7 @@ interface LobbyData {
   gameState?: GameState;
   chat?: Record<string, ChatMessage>;
   // Battle Royale specific fields
-  type?: 'battle_royale';
+  type?: "battle_royale";
   competitiveSettings?: CompetitiveSettings;
   matchmakingInfo?: {
     matchId: string;
@@ -383,13 +383,13 @@ interface ValidationResult {
 // Event types for real-time updates
 interface LobbyEvent {
   type:
-    | 'player_joined'
-    | 'player_left'
-    | 'settings_updated'
-    | 'game_started'
-    | 'host_changed'
-    | 'lobby_deleted'
-    | 'player_kicked';
+    | "player_joined"
+    | "player_left"
+    | "settings_updated"
+    | "game_started"
+    | "host_changed"
+    | "lobby_deleted"
+    | "player_kicked";
   timestamp: string;
   data: unknown;
   playerId?: string;
@@ -441,25 +441,25 @@ interface UpdatePlayerStatusParams {
 
 // Error types for classification
 type LobbyErrorType =
-  | 'NETWORK_ERROR'
-  | 'LOBBY_NOT_FOUND'
-  | 'LOBBY_FULL'
-  | 'LOBBY_ALREADY_STARTED'
-  | 'PERMISSION_DENIED'
-  | 'VALIDATION_ERROR'
-  | 'CODE_GENERATION_FAILED'
-  | 'UNKNOWN_ERROR';
+  | "NETWORK_ERROR"
+  | "LOBBY_NOT_FOUND"
+  | "LOBBY_FULL"
+  | "LOBBY_ALREADY_STARTED"
+  | "PERMISSION_DENIED"
+  | "VALIDATION_ERROR"
+  | "CODE_GENERATION_FAILED"
+  | "UNKNOWN_ERROR";
 
 // Battle Royale specific error types
 type BattleRoyaleErrorType =
-  | 'QUEUE_FULL'
-  | 'ALREADY_IN_QUEUE'
-  | 'MATCHMAKING_TIMEOUT'
-  | 'INSUFFICIENT_PLAYERS'
-  | 'SKILL_RATING_UNAVAILABLE'
-  | 'REGION_UNAVAILABLE'
-  | 'MATCH_CREATION_FAILED'
-  | 'STATS_UPDATE_FAILED';
+  | "QUEUE_FULL"
+  | "ALREADY_IN_QUEUE"
+  | "MATCHMAKING_TIMEOUT"
+  | "INSUFFICIENT_PLAYERS"
+  | "SKILL_RATING_UNAVAILABLE"
+  | "REGION_UNAVAILABLE"
+  | "MATCH_CREATION_FAILED"
+  | "STATS_UPDATE_FAILED";
 
 interface LobbyError extends Error {
   type: LobbyErrorType;
@@ -528,7 +528,7 @@ interface PlayerData {
   // AI-specific properties
   isAI?: boolean;
   aiPersonalityId?: string;
-  aiDifficulty?: 'easy' | 'medium' | 'hard';
+  aiDifficulty?: "easy" | "medium" | "hard";
 }
 
 // Battle Royale Queue and Matchmaking Types
@@ -547,14 +547,14 @@ interface QueueEntry {
 
 interface QueuePreferences {
   maxWaitTime: number; // seconds
-  skillRangeFlexibility: 'strict' | 'medium' | 'flexible';
+  skillRangeFlexibility: "strict" | "medium" | "flexible";
   regionPreference?: string;
 }
 
 interface ConnectionInfo {
   region: string;
   latency: number;
-  connectionQuality: 'poor' | 'fair' | 'good' | 'excellent';
+  connectionQuality: "poor" | "fair" | "good" | "excellent";
 }
 
 interface MatchmakingResult {
@@ -599,7 +599,7 @@ interface GameResult {
   score: number;
   roundsWon: number;
   totalRounds: number;
-  gameMode: 'battle_royale';
+  gameMode: "battle_royale";
   duration: number; // seconds
   xpEarned: number;
   skillRatingChange: number;
@@ -608,7 +608,7 @@ interface GameResult {
 
 // Battle Royale Lobby Extensions
 interface BattleRoyaleLobbyParams extends CreateLobbyParams {
-  type: 'battle_royale';
+  type: "battle_royale";
   matchId: string;
   competitiveSettings: CompetitiveSettings;
   autoStart: boolean;

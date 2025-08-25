@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, Zap, Turtle, Timer } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Clock, Timer, Turtle, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 
 interface TimeLimitOption {

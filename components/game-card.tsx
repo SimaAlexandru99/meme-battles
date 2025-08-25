@@ -1,12 +1,12 @@
 "use client";
 
-import * as React from "react";
 import { motion } from "framer-motion";
+import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  badgeVariants,
   buttonVariants,
   microInteractionVariants,
-  badgeVariants,
 } from "@/lib/animations/private-lobby-variants";
 
 interface GameCardProps {
@@ -42,7 +42,7 @@ export default function GameCard({
 }: GameCardProps) {
   // Focus management refs
   const cardRef = React.useRef<HTMLDivElement>(null);
-  const buttonRef = React.useRef<HTMLDivElement>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
 
   const handleClick = React.useCallback(() => {
     if (onClick) {
@@ -82,12 +82,11 @@ export default function GameCard({
   }, [handleClick, handleCardInteraction]);
 
   return (
-    <motion.div
+    <motion.article
       variants={microInteractionVariants}
       whileHover="hover"
       whileTap="tap"
       className="w-full h-full"
-      role="article"
       aria-label={`${title} game card`}
     >
       <Card
@@ -95,7 +94,6 @@ export default function GameCard({
         className={`relative border-0 shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden ${hoverShadowColor} ${className} group w-full h-full`}
         onClick={handleClickWithAnnouncement}
         onKeyDown={handleKeyDown}
-        role="button"
         tabIndex={onClick ? 0 : -1}
         aria-label={`${title} - ${description || ""}`}
         aria-describedby={`${title.toLowerCase().replace(/\s+/g, "-")}-description`}
@@ -159,13 +157,13 @@ export default function GameCard({
 
           {children}
 
-          <motion.div
+          <motion.button
             ref={buttonRef}
             className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 sm:px-4 sm:py-2 border border-white/30"
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
-            role="button"
+            type="button"
             tabIndex={-1}
             aria-label={`${buttonText} for ${title}`}
             aria-describedby={`${title.toLowerCase().replace(/\s+/g, "-")}-button-description`}
@@ -174,7 +172,7 @@ export default function GameCard({
             <span className="text-white font-bangers font-medium tracking-wide text-xs sm:text-sm">
               {buttonText}
             </span>
-          </motion.div>
+          </motion.button>
           <div
             id={`${title.toLowerCase().replace(/\s+/g, "-")}-button-description`}
             className="sr-only"
@@ -183,6 +181,6 @@ export default function GameCard({
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </motion.article>
   );
 }

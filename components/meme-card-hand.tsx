@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { MemeCard, CardTheme } from "@/components/meme-card";
-import { cn } from "@/lib/utils";
+import { type CardTheme, MemeCard } from "@/components/meme-card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface MemeCardHandProps {
   cards: MemeCard[];
@@ -42,7 +42,7 @@ export function MemeCardHand({
       if (randomValue < 0.35) return "rare"; // 20%
       return "common"; // 65%
     },
-    [showRarity]
+    [showRarity],
   );
 
   const handleCardSelect = useCallback(
@@ -50,7 +50,7 @@ export function MemeCardHand({
       if (hasSubmitted) return;
       onSelectCard(card);
     },
-    [hasSubmitted, onSelectCard]
+    [hasSubmitted, onSelectCard],
   );
 
   const handleCardHover = useCallback((cardId: string | null) => {
@@ -91,7 +91,7 @@ export function MemeCardHand({
                     "relative transition-all duration-300 ease-out",
                     isHovered && "scale-110 z-50",
                     isSelected && "scale-110 z-40",
-                    hasSubmitted && "opacity-50 cursor-not-allowed"
+                    hasSubmitted && "opacity-50 cursor-not-allowed",
                   )}
                   onMouseEnter={() => handleCardHover(card.id)}
                   onMouseLeave={() => handleCardHover(null)}
@@ -114,21 +114,26 @@ export function MemeCardHand({
       {/* Mobile Layout - Centered and visible */}
       <div className="lg:hidden w-full">
         {/* Mobile Cards Horizontal Scroll */}
-        <div 
-          className="w-full overflow-x-auto overflow-y-hidden" 
-          style={{ 
-            scrollbarWidth: 'none', /* Firefox */
-            msOverflowStyle: 'none', /* Internet Explorer 10+ */
+        <div
+          className="w-full overflow-x-auto overflow-y-hidden"
+          style={{
+            scrollbarWidth: "none" /* Firefox */,
+            msOverflowStyle: "none" /* Internet Explorer 10+ */,
           }}
         >
-          <style dangerouslySetInnerHTML={{
-            __html: `
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
               .overflow-x-auto::-webkit-scrollbar {
                 display: none; /* Safari and Chrome */
               }
-            `
-          }} />
-          <div className="flex items-center justify-center gap-4 px-8 py-4 min-w-full" style={{ minWidth: `${Math.max(cards.length * 100, 320)}px` }}>
+            `,
+            }}
+          />
+          <div
+            className="flex items-center justify-center gap-4 px-8 py-4 min-w-full"
+            style={{ minWidth: `${Math.max(cards.length * 100, 320)}px` }}
+          >
             {cards.map((card) => {
               const isSelected = selectedCard?.id === card.id;
               const rarity = getCardRarity(card.id);
@@ -140,15 +145,17 @@ export function MemeCardHand({
                     "relative transition-all duration-300 flex-shrink-0",
                     "w-20 h-28", // Slightly larger for better visibility
                     isSelected && "z-10",
-                    hasSubmitted && "opacity-50 cursor-not-allowed"
+                    hasSubmitted && "opacity-50 cursor-not-allowed",
                   )}
                   style={{
-                    transform: isSelected ? 'scale(1.15) translateY(-4px)' : 'scale(1)',
-                    boxShadow: isSelected 
-                      ? '0 8px 25px rgba(168, 85, 247, 0.4), 0 0 0 3px rgb(168 85 247 / 0.8)' 
-                      : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                    borderRadius: '12px',
-                    filter: isSelected ? 'brightness(1.1)' : 'brightness(1)',
+                    transform: isSelected
+                      ? "scale(1.15) translateY(-4px)"
+                      : "scale(1)",
+                    boxShadow: isSelected
+                      ? "0 8px 25px rgba(168, 85, 247, 0.4), 0 0 0 3px rgb(168 85 247 / 0.8)"
+                      : "0 4px 12px rgba(0, 0, 0, 0.3)",
+                    borderRadius: "12px",
+                    filter: isSelected ? "brightness(1.1)" : "brightness(1)",
                   }}
                   onClick={() => handleCardSelect(card)}
                 >
@@ -171,7 +178,11 @@ export function MemeCardHand({
             <div className="inline-flex items-center gap-2 bg-purple-600/20 border border-purple-400/30 rounded-lg px-3 py-1">
               <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
               <p className="text-purple-200 text-sm font-bangers">
-                Selected: {selectedCard.filename?.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '') || 'Card'}
+                Selected:{" "}
+                {selectedCard.filename?.replace(
+                  /\.(jpg|jpeg|png|gif|webp)$/i,
+                  "",
+                ) || "Card"}
               </p>
             </div>
           </div>

@@ -7,11 +7,11 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
+import { getApps, initializeApp } from "firebase-admin/app";
+import { getDatabase, ServerValue } from "firebase-admin/database";
 import { setGlobalOptions } from "firebase-functions";
 import { onValueCreated, onValueWritten } from "firebase-functions/v2/database";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getDatabase, ServerValue } from "firebase-admin/database";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -68,7 +68,7 @@ export const onSubmissionCreated = onValueCreated(
       updates[`lobbies/${lobbyCode}/updatedAt`] = ServerValue.TIMESTAMP;
       await rtdb.ref().update(updates);
     }
-  }
+  },
 );
 
 export const onVoteCreated = onValueCreated(
@@ -103,7 +103,7 @@ export const onVoteCreated = onValueCreated(
       updates[`lobbies/${lobbyCode}/updatedAt`] = ServerValue.TIMESTAMP;
       await rtdb.ref().update(updates);
     }
-  }
+  },
 );
 
 export const onResultsPhase = onValueWritten(
@@ -158,14 +158,14 @@ export const onResultsPhase = onValueWritten(
       ranking.push({ pid, votes: receivedVotes, delta });
     }
     ranking.sort((a, b) =>
-      b.votes !== a.votes ? b.votes - a.votes : a.pid.localeCompare(b.pid)
+      b.votes !== a.votes ? b.votes - a.votes : a.pid.localeCompare(b.pid),
     );
     updates[`${gameStatePath}/winner`] = winnerId;
     updates[`${gameStatePath}/roundResults`] = { roundNumber, ranking };
     updates[`${gameStatePath}/scoredRound`] = roundNumber;
     updates[`lobbies/${lobbyCode}/updatedAt`] = ServerValue.TIMESTAMP;
     await rtdb.ref().update(updates);
-  }
+  },
 );
 
 export const cleanupLobbiesV2 = onSchedule("every 5 minutes", async () => {
@@ -190,7 +190,7 @@ export const cleanupLobbiesV2 = onSchedule("every 5 minutes", async () => {
         (p: any) => {
           const ts = p?.lastSeen || p?.joinedAt;
           return ts ? new Date(ts).getTime() : 0;
-        }
+        },
       );
       const mostRecentActivity = playerLastSeenTimes.length
         ? Math.max(...playerLastSeenTimes)

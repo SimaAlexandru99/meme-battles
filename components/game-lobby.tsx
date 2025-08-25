@@ -1,27 +1,28 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useClipboard, useEventListener } from "react-haiku";
 import {
+  RiAlertLine,
   RiArrowLeftLine,
   RiFileCopyLine,
-  RiShareLine,
-  RiPlayLine,
-  RiSettings3Line,
-  RiWifiOffLine,
-  RiRefreshLine,
-  RiUserLine,
-  RiTimeLine,
   RiGamepadLine,
-  RiAlertLine,
+  RiPlayLine,
+  RiRefreshLine,
   RiRobotLine,
+  RiSettings3Line,
+  RiShareLine,
+  RiTimeLine,
+  RiUserLine,
+  RiWifiOffLine,
 } from "react-icons/ri";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-
+import { toast } from "sonner";
+import { AddBotButton } from "@/components/game-settings/AddBotButton";
+import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
+import { KickPlayerButton } from "@/components/kick-player-button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,24 +33,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn, formatJoinTime } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import * as Sentry from "@sentry/nextjs";
-import { useEventListener, useClipboard } from "react-haiku";
-import { useLobbyManagement } from "@/hooks/use-lobby-management";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useLobbyConnection } from "@/hooks/use-lobby-connection";
-
-import { GameSettingsModal } from "@/components/game-settings/GameSettingsModal";
-import { AddBotButton } from "@/components/game-settings/AddBotButton";
-import { KickPlayerButton } from "@/components/kick-player-button";
+import { useLobbyGameTransition } from "@/hooks/use-lobby-game-transition";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import {
-  buttonVariants,
   badgeVariants,
+  buttonVariants,
   microInteractionVariants,
   successVariants,
 } from "@/lib/animations/private-lobby-variants";
-import { useLobbyGameTransition } from "@/hooks/use-lobby-game-transition";
+import { cn, formatJoinTime } from "@/lib/utils";
 
 interface GameLobbyProps {
   lobbyCode: string;
@@ -111,10 +109,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(error);
             throw error;
           }
-        }
+        },
       );
     },
-    [kickPlayer]
+    [kickPlayer],
   );
 
   // Network status monitoring
@@ -180,7 +178,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           toast.error("Failed to copy invitation code");
           Sentry.captureException(err);
         }
-      }
+      },
     );
   }, [lobbyCode, copyToClipboard]);
 
@@ -217,7 +215,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
             Sentry.captureException(err);
           }
         }
-      }
+      },
     );
   }, [lobbyCode, copyToClipboard]);
 
@@ -338,10 +336,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           } finally {
             setIsSavingSettings(false);
           }
-        }
+        },
       );
     },
-    [updateSettings]
+    [updateSettings],
   );
 
   // Handle adding AI player
@@ -374,10 +372,10 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
           } finally {
             setIsAddingBot(false);
           }
-        }
+        },
       );
     },
-    [addBot]
+    [addBot],
   );
 
   // Navigation to gameplay is handled centrally by useLobbyGameTransition
@@ -586,13 +584,13 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     "flex items-center gap-1 font-bangers tracking-wide text-xs sm:text-sm",
                     isOnline
                       ? "bg-green-500/20 text-green-400 border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border-red-500/30"
+                      : "bg-red-500/20 text-red-400 border-red-500/30",
                   )}
                 >
                   <motion.div
                     className={cn(
                       "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full",
-                      isOnline ? "bg-green-400" : "bg-red-400"
+                      isOnline ? "bg-green-400" : "bg-red-400",
                     )}
                     animate={isOnline ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 2, repeat: Infinity }}
@@ -666,7 +664,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       "text-white font-bangers text-lg tracking-wide",
                       "shadow-lg shadow-purple-500/30",
                       "focus-visible:ring-2 focus-visible:ring-purple-500/50",
-                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                      "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                     )}
                   >
                     <RiShareLine className="w-5 h-5 mr-2" />
@@ -750,7 +748,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             "focus-visible:ring-2 focus-visible:ring-green-500/50",
                             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
                             // Mobile-specific enhancements
-                            "sm:ring-1 sm:hover:ring-2"
+                            "sm:ring-1 sm:hover:ring-2",
                           )}
                         >
                           {showTransitionOverlay && transitionCountdown ? (
@@ -806,7 +804,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           maxBots={6}
                           currentBotCount={
                             Object.values(lobby.players).filter(
-                              (p: PlayerData) => p.isAI
+                              (p: PlayerData) => p.isAI,
                             ).length
                           }
                           disabled={!isCurrentUserHost}
@@ -838,7 +836,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                     {Object.entries(lobby.players).map(
                       (
                         [playerId, player]: [string, PlayerData],
-                        index: number
+                        index: number,
                       ) => (
                         <motion.div
                           key={playerId}
@@ -849,7 +847,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                           className={cn(
                             "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg",
                             "bg-slate-700/30 border border-slate-600/30",
-                            "hover:bg-slate-700/50 transition-colors duration-200"
+                            "hover:bg-slate-700/50 transition-colors duration-200",
                           )}
                           variants={microInteractionVariants}
                           whileHover="hover"
@@ -865,7 +863,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                                   "font-bangers text-sm sm:text-base",
                                   player.isAI
                                     ? "bg-purple-600 text-white"
-                                    : "bg-purple-600 text-white"
+                                    : "bg-purple-600 text-white",
                                 )}
                               >
                                 {player.isAI ? (
@@ -946,7 +944,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                             />
                           </motion.div>
                         </motion.div>
-                      )
+                      ),
                     )}
                   </AnimatePresence>
 

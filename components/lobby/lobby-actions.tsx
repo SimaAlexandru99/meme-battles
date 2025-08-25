@@ -1,11 +1,11 @@
 "use client";
 
-import * as React from "react";
 import { motion } from "framer-motion";
-import { StartGameButton } from "./start-game-button";
-import { LeaveLobbyButton } from "./leave-lobby-button";
-import { cn } from "@/lib/utils";
+import * as React from "react";
 import { staggerContainerVariants } from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
+import { LeaveLobbyButton } from "./leave-lobby-button";
+import { StartGameButton } from "./start-game-button";
 
 interface LobbyActionsProps {
   // Lobby data

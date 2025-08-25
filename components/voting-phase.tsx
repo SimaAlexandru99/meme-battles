@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useCallback, useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
 import { motion } from "framer-motion";
-import { Flame, Check, ThumbsUp, Timer, User } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Check, Flame, ThumbsUp, Timer, User } from "lucide-react";
 import Image from "next/image";
+import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface VotingPhaseProps {
   lobbyCode: string;
@@ -49,7 +49,7 @@ export function VotingPhase({
   }, [roundNumber, totalRounds, timeLeft]);
   const hasVoted = useMemo(
     () => Boolean(votes?.[currentUser.id]),
-    [votes, currentUser.id]
+    [votes, currentUser.id],
   );
 
   // Ensure votes object exists to prevent runtime errors
@@ -69,14 +69,14 @@ export function VotingPhase({
         alt: `Meme card ${submission.cardId}`,
       },
       submittedAt: new Date(submission.submittedAt),
-    })
+    }),
   );
 
   // Use stable order instead of shuffling to prevent position changes
   const stableSubmissions = useMemo(() => {
     // Sort by playerId for consistent ordering across renders
     return [...submissionArray].sort((a, b) =>
-      a.playerId.localeCompare(b.playerId)
+      a.playerId.localeCompare(b.playerId),
     );
   }, [submissionArray]);
 
@@ -89,7 +89,7 @@ export function VotingPhase({
         const { rtdb } = await import("@/firebase/client");
         await set(
           ref(rtdb, `lobbies/${lobbyCode}/gameState/votes/${currentUser.id}`),
-          submissionId
+          submissionId,
         );
         toast.success("Vote submitted!");
       } catch (error) {
@@ -97,7 +97,7 @@ export function VotingPhase({
         toast.error("Failed to submit vote. Please try again.");
       }
     },
-    [hasVoted, currentUser.id, timeLeft, lobbyCode]
+    [hasVoted, currentUser.id, timeLeft, lobbyCode],
   );
 
   const isCriticalTime = timeLeft <= 10;
@@ -137,7 +137,7 @@ export function VotingPhase({
                 ? "bg-red-600/90 border-red-400 text-white animate-pulse shadow-lg shadow-red-500/50"
                 : timeLeft <= 20
                   ? "bg-orange-600/90 border-orange-400 text-white shadow-lg shadow-orange-500/30"
-                  : "bg-green-600/90 border-green-400 text-white shadow-lg shadow-green-500/30"
+                  : "bg-green-600/90 border-green-400 text-white shadow-lg shadow-green-500/30",
             )}
             style={
               isCriticalTime
@@ -152,13 +152,13 @@ export function VotingPhase({
             <Timer
               className={cn(
                 "w-5 h-5 sm:w-6 sm:h-6",
-                isCriticalTime && "animate-bounce"
+                isCriticalTime && "animate-bounce",
               )}
             />
             <span
               className={cn(
                 "font-bold tracking-wider",
-                isCriticalTime && "animate-pulse"
+                isCriticalTime && "animate-pulse",
               )}
             >
               {timeLeft}s
@@ -235,7 +235,7 @@ export function VotingPhase({
                   hasVoted &&
                     safeVotes[currentUser.id] !== submission.playerId &&
                     submission.playerId !== currentUser.id &&
-                    "opacity-70 border-slate-600/30"
+                    "opacity-70 border-slate-600/30",
                 )}
                 onClick={() => handleVote(submission.playerId)}
               >
@@ -274,7 +274,7 @@ export function VotingPhase({
                       <span className="text-white text-sm font-bangers">
                         {
                           Object.values(safeVotes).filter(
-                            (vote) => vote === submission.playerId
+                            (vote) => vote === submission.playerId,
                           ).length
                         }{" "}
                         votes
@@ -336,7 +336,7 @@ export function VotingPhase({
               ? "bg-green-600/20 border border-green-400/30"
               : isCriticalTime
                 ? "bg-red-600/20 border border-red-400/30"
-                : "bg-blue-600/20 border border-blue-400/30"
+                : "bg-blue-600/20 border border-blue-400/30",
           )}
         >
           {hasVoted ? (
@@ -358,14 +358,14 @@ export function VotingPhase({
                   "w-5 h-5 sm:w-6 sm:h-6",
                   isCriticalTime
                     ? "text-red-400 animate-bounce"
-                    : "text-blue-400"
+                    : "text-blue-400",
                 )}
               />
               <div className="text-left">
                 <p
                   className={cn(
                     "font-bangers text-base sm:text-lg tracking-wide",
-                    isCriticalTime ? "text-red-300" : "text-blue-300"
+                    isCriticalTime ? "text-red-300" : "text-blue-300",
                   )}
                 >
                   {isCriticalTime
@@ -375,7 +375,7 @@ export function VotingPhase({
                 <p
                   className={cn(
                     "font-bangers text-sm",
-                    isCriticalTime ? "text-red-200/80" : "text-blue-200/80"
+                    isCriticalTime ? "text-red-200/80" : "text-blue-200/80",
                   )}
                 >
                   {timeLeft}s remaining

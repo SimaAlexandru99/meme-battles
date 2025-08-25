@@ -1,24 +1,23 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, X } from "lucide-react";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEventListener } from "react-haiku";
+import { RiCloseLine, RiSettings3Line } from "react-icons/ri";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, X } from "lucide-react";
-import { RiSettings3Line, RiCloseLine } from "react-icons/ri";
-
-import { GameSettingsFormData } from "./types";
-import { GameSettingsForm } from "./GameSettingsForm";
-import { useEventListener } from "react-haiku";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { GameSettingsForm } from "./GameSettingsForm";
+import type { GameSettingsFormData } from "./types";
 
 interface GameSettingsModalProps {
   isOpen: boolean;

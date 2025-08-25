@@ -1,24 +1,23 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion } from "framer-motion";
+import { Clock, Settings, Tag, Users, Zap } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
-import { Settings, Clock, Users, Tag, Zap } from "lucide-react";
-
+import {
+  AdvancedSettings,
+  CategorySelector,
+  RoundsSelector,
+  TimeLimitSelector,
+} from "@/components/game-settings";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  CategorySelector,
-  TimeLimitSelector,
-  RoundsSelector,
-  AdvancedSettings,
-} from "@/components/game-settings";
 
 // Form validation schema - only include properties that are part of GameSettings
 const gameSettingsSchema = z.object({

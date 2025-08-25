@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { RiTimeLine, RiGamepadLine } from "react-icons/ri";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useState } from "react";
+import { RiGamepadLine, RiTimeLine } from "react-icons/ri";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface RoundCountdownProps {
   lobbyCode: string;
@@ -144,7 +144,7 @@ export function RoundCountdown({
                       "flex items-center gap-3 p-2 rounded-lg",
                       "bg-slate-700/30 border border-slate-600/50",
                       player.isCurrentPlayer &&
-                        "ring-2 ring-purple-500 bg-purple-600/20"
+                        "ring-2 ring-purple-500 bg-purple-600/20",
                     )}
                   >
                     <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -155,7 +155,7 @@ export function RoundCountdown({
                         "font-bangers text-sm tracking-wide flex-1",
                         player.isCurrentPlayer
                           ? "text-purple-300"
-                          : "text-white"
+                          : "text-white",
                       )}
                     >
                       {player.name}

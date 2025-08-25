@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
+import { useEffect, useState } from "react";
+import { RiCheckLine, RiDiceLine } from "react-icons/ri";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RiDiceLine, RiCheckLine } from "react-icons/ri";
 import { generateGuestDisplayName } from "@/firebase/client";
 import { useUpdateDisplayName } from "@/hooks/useUpdateDisplayName";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { markUserSetupComplete } from "@/lib/actions/auth.action";
 import ProfilePicker from "./profile-picker";
-import * as Sentry from "@sentry/nextjs";
 
 interface FirstTimeSetupDialogProps {
   isOpen: boolean;

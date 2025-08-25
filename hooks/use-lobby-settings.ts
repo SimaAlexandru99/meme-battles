@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { LobbyService } from "@/lib/services/lobby.service";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import * as Sentry from "@sentry/nextjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { LobbyService } from "@/lib/services/lobby.service";
 
 // Hook return interface
 interface UseLobbySettingsReturn {

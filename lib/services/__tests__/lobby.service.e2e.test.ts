@@ -1,7 +1,7 @@
-import { LobbyService } from "../lobby.service";
-import { get, set, update, ref } from "firebase/database";
 import * as Sentry from "@sentry/nextjs";
 import type { DataSnapshot } from "firebase/database";
+import { get, ref, set, update } from "firebase/database";
+import { LobbyService } from "../lobby.service";
 
 // Mock Firebase
 jest.mock("firebase/database", () => ({
@@ -245,7 +245,7 @@ describe("LobbyService - End-to-End Tests", () => {
                     status: "waiting",
                     lastSeen: `2025-01-08T10:0${j + 1}:00.000Z`,
                   },
-                ])
+                ]),
               ),
             },
           }),
@@ -270,7 +270,7 @@ describe("LobbyService - End-to-End Tests", () => {
                   status: "waiting",
                   lastSeen: `2025-01-08T10:0${j + 1}:00.000Z`,
                 },
-              ])
+              ]),
             ),
           },
         };
@@ -403,7 +403,7 @@ describe("LobbyService - End-to-End Tests", () => {
           timeLimit: 90,
           categories: ["general", "reaction", "wholesome"],
         },
-        "host123"
+        "host123",
       );
 
       // Fast-forward through debounce delay
@@ -434,7 +434,7 @@ describe("LobbyService - End-to-End Tests", () => {
       };
 
       await expect(
-        lobbyService.updateLobbySettings("ABC12", invalidSettings, "host123")
+        lobbyService.updateLobbySettings("ABC12", invalidSettings, "host123"),
       ).rejects.toMatchObject({
         type: "VALIDATION_ERROR",
         userMessage: expect.stringContaining("Invalid settings"),
@@ -458,7 +458,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "UNKNOWN_ERROR",
         retryable: true,
@@ -542,7 +542,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "VALIDATION_ERROR",
         userMessage: expect.stringContaining("Invalid lobby code"),
@@ -561,7 +561,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "LOBBY_NOT_FOUND",
         userMessage: "Lobby not found. Please check the code.",
@@ -610,7 +610,7 @@ describe("LobbyService - End-to-End Tests", () => {
 
       // Simulate 10 rapid player status updates
       const operations = Array.from({ length: 10 }, () =>
-        lobbyService.updatePlayerStatus("ABC12", "host123", "waiting")
+        lobbyService.updatePlayerStatus("ABC12", "host123", "waiting"),
       );
 
       const startTime = Date.now();
@@ -675,7 +675,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "newPlayer",
           displayName: "NewPlayer",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "LOBBY_FULL",
         userMessage: "This lobby is full. Try another one.",
@@ -697,7 +697,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "VALIDATION_ERROR",
         userMessage: expect.stringContaining("Lobby code is required"),
@@ -713,7 +713,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "LOBBY_NOT_FOUND",
         userMessage: "Lobby not found. Please check the code.",
@@ -757,7 +757,7 @@ describe("LobbyService - End-to-End Tests", () => {
           uid: "player456",
           displayName: "Player",
           avatarId: "default",
-        })
+        }),
       ).rejects.toMatchObject({
         type: "LOBBY_ALREADY_STARTED",
         userMessage: "This game has already started. You cannot join now.",
@@ -773,17 +773,17 @@ describe("LobbyService - End-to-End Tests", () => {
       };
 
       const validation = lobbyService.isValidGameSettings(
-        invalidSettings as GameSettings
+        invalidSettings as GameSettings,
       );
 
       expect(validation.isValid).toBe(false);
       expect(validation.errors).toHaveLength(3);
       expect(validation.errors).toContain("Rounds must be between 3 and 15");
       expect(validation.errors).toContain(
-        "Time limit must be between 30 and 120 seconds"
+        "Time limit must be between 30 and 120 seconds",
       );
       expect(validation.errors).toContain(
-        "At least 1 category must be selected"
+        "At least 1 category must be selected",
       );
 
       // Test boundary values

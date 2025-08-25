@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import * as Sentry from "@sentry/nextjs";
 import {
-  ref,
-  onValue,
   off,
+  onValue,
+  ref,
+  serverTimestamp,
   set,
   update,
-  serverTimestamp,
 } from "firebase/database";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { rtdb } from "@/firebase/client";
-import { MemeCardPool } from "@/lib/utils/meme-card-pool";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { AIBotService } from "@/lib/services/ai-bot.service";
 import { lobbyService } from "@/lib/services/lobby.service";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { MemeCardPool } from "@/lib/utils/meme-card-pool";
 import { calculateRoundScoring, type PlayerStreak } from "@/lib/utils/scoring";
-import * as Sentry from "@sentry/nextjs";
 
 interface GameState {
   phase:
@@ -91,7 +91,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   const [hostUid, setHostUid] = useState<string | null>(null);
   // Duration for submission phase (derived from lobby settings.timeLimit)
   const [submissionDuration, setSubmissionDuration] = useState<number | null>(
-    null
+    null,
   );
   // Total rounds from lobby settings
   const [totalRounds, setTotalRounds] = useState<number>(8);
@@ -125,7 +125,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode]
+    [lobbyCode],
   );
 
   /**
@@ -164,10 +164,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "submit_card");
             throw error;
           }
-        }
+        },
       );
     },
-    [user, gameState, lobbyCode, playerCards, handleError]
+    [user, gameState, lobbyCode, playerCards, handleError],
   );
 
   /**
@@ -196,10 +196,10 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             handleError(error, "vote");
             throw error;
           }
-        }
+        },
       );
     },
-    [user, gameState, lobbyCode, handleError]
+    [user, gameState, lobbyCode, handleError],
   );
 
   /**
@@ -223,7 +223,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "abstain");
           throw error;
         }
-      }
+      },
     );
   }, [user, gameState, lobbyCode, handleError]);
 
@@ -273,7 +273,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "reset_game_state");
           throw error;
         }
-      }
+      },
     );
   }, [user, lobbyCode, totalRounds, players, handleError]);
 
@@ -363,7 +363,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "start_round");
           throw error;
         }
-      }
+      },
     );
   }, [
     user,
@@ -431,7 +431,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
               } catch (error) {
                 console.error(
                   `Failed to get ${needed} cards for player ${playerId}:`,
-                  error
+                  error,
                 );
                 // If we can't get enough unique cards, at least try to maintain the hand
                 Sentry.captureException(error, {
@@ -444,7 +444,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             // Ensure we have exactly 7 cards (game rule requirement)
             if (newHand.length !== 7) {
               console.warn(
-                `Player ${playerId} has ${newHand.length} cards instead of 7`
+                `Player ${playerId} has ${newHand.length} cards instead of 7`,
               );
             }
 
@@ -514,7 +514,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "next_round");
           throw error;
         }
-      }
+      },
     );
   }, [user, gameState, lobbyCode, handleError, players]);
 
@@ -542,7 +542,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "end_game");
           throw error;
         }
-      }
+      },
     );
   }, [user, lobbyCode, handleError]);
 
@@ -552,7 +552,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   const completeGameTransition = useCallback(async (): Promise<void> => {
     if (!user || !lobbyCode) {
       throw new Error(
-        "Cannot complete game transition: missing user or lobby code"
+        "Cannot complete game transition: missing user or lobby code",
       );
     }
 
@@ -578,7 +578,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           handleError(error, "complete_game_transition");
           throw error;
         }
-      }
+      },
     );
   }, [user, lobbyCode, handleError]);
 
@@ -603,7 +603,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           gameState.votes || {},
           gameState.roundNumber || 1,
           gameState.scores || {},
-          gameState.playerStreaks || {}
+          gameState.playerStreaks || {},
         );
 
         await update(ref(rtdb, `lobbies/${lobbyCode}/gameState`), {
@@ -688,7 +688,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       timeElapsed >= MIN_SUBMISSION_TIME
     ) {
       console.log(
-        "✅ All players submitted and minimum time passed, transitioning to voting early"
+        "✅ All players submitted and minimum time passed, transitioning to voting early",
       );
       const gameStatePath = `lobbies/${lobbyCode}/gameState`;
       update(ref(rtdb, gameStatePath), {
@@ -714,7 +714,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     if (!isHost) return;
     if (!gameState || gameState.phase !== "submission") return;
     const phaseKey = String(
-      gameState.phaseStartTime ?? `${gameState.roundNumber}-submission`
+      gameState.phaseStartTime ?? `${gameState.roundNumber}-submission`,
     );
 
     // Trigger AI submissions once per submission phase
@@ -722,7 +722,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       aiSubmissionsPhaseKeyRef.current = phaseKey;
       console.log(
         "🤖 Triggering AI bot submissions for round",
-        gameState.roundNumber
+        gameState.roundNumber,
       );
 
       try {
@@ -750,7 +750,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           .processAIBotSubmissions(
             lobbyCode,
             playersRecord,
-            gameState.currentSituation
+            gameState.currentSituation,
           )
           .catch((err) =>
             Sentry.captureException(err, {
@@ -758,7 +758,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
                 operation: "ai_bot_submissions_on_submission_phase",
                 lobbyCode,
               },
-            })
+            }),
           );
       } catch (err) {
         Sentry.captureException(err, {
@@ -776,7 +776,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     if (!isHost) return;
     if (!gameState || gameState.phase !== "voting") return;
     const phaseKey = String(
-      gameState.phaseStartTime ?? `${gameState.roundNumber}-voting`
+      gameState.phaseStartTime ?? `${gameState.roundNumber}-voting`,
     );
 
     // Trigger AI votes once per voting phase
@@ -811,12 +811,12 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             lobbyCode,
             playersRecord,
             submissionsRecord,
-            gameState.currentSituation
+            gameState.currentSituation,
           )
           .catch((err) =>
             Sentry.captureException(err, {
               tags: { operation: "ai_bot_votes_on_voting_phase", lobbyCode },
-            })
+            }),
           );
       } catch (err) {
         Sentry.captureException(err, {
@@ -838,7 +838,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           gameState.votes || {},
           gameState.roundNumber || 1,
           gameState.scores || {},
-          gameState.playerStreaks || {}
+          gameState.playerStreaks || {},
         );
 
         const gameStatePath = `lobbies/${lobbyCode}/gameState`;
@@ -903,7 +903,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       (error) => {
         handleError(error, "game_state_listener");
         setConnectionStatus("disconnected");
-      }
+      },
     );
 
     // Listen to players data
@@ -951,7 +951,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
                 aiDifficulty: player.aiDifficulty,
                 isHost: Boolean(player.isHost),
               };
-            }
+            },
           );
 
           // Ensure we always have a valid array
@@ -963,7 +963,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       },
       (error) => {
         handleError(error, "players_listener");
-      }
+      },
     );
 
     // Listen to current player's cards
@@ -976,7 +976,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         console.log(
           "Player cards snapshot:",
           snapshot.exists(),
-          snapshot.val()
+          snapshot.val(),
         );
         if (snapshot.exists()) {
           const cards = snapshot.val() as MemeCard[];
@@ -993,7 +993,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           setPlayerCards((prevCards) => {
             if (cardsLoadedOnce && prevCards.length > 0) {
               console.warn(
-                "⚠️ Cards snapshot is null but we had cards before - keeping previous cards to prevent loss"
+                "⚠️ Cards snapshot is null but we had cards before - keeping previous cards to prevent loss",
               );
               return prevCards; // Keep existing cards to prevent loss during transitions
             }
@@ -1004,7 +1004,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       },
       (error) => {
         handleError(error, "player_cards_listener");
-      }
+      },
     );
 
     return () => {
@@ -1029,7 +1029,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     if (!user || !lobbyCode) return;
     const unsubscribePresence = lobbyService.initializePresence(
       lobbyCode,
-      user.id
+      user.id,
     );
     return () => {
       try {
@@ -1073,7 +1073,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         Sentry.captureException(err, {
           tags: { operation: "presence_heartbeat", lobbyCode },
           extra: { userId: user.id },
-        })
+        }),
       );
     }, 15000); // 15s heartbeat
     return () => clearInterval(interval);
@@ -1129,7 +1129,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         gameState?.submissions?.[playerId] !== undefined
       );
     },
-    [isCurrentPlayer, gameState, hasVoted, user?.id]
+    [isCurrentPlayer, gameState, hasVoted, user?.id],
   );
 
   return {

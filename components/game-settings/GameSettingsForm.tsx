@@ -1,22 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { cn } from "@/lib/utils";
-import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
-import { FormErrorDisplay, FormSuccessDisplay } from "./FormErrorDisplay";
-import { GameSettingsFormData } from "./types";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -26,6 +14,18 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { cn } from "@/lib/utils";
+import { FormErrorDisplay, FormSuccessDisplay } from "./FormErrorDisplay";
+import type { GameSettingsFormData } from "./types";
 
 interface GameSettingsFormProps {
   initialSettings?: Partial<GameSettingsFormData>;
@@ -38,8 +38,14 @@ interface GameSettingsFormProps {
 
 // Zod validation schema
 const formSchema = z.object({
-  rounds: z.number().min(1, "Rounds must be at least 1").max(10, "Rounds cannot exceed 10"),
-  timeLimit: z.number().min(30, "Time limit must be at least 30 seconds").max(300, "Time limit cannot exceed 5 minutes"),
+  rounds: z
+    .number()
+    .min(1, "Rounds must be at least 1")
+    .max(10, "Rounds cannot exceed 10"),
+  timeLimit: z
+    .number()
+    .min(30, "Time limit must be at least 30 seconds")
+    .max(300, "Time limit cannot exceed 5 minutes"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,7 +63,6 @@ const ROUNDS_OPTIONS = [
   { value: "9", label: "9 Rounds" },
   { value: "10", label: "10 Rounds (Marathon)" },
 ];
-
 
 // Format seconds to display as "1m 30s" or "45s"
 function formatTime(seconds: number): string {
@@ -87,10 +92,10 @@ export const GameSettingsForm = React.forwardRef<
     className,
     hideActions = false,
   },
-  ref
+  ref,
 ) {
   const [successMessage, setSuccessMessage] = React.useState<string | null>(
-    null
+    null,
   );
 
   const defaultValues = React.useMemo(
@@ -98,10 +103,7 @@ export const GameSettingsForm = React.forwardRef<
       rounds: initialSettings?.rounds ?? 5,
       timeLimit: initialSettings?.timeLimit ?? 60,
     }),
-    [
-      initialSettings?.rounds,
-      initialSettings?.timeLimit,
-    ]
+    [initialSettings?.rounds, initialSettings?.timeLimit],
   );
 
   const form = useForm<FormValues>({
@@ -124,11 +126,11 @@ export const GameSettingsForm = React.forwardRef<
     async (data: FormValues) => {
       if (!onSubmit) return;
 
-      await onSubmit(data); 
+      await onSubmit(data);
       setSuccessMessage("Settings saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     },
-    [onSubmit]
+    [onSubmit],
   );
 
   // Handle unsaved changes warning
@@ -245,7 +247,6 @@ export const GameSettingsForm = React.forwardRef<
               </FormItem>
             )}
           />
-
         </div>
 
         {/* Form Actions */}
@@ -263,7 +264,7 @@ export const GameSettingsForm = React.forwardRef<
                   "disabled:cursor-not-allowed disabled:opacity-50",
                   "text-white shadow-lg transition-all duration-200",
                   "focus:outline-none focus:ring-2 focus:ring-purple-500/50",
-                  "active:scale-95"
+                  "active:scale-95",
                 )}
               >
                 {isSubmitting ? (
@@ -288,7 +289,7 @@ export const GameSettingsForm = React.forwardRef<
                   "text-white border border-slate-600/50",
                   "transition-all duration-200",
                   "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-                  "active:scale-95"
+                  "active:scale-95",
                 )}
               >
                 Cancel
@@ -306,7 +307,7 @@ export const GameSettingsForm = React.forwardRef<
                   "text-slate-400 hover:text-white",
                   "hover:bg-slate-700/30 transition-all duration-200",
                   "focus:outline-none focus:ring-2 focus:ring-slate-500/50",
-                  "disabled:cursor-not-allowed disabled:opacity-50"
+                  "disabled:cursor-not-allowed disabled:opacity-50",
                 )}
               >
                 Reset

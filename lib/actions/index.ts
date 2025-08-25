@@ -3,22 +3,22 @@
 // ============================================================================
 
 export {
-  signIn,
-  signUp,
-  signOut,
   getCurrentUser,
-  isAuthenticated,
-  isAnonymousUser,
-  isFirstTimeUser,
-  updateUserDisplayName,
-  markUserSetupComplete,
-  updateUserProfile,
-  getUserDisplayName,
   getUserActiveLobby,
+  getUserDisplayName,
+  isAnonymousUser,
+  isAuthenticated,
+  isFirstTimeUser,
+  markUserSetupComplete,
   setSessionCookie,
-  signInWithGoogle,
-  signInWithGitHub,
+  signIn,
   signInAsGuest,
+  signInWithGitHub,
+  signInWithGoogle,
+  signOut,
+  signUp,
+  updateUserDisplayName,
+  updateUserProfile,
 } from "./auth.action";
 
 // ============================================================================

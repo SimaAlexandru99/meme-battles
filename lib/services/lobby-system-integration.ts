@@ -7,10 +7,10 @@
  */
 
 import { dbOptimization } from "./database-optimization";
+import { firebaseOptimization } from "./firebase-config";
 import { lobbyCleanup } from "./lobby-cleanup";
 import { lobbyMonitoring } from "./lobby-monitoring";
 import { RateLimitingService } from "./rate-limiting";
-import { firebaseOptimization } from "./firebase-config";
 
 export interface LobbySystemConfig {
   enableOptimization: boolean;

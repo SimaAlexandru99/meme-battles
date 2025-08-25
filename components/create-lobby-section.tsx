@@ -1,24 +1,24 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   RiAddLine,
-  RiFileCopyLine,
-  RiCheckLine,
   RiAlertLine,
+  RiCheckLine,
+  RiFileCopyLine,
 } from "react-icons/ri";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  buttonVariants,
-  successVariants,
-  microInteractionVariants,
   badgeVariants,
+  buttonVariants,
   errorVariants,
+  microInteractionVariants,
+  successVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface CreateLobbySectionProps {
   onCreateLobby: (settings?: Partial<GameSettings>) => Promise<string>;

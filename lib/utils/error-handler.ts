@@ -21,9 +21,9 @@ export class ErrorHandler {
     } = {},
   ): Promise<T> {
     const {
-      maxRetries = this.MAX_RETRIES,
-      retryDelays = this.DEFAULT_RETRY_DELAYS,
-      retryCondition = this.isRetryableError,
+      maxRetries = ErrorHandler.MAX_RETRIES,
+      retryDelays = ErrorHandler.DEFAULT_RETRY_DELAYS,
+      retryCondition = ErrorHandler.isRetryableError,
       onRetry,
       operationName = "operation",
     } = options;
@@ -168,7 +168,7 @@ export class ErrorHandler {
       const lobbyError = error as LobbyError;
       return {
         message: lobbyError.userMessage || lobbyError.message,
-        action: this.getRecoveryAction(lobbyError.type),
+        action: ErrorHandler.getRecoveryAction(lobbyError.type),
         canRetry: lobbyError.retryable || false,
       };
     }
@@ -262,7 +262,7 @@ export class ErrorHandler {
     const { operation, userId, lobbyCode, additionalData } = context;
 
     // Determine error severity
-    const severity = this.getErrorSeverity(error);
+    const severity = ErrorHandler.getErrorSeverity(error);
 
     // Prepare error context
     const lobbyError =
@@ -353,7 +353,7 @@ export class ErrorHandler {
       action?: string;
     };
   } {
-    const friendlyError = this.getUserFriendlyMessage(error);
+    const friendlyError = ErrorHandler.getUserFriendlyMessage(error);
     const lobbyError =
       error && typeof error === "object" && "type" in error
         ? (error as LobbyError)
@@ -384,17 +384,17 @@ export class ErrorHandler {
   ) {
     return async (...args: T): Promise<R> => {
       try {
-        return await this.withRetry(() => method(...args), {
+        return await ErrorHandler.withRetry(() => method(...args), {
           operationName,
           onRetry: (attempt, error) => {
-            this.logError(error, {
+            ErrorHandler.logError(error, {
               operation: operationName,
               additionalData: { retryAttempt: attempt },
             });
           },
         });
       } catch (error) {
-        this.logError(error, { operation: operationName });
+        ErrorHandler.logError(error, { operation: operationName });
         throw error;
       }
     };

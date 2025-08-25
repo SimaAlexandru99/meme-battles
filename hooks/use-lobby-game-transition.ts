@@ -1,8 +1,8 @@
-import { useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useLobbyManagement } from "@/hooks/use-lobby-management";
-import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect } from "react";
+import { toast } from "sonner";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
 
 interface UseLobbyGameTransitionReturn {
   startGame: () => Promise<void>;
@@ -16,7 +16,7 @@ interface UseLobbyGameTransitionReturn {
  * Manages the transition from lobby state to active game state
  */
 export function useLobbyGameTransition(
-  lobbyCode: string
+  lobbyCode: string,
 ): UseLobbyGameTransitionReturn {
   const router = useRouter();
   const {
@@ -47,7 +47,7 @@ export function useLobbyGameTransition(
           Sentry.captureException(error);
           throw error;
         }
-      }
+      },
     );
   }, [isHost, startLobbyGame]);
 

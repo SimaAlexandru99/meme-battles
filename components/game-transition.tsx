@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
 import { RiGamepadLine, RiUserLine } from "react-icons/ri";
 import { toast } from "sonner";
-import * as Sentry from "@sentry/nextjs";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface GameTransitionProps {
   lobbyCode: string;
@@ -66,7 +66,7 @@ export function GameTransition({
         if (currentUser && lobbyCode) {
           console.log(
             "🎮 GameTransition: Completing transition with user:",
-            currentUser.id
+            currentUser.id,
           );
           onTransitionComplete();
         } else {
@@ -135,7 +135,7 @@ export function GameTransition({
 
       // Use fallback situation
       setSituation(
-        "When you're trying to be productive but your bed is calling your name"
+        "When you're trying to be productive but your bed is calling your name",
       );
       setTimeout(() => {
         setCurrentStep("distributing_cards");

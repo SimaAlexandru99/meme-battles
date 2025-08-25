@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ref, onValue, push } from "firebase/database";
-import { rtdb } from "@/firebase/client";
+import * as Sentry from "@sentry/nextjs";
+import { onValue, push, ref } from "firebase/database";
 import { Clock, Gamepad2, MessageCircle, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -14,22 +16,20 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { toast } from "sonner";
-import { MemeCardHand } from "./meme-card-hand";
-import { PlayersList } from "./players-panel";
-import { ChatPanel } from "./chat-panel";
-import { ResultsPhase } from "./results-phase";
-import { VotingPhase } from "./voting-phase";
-import { LeaderboardPhase } from "./leaderboard-phase";
-import { RoundCountdown } from "./round-countdown";
-import { GameTransition } from "./game-transition";
-import { GameOver } from "./game-over";
-import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
+import { rtdb } from "@/firebase/client";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
-import { useRouter } from "next/navigation";
-import * as Sentry from "@sentry/nextjs";
+import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
 import { cn } from "@/lib/utils";
+import { ChatPanel } from "./chat-panel";
+import { GameOver } from "./game-over";
+import { GameTransition } from "./game-transition";
+import { LeaderboardPhase } from "./leaderboard-phase";
+import { MemeCardHand } from "./meme-card-hand";
+import { PlayersList } from "./players-panel";
+import { ResultsPhase } from "./results-phase";
+import { RoundCountdown } from "./round-countdown";
+import { VotingPhase } from "./voting-phase";
 
 interface ArenaProps {
   lobbyCode: string;
@@ -38,7 +38,6 @@ interface ArenaProps {
 
 export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const router = useRouter();
-
 
   // Use real-time game state from lobby system
   const {
@@ -78,7 +77,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       const retryTimeout = setTimeout(() => {
         if (playerCards.length === 0) {
           console.log(
-            "🔄 Retrying card load - cards still missing after 3 seconds"
+            "🔄 Retrying card load - cards still missing after 3 seconds",
           );
           toast.warning("Loading your cards... Please wait.");
         }
@@ -137,7 +136,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         const chatData = snapshot.val() as Record<string, ChatMessage>;
         const messagesList = Object.values(chatData).sort(
           (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
         );
         setMessages(messagesList);
       } else {
@@ -262,7 +261,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       // DON'T automatically leave lobby on unmount during normal navigation
       // Only leave if the game is actually over or user explicitly left
       console.log(
-        "🔄 Arena: Component unmounting - NOT leaving lobby (normal navigation)"
+        "🔄 Arena: Component unmounting - NOT leaving lobby (normal navigation)",
       );
     };
   }, [lobbyCode, currentUser?.id, leaveLobby]);
@@ -368,7 +367,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
               </p>
             </div>
 
-            {players.find(p => p.id === currentUser.id)?.isHost && (
+            {players.find((p) => p.id === currentUser.id)?.isHost && (
               <Button
                 onClick={handleStartRound}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
@@ -560,7 +559,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                           className={cn(
                             "w-4 h-4 sm:w-6 sm:h-6",
                             isCritical ? "text-red-400" : "text-purple-400",
-                            isVeryLow && "animate-bounce"
+                            isVeryLow && "animate-bounce",
                           )}
                         />
                         <span
@@ -570,7 +569,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                               ? "text-lg sm:text-2xl text-red-400 font-bold"
                               : "text-sm sm:text-lg text-white",
                             isVeryLow && "animate-pulse text-red-300",
-                            isCritical && "drop-shadow-lg"
+                            isCritical && "drop-shadow-lg",
                           )}
                           style={
                             isVeryLow
@@ -652,7 +651,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                         <span className="text-white font-bold">
                           {selectedCard.filename?.replace(
                             /\.(jpg|jpeg|png|gif|webp)$/i,
-                            ""
+                            "",
                           ) || "Card"}
                         </span>
                       </p>
@@ -668,7 +667,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                         ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-105 text-white"
                         : "bg-slate-600 cursor-not-allowed opacity-60 text-slate-300",
                       selectedCard &&
-                        "animate-pulse hover:animate-none border-2 border-purple-400/50"
+                        "animate-pulse hover:animate-none border-2 border-purple-400/50",
                     )}
                     style={
                       selectedCard

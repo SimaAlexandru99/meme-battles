@@ -1,9 +1,9 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { RiAlertLine, RiPlayLine } from "react-icons/ri";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,13 +14,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   buttonVariants,
-  successVariants,
   errorVariants,
+  successVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface StartGameButtonProps {
   lobbyCode: string;
@@ -126,7 +126,7 @@ export function StartGameButton({
             // Enhanced visual weight for critical action
             "ring-2 ring-green-500/20 hover:ring-green-500/40",
             // Mobile-specific enhancements
-            "sm:ring-1 sm:hover:ring-2"
+            "sm:ring-1 sm:hover:ring-2",
           )}
           aria-label={
             isStarting

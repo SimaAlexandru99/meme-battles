@@ -1,21 +1,21 @@
 "use client";
 
-import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, WifiOff } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useLobbyManagement } from "@/hooks/use-lobby-management";
-import { useLobbyConnection } from "@/hooks/use-lobby-connection";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { PlayerList } from "./player-list";
-import { GameSettings } from "./game-settings";
-import { ConnectionStatus } from "./connection-status";
-import { LobbyHeader } from "./lobby-header";
-import { LobbyActions } from "./lobby-actions";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import * as Sentry from "@sentry/nextjs";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, WifiOff } from "lucide-react";
+import * as React from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useLobbyConnection } from "@/hooks/use-lobby-connection";
+import { useLobbyManagement } from "@/hooks/use-lobby-management";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { cn } from "@/lib/utils";
+import { ConnectionStatus } from "./connection-status";
+import { GameSettings } from "./game-settings";
+import { LobbyActions } from "./lobby-actions";
+import { LobbyHeader } from "./lobby-header";
+import { PlayerList } from "./player-list";
 
 interface LobbyInterfaceProps {
   lobbyCode: string;
@@ -136,7 +136,7 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
       window.removeEventListener("error", handleError);
       window.removeEventListener(
         "unhandledrejection",
-        handleUnhandledRejection
+        handleUnhandledRejection,
       );
     };
   }, []);
@@ -258,7 +258,7 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
     <div
       className={cn(
         "min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900",
-        className
+        className,
       )}
       role="main"
       aria-label="Game lobby interface"

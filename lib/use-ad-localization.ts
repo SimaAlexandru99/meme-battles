@@ -1,8 +1,8 @@
 /**
  * React hook for SSR-safe advertisement localization
  */
-import { useState, useEffect, useMemo } from "react";
-import { getRemoveAdsText, detectBrowserLocale } from "./ad-localization";
+import { useEffect, useMemo, useState } from "react";
+import { detectBrowserLocale, getRemoveAdsText } from "./ad-localization";
 
 /**
  * Hook for SSR-safe advertisement localization

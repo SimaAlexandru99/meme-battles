@@ -2,20 +2,20 @@
 
 import { motion } from "framer-motion";
 import {
-  Trophy,
-  Medal,
   Crown,
-  Star,
-  Sparkles,
-  PartyPopper,
   Home,
+  Medal,
+  PartyPopper,
   RotateCcw,
+  Sparkles,
+  Star,
+  Trophy,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface GameOverProps {
   players: Player[];
@@ -170,7 +170,7 @@ export function GameOver({
                   ? "bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border-yellow-500/70"
                   : currentUserEntry.rank <= 3
                     ? "bg-gradient-to-r from-green-500/20 to-emerald-600/20 border-green-500/70"
-                    : "bg-gradient-to-r from-blue-500/20 to-purple-600/20 border-blue-500/70"
+                    : "bg-gradient-to-r from-blue-500/20 to-purple-600/20 border-blue-500/70",
               )}
             >
               <CardHeader>
@@ -243,7 +243,8 @@ export function GameOver({
                     className={cn(
                       "flex items-center justify-between p-4 rounded-xl border-2 transition-all",
                       `bg-gradient-to-r ${getRankColors(entry.rank)}`,
-                      entry.isCurrentUser && "ring-2 ring-blue-500/50 shadow-lg"
+                      entry.isCurrentUser &&
+                        "ring-2 ring-blue-500/50 shadow-lg",
                     )}
                   >
                     <div className="flex items-center gap-4">
@@ -302,7 +303,7 @@ export function GameOver({
                           entry.rank === 1 && "text-yellow-300",
                           entry.rank === 2 && "text-slate-300",
                           entry.rank === 3 && "text-orange-300",
-                          entry.rank > 3 && "text-white"
+                          entry.rank > 3 && "text-white",
                         )}
                       >
                         {entry.totalScore}

@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { useLobbySettings } from "@/hooks/use-lobby-settings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 

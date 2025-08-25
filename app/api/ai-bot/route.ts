@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
+import { type NextRequest, NextResponse } from "next/server";
 
 interface AIBotRequest {
   situation: string;
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Log the cards being sent to AI for debugging
     console.log(
       "AI Bot Request - Cards:",
-      cards.map((c) => ({ id: c.id, filename: c.filename }))
+      cards.map((c) => ({ id: c.id, filename: c.filename })),
     );
 
     // Create a detailed prompt for the AI
@@ -125,18 +125,19 @@ Format your response as valid JSON only.`;
 
       // Handle case where AI returns numbered selections (1, 2, 3) instead of actual card IDs
       let selectedCard = cards.find(
-        (card) => card.id === aiResponse.selectedCardId
+        (card) => card.id === aiResponse.selectedCardId,
       );
 
       // If not found, try to interpret as index (AI might be using 1-based indexing)
       if (!selectedCard) {
-        const cardIndex = parseInt(aiResponse.selectedCardId.toString()) - 1; // Convert to 0-based index
+        const cardIndex =
+          parseInt(aiResponse.selectedCardId.toString(), 10) - 1; // Convert to 0-based index
         if (cardIndex >= 0 && cardIndex < cards.length) {
           selectedCard = cards[cardIndex];
           // Update the AI response to use the actual card ID
           aiResponse.selectedCardId = selectedCard.id;
           console.log(
-            `AI used index ${cardIndex + 1}, converted to card ID: ${selectedCard.id}`
+            `AI used index ${cardIndex + 1}, converted to card ID: ${selectedCard.id}`,
           );
         }
       }
@@ -145,13 +146,13 @@ Format your response as valid JSON only.`;
       if (!selectedCard) {
         console.warn(
           `AI selected card ID "${aiResponse.selectedCardId}" which doesn't exist. Available cards:`,
-          cards.map((c) => ({ id: c.id, filename: c.filename }))
+          cards.map((c) => ({ id: c.id, filename: c.filename })),
         );
         throw new Error("AI selected a card that doesn't exist");
       }
 
       console.log(
-        `AI successfully selected card: ${selectedCard.filename} (${selectedCard.id})`
+        `AI successfully selected card: ${selectedCard.filename} (${selectedCard.id})`,
       );
       return NextResponse.json(aiResponse);
     } catch (parseError) {
@@ -166,11 +167,11 @@ Format your response as valid JSON only.`;
           if (partialResponse.selectedCardId) {
             // Try to interpret as index if it's a number
             const cardIndex =
-              parseInt(partialResponse.selectedCardId.toString()) - 1;
+              parseInt(partialResponse.selectedCardId.toString(), 10) - 1;
             if (cardIndex >= 0 && cardIndex < cards.length) {
               const selectedCard = cards[cardIndex];
               console.log(
-                `Fallback: Using index ${cardIndex + 1} to select card: ${selectedCard.filename}`
+                `Fallback: Using index ${cardIndex + 1} to select card: ${selectedCard.filename}`,
               );
               return NextResponse.json({
                 selectedCardId: selectedCard.id,
@@ -199,7 +200,7 @@ Format your response as valid JSON only.`;
         error:
           "AI temporarily unavailable due to rate limits. Please retry shortly.",
       },
-      { status: 503, headers: { "Retry-After": "10" } }
+      { status: 503, headers: { "Retry-After": "10" } },
     );
   }
 }

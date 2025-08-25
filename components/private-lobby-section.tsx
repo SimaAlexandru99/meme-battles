@@ -1,17 +1,17 @@
 "use client";
 
-import * as React from "react";
 import { motion } from "framer-motion";
+import * as React from "react";
 import { RiArrowLeftLine } from "react-icons/ri";
-import { JoinWithCodeSection } from "@/components/join-with-code-section";
 import { CreateLobbySection } from "@/components/create-lobby-section";
+import { JoinWithCodeSection } from "@/components/join-with-code-section";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   lobbyEnterVariants,
   lobbySectionVariants,
   staggerContainerVariants,
 } from "@/lib/animations/private-lobby-variants";
+import { cn } from "@/lib/utils";
 
 interface PrivateLobbySectionProps {
   onBackToMain: () => void;
@@ -62,7 +62,7 @@ export function PrivateLobbySection({
         setIsJoining(false);
       }
     },
-    [onJoinLobby]
+    [onJoinLobby],
   );
 
   // Handle creates a lobby with error management
@@ -90,7 +90,7 @@ export function PrivateLobbySection({
         onBackToMain();
       }
     },
-    [onBackToMain]
+    [onBackToMain],
   );
 
   // Determine if any operation is in progress
@@ -182,7 +182,7 @@ export function PrivateLobbySection({
         "flex flex-col items-center gap-8 sm:gap-12",
         "min-h-full py-8 sm:py-12", // Add padding to ensure the button is clickable
         "relative", // allow absolute-positioned overlays (e.g., error banner)
-        className
+        className,
       )}
       role="main"
       aria-label="Private lobby interface"
@@ -209,7 +209,7 @@ export function PrivateLobbySection({
             "focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
             "z-10 relative", // Ensure the button is above other elements
             "min-h-[48px] min-w-[160px]", // Ensure a minimum touch target size
-            "cursor-pointer" // Explicitly set cursor
+            "cursor-pointer", // Explicitly set cursor
           )}
           aria-label="Navigate back to main menu"
           aria-describedby="back-button-description"
@@ -217,7 +217,7 @@ export function PrivateLobbySection({
           <RiArrowLeftLine
             className={cn(
               "w-5 h-5 transition-transform duration-300",
-              "group-hover:-translate-x-1"
+              "group-hover:-translate-x-1",
             )}
             aria-hidden="true"
           />
@@ -240,7 +240,7 @@ export function PrivateLobbySection({
           // Desktop: Side by side with equal height
           "lg:grid-cols-2 lg:gap-16",
           // Ensure equal height on desktop
-          "lg:items-stretch"
+          "lg:items-stretch",
         )}
         role="region"
         aria-label="Lobby options"
@@ -300,7 +300,7 @@ export function PrivateLobbySection({
           exit={{ opacity: 0 }}
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center",
-            "bg-slate-900/80 backdrop-blur-sm"
+            "bg-slate-900/80 backdrop-blur-sm",
           )}
           role="dialog"
           aria-modal="true"

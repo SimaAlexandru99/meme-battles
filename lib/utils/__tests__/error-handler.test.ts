@@ -1,5 +1,5 @@
-import { ErrorHandler } from "../error-handler";
 import * as Sentry from "@sentry/nextjs";
+import { ErrorHandler } from "../error-handler";
 
 // Mock Sentry
 jest.mock("@sentry/nextjs", () => ({
