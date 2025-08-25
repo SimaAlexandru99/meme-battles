@@ -1043,7 +1043,9 @@ export class MemeCardPool {
       );
 
       // Track used cards
-      playerCards.forEach((card) => this.usedCardIds.add(card.id));
+      playerCards.forEach((card) => {
+        this.usedCardIds.add(card.id);
+      });
 
       distribution.set(playerIndex, playerCards);
     }
@@ -1060,7 +1062,9 @@ export class MemeCardPool {
       Array.from(this.usedCardIds),
     );
     // Mark these cards as used
-    cards.forEach((card) => this.usedCardIds.add(card.id));
+    cards.forEach((card) => {
+      this.usedCardIds.add(card.id);
+    });
     return cards;
   }
 
@@ -1068,7 +1072,9 @@ export class MemeCardPool {
    * Marks cards as used
    */
   markCardsAsUsed(cardIds: string[]): void {
-    cardIds.forEach((id) => this.usedCardIds.add(id));
+    cardIds.forEach((id) => {
+      this.usedCardIds.add(id);
+    });
   }
 
   /**

@@ -172,7 +172,7 @@ export function PrivateLobbySection({
   }, [createdLobbyCode]);
 
   return (
-    <motion.div
+    <motion.main
       variants={lobbyEnterVariants}
       initial="initial"
       animate="animate"
@@ -184,7 +184,6 @@ export function PrivateLobbySection({
         "relative", // allow absolute-positioned overlays (e.g., error banner)
         className,
       )}
-      role="main"
       aria-label="Private lobby interface"
     >
       {/* Back Navigation Button */}
@@ -231,7 +230,7 @@ export function PrivateLobbySection({
       {/* Global error banner intentionally removed */}
 
       {/* Main Content Container */}
-      <motion.div
+      <motion.section
         variants={staggerContainerVariants}
         className={cn(
           "w-full grid gap-8 sm:gap-12",
@@ -242,15 +241,13 @@ export function PrivateLobbySection({
           // Ensure equal height on desktop
           "lg:items-stretch",
         )}
-        role="region"
         aria-label="Lobby options"
       >
         {/* Join With Code Section */}
-        <motion.div
+        <motion.section
           ref={joinSectionRef}
           variants={lobbySectionVariants}
           className="w-full flex justify-center"
-          role="region"
           aria-label="Join existing lobby"
         >
           <JoinWithCodeSection
@@ -260,14 +257,13 @@ export function PrivateLobbySection({
             success={joinSuccess}
             className="w-full max-w-md h-full"
           />
-        </motion.div>
+        </motion.section>
 
         {/* Create Lobby Section */}
-        <motion.div
+        <motion.section
           ref={createSectionRef}
           variants={lobbySectionVariants}
           className="w-full flex justify-center"
-          role="region"
           aria-label="Create new lobby"
         >
           <CreateLobbySection
@@ -276,21 +272,20 @@ export function PrivateLobbySection({
             createdCode={createdLobbyCode}
             className="w-full max-w-md h-full"
           />
-        </motion.div>
-      </motion.div>
+        </motion.section>
+      </motion.section>
 
       {/* Helper Text */}
-      <motion.div
+      <motion.aside
         variants={lobbySectionVariants}
         className="text-center max-w-2xl"
-        role="complementary"
         aria-label="Instructions"
       >
         <p className="text-purple-200/60 text-sm sm:text-base font-bangers tracking-wide">
           Choose to join an existing lobby with an invitation code or create
           your own lobby to invite friends.
         </p>
-      </motion.div>
+      </motion.aside>
 
       {/* Loading Overlay for Global Operations */}
       {isLoading && (
@@ -322,6 +317,6 @@ export function PrivateLobbySection({
           </div>
         </motion.div>
       )}
-    </motion.div>
+    </motion.main>
   );
 }

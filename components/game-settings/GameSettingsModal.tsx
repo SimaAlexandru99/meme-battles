@@ -70,7 +70,7 @@ export function GameSettingsModal({
   // Clear errors when modal opens/closes
   React.useEffect(() => {
     // Reset any form state when modal opens
-  }, [isOpen]);
+  }, []);
 
   const handleClose = React.useCallback(() => {
     if (!isSubmitting) {

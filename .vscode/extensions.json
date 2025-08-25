@@ -1,26 +1,59 @@
 {
   "recommendations": [
-    // Essential for Biome
+    // Essential for Biome (Linting & Formatting)
     "biomejs.biome",
 
-    // Next.js and React
+    // Next.js and React Development
     "ms-vscode.vscode-typescript-next",
     "bradlc.vscode-tailwindcss",
     "formulahendry.auto-rename-tag",
+    "ms-vscode.vscode-react-native",
+    "ms-vscode.vscode-js-debug-companion",
+    "ms-vscode.vscode-js-debug",
 
-    // Testing
+    // CSS & Styling
+    "csstools.postcss",
+    "ms-vscode.vscode-css-peek",
+
+    // Testing & Debugging
     "orta.vscode-jest",
+    "ms-vscode.vscode-debugadapter",
 
-    // Git and utilities
+    // Git and Version Control
     "eamodio.gitlens",
     "ms-vscode.vscode-json",
 
-    // Firebase
-    "toba.vsfire"
+    // Firebase Development
+    "toba.vsfire",
+    "firebase.firebase-vscode",
+
+    // Database & API
+    "ms-vscode.vscode-rest-client",
+
+    // Code Quality & Productivity
+    "yzhang.markdown-all-in-one",
+    "streetsidesoftware.code-spell-checker",
+
+    // Performance & Monitoring
+    "ms-vscode.vscode-js-profile-flame",
+    "ms-vscode.vscode-js-profile-table",
+
+    // Accessibility
+    "ms-vscode.vscode-accessibility-reporter",
+
+    // AI & Code Assistance
+    "github.copilot",
+    "github.copilot-chat"
   ],
   "unwantedRecommendations": [
     // Disable conflicting formatters
     "esbenp.prettier-vscode",
-    "ms-vscode.vscode-eslint"
+    "ms-vscode.vscode-eslint",
+
+    // Disable other conflicting tools
+    "hookyqr.beautify",
+
+    // Disable old TypeScript versions
+    "ms-vscode.vscode-typescript"
   ]
 }

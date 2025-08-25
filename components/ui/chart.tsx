@@ -74,16 +74,15 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     ([, config]) => config.theme || config.color,
   );
 
-  if (!colorConfig.length) {
-    return null;
-  }
+  // Generate CSS variables for chart theming
+  const cssVariables = React.useMemo(() => {
+    if (!colorConfig.length) {
+      return "";
+    }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
+    return Object.entries(THEMES)
+      .map(
+        ([theme, prefix]) => `
 ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
@@ -92,14 +91,39 @@ ${colorConfig
       itemConfig.color;
     return color ? `  --color-${key}: ${color};` : null;
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `,
-          )
-          .join("\n"),
-      }}
-    />
-  );
+      )
+      .join("\n");
+  }, [colorConfig, id]);
+
+  // Apply styles via CSS custom properties instead of dangerouslySetInnerHTML
+  React.useEffect(() => {
+    if (!cssVariables) {
+      return;
+    }
+
+    const styleId = `chart-theme-${id}`;
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
+
+    if (!styleElement) {
+      styleElement = document.createElement("style");
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
+
+    styleElement.textContent = cssVariables;
+
+    return () => {
+      if (styleElement?.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
+      }
+    };
+  }, [cssVariables, id]);
+
+  return null;
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;

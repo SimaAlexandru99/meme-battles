@@ -4,6 +4,7 @@ import { ErrorHandler } from "./error-handler";
 /**
  * Enhanced error toast utility using Sonner for user-friendly error notifications
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: This is intentionally a utility class with static methods
 export class ErrorToast {
   /**
    * Show an error toast with user-friendly messaging and retry options

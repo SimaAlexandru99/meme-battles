@@ -278,7 +278,7 @@ export function CategorySelector({
                               <div className="flex flex-wrap gap-1">
                                 {category.preview.map((example, index) => (
                                   <Badge
-                                    key={index}
+                                    key={`${category.id}-preview-${example}-${index}`}
                                     variant="outline"
                                     className="text-xs"
                                   >

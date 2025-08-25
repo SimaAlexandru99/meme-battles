@@ -2,7 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RiGamepadLine, RiUserLine } from "react-icons/ri";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,41 @@ export function GameTransition({
   const [situation, setSituation] = useState<string>("");
   const [progress, setProgress] = useState(0);
 
+  const generateSituation = useCallback(async () => {
+    try {
+      const response = await fetch("/api/situation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate situation");
+      }
+
+      const data = await response.json();
+      setSituation(data.situation);
+
+      // Move to next step after a short delay
+      setTimeout(() => {
+        setCurrentStep("distributing_cards");
+      }, 1000);
+    } catch (error) {
+      console.error("Error generating situation:", error);
+      Sentry.captureException(error);
+      toast.error("Failed to generate situation. Using fallback...");
+
+      // Use fallback situation
+      setSituation(
+        "When you're trying to be productive but your bed is calling your name",
+      );
+      setTimeout(() => {
+        setCurrentStep("distributing_cards");
+      }, 1000);
+    }
+  }, []);
+
   // Welcome step - show for 3 seconds
   useEffect(() => {
     if (currentStep === "welcome") {
@@ -46,7 +81,7 @@ export function GameTransition({
     if (currentStep === "generating_situation") {
       generateSituation();
     }
-  }, [currentStep]);
+  }, [currentStep, generateSituation]);
 
   // Distribute cards step
   useEffect(() => {
@@ -107,41 +142,6 @@ export function GameTransition({
       return () => clearInterval(interval);
     }
   }, [currentStep]);
-
-  const generateSituation = async () => {
-    try {
-      const response = await fetch("/api/situation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate situation");
-      }
-
-      const data = await response.json();
-      setSituation(data.situation);
-
-      // Move to next step after a short delay
-      setTimeout(() => {
-        setCurrentStep("distributing_cards");
-      }, 1000);
-    } catch (error) {
-      console.error("Error generating situation:", error);
-      Sentry.captureException(error);
-      toast.error("Failed to generate situation. Using fallback...");
-
-      // Use fallback situation
-      setSituation(
-        "When you're trying to be productive but your bed is calling your name",
-      );
-      setTimeout(() => {
-        setCurrentStep("distributing_cards");
-      }, 1000);
-    }
-  };
 
   const getStepContent = () => {
     switch (currentStep) {

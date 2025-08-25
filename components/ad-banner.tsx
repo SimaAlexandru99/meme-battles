@@ -5,6 +5,52 @@ import { useAdLocalization } from "@/lib/use-ad-localization";
 
 // AdBannerProps interface is defined in types/index.d.ts
 
+// Move script loading functions outside component to avoid recreation
+const loadGoogleAdsScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Window object not available"));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
+    script.async = true;
+    script.onload = () => {
+      const googleAdsWindow = window as GoogleAdsWindow;
+      if (!googleAdsWindow.googletag) {
+        googleAdsWindow.googletag = {
+          cmd: [],
+          defineSlot: () => null,
+          pubads: () => ({ enableSingleRequest: () => {} }),
+          enableServices: () => {},
+          display: () => {},
+        };
+      }
+      resolve();
+    };
+    script.onerror = () =>
+      reject(new Error("Failed to load Google Ads script"));
+    document.head.appendChild(script);
+  });
+};
+
+const loadPokiScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Window object not available"));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Poki SDK script"));
+    document.head.appendChild(script);
+  });
+};
+
 export default function AdBanner({
   position,
   adId,
@@ -58,8 +104,116 @@ export default function AdBanner({
     setIsInitialized(true);
   }, [adId, position, adNetworks, isInitialized]);
 
+  // Initialize Google Ads
+  const initializeGoogleAds = React.useCallback(
+    async (slotData: AdSlotData) => {
+      return new Promise<void>((resolve, reject) => {
+        try {
+          // Check if Google Ads script is loaded
+          if (
+            typeof window !== "undefined" &&
+            (window as GoogleAdsWindow).googletag
+          ) {
+            const googletag = (window as GoogleAdsWindow).googletag;
+
+            if (!googletag) {
+              reject(new Error("Google Ads script not loaded"));
+              return;
+            }
+            googletag.cmd.push(() => {
+              try {
+                if (!slotData.googleAdId) {
+                  reject(new Error("Google Ad ID is not configured"));
+                  return;
+                }
+                const slot = googletag.defineSlot(
+                  slotData.googleAdId,
+                  [160, 600],
+                  slotData.containerId,
+                );
+
+                if (slot) {
+                  slot.addService(googletag.pubads());
+                  googletag.pubads().enableSingleRequest();
+                  googletag.enableServices();
+                  googletag.display(slotData.containerId);
+                  resolve();
+                } else {
+                  reject(new Error("Failed to create Google Ad slot"));
+                }
+              } catch (error) {
+                reject(error);
+              }
+            });
+          } else {
+            // Load Google Ads script if not present
+            loadGoogleAdsScript()
+              .then(() => initializeGoogleAds(slotData))
+              .then(resolve)
+              .catch(reject);
+          }
+        } catch (error) {
+          reject(error);
+        }
+      });
+    },
+    [],
+  );
+
+  // Initialize Poki Ads
+  const initializePokiAds = React.useCallback(async (slotData: AdSlotData) => {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        // Check if Poki SDK is loaded
+        if (typeof window !== "undefined" && (window as PokiWindow).PokiSDK) {
+          const PokiSDK = (window as PokiWindow).PokiSDK;
+
+          // Initialize Poki ad slot
+          const adContainer = document.getElementById(slotData.containerId);
+          if (adContainer && slotData.pokiAdId) {
+            adContainer.setAttribute("data-poki-ad-slot", slotData.pokiAdId);
+            adContainer.setAttribute("data-poki-ad-size", "160x600");
+
+            if (!PokiSDK) {
+              reject(new Error("Poki SDK not loaded"));
+              return;
+            }
+
+            // Request ad from Poki
+            PokiSDK.displayAd(slotData.containerId)
+              .then(() => resolve())
+              .catch(reject);
+          } else {
+            reject(new Error("Ad container not found"));
+          }
+        } else {
+          // Load Poki SDK if not present
+          loadPokiScript()
+            .then(() => initializePokiAds(slotData))
+            .then(resolve)
+            .catch(reject);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }, []);
+
+  // Initialize default ad placeholder
+  const initializeDefaultAd = React.useCallback(
+    (slotData: AdSlotData) => {
+      const adContainer = document.getElementById(slotData.containerId);
+      if (adContainer) {
+        adContainer.setAttribute("data-ad-slot", slotData.slotId);
+        adContainer.setAttribute("data-ad-size", "160x600");
+        adContainer.setAttribute("data-ad-position", position);
+      }
+    },
+    [position],
+  );
+
   // Initialize ad slots for different networks
-  const initializeAdSlots = async () => {
+  const initializeAdSlots = React.useCallback(async () => {
     if (!adSlotData || !adContainerRef.current) return;
 
     setLoadingState("loading");
@@ -85,152 +239,14 @@ export default function AdBanner({
       console.error("Failed to initialize ad slots:", error);
       setLoadingState("error");
     }
-  };
-
-  // Initialize Google Ads
-  const initializeGoogleAds = async (slotData: AdSlotData) => {
-    return new Promise<void>((resolve, reject) => {
-      try {
-        // Check if Google Ads script is loaded
-        if (
-          typeof window !== "undefined" &&
-          (window as GoogleAdsWindow).googletag
-        ) {
-          const googletag = (window as GoogleAdsWindow).googletag!;
-
-          googletag.cmd.push(() => {
-            try {
-              const slot = googletag.defineSlot(
-                slotData.googleAdId!,
-                [160, 600],
-                slotData.containerId,
-              );
-
-              if (slot) {
-                slot.addService(googletag.pubads());
-                googletag.pubads().enableSingleRequest();
-                googletag.enableServices();
-                googletag.display(slotData.containerId);
-                resolve();
-              } else {
-                reject(new Error("Failed to create Google Ad slot"));
-              }
-            } catch (error) {
-              reject(error);
-            }
-          });
-        } else {
-          // Load Google Ads script if not present
-          loadGoogleAdsScript()
-            .then(() => initializeGoogleAds(slotData))
-            .then(resolve)
-            .catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
-  };
-
-  // Initialize Poki Ads
-  const initializePokiAds = async (slotData: AdSlotData) => {
-    return new Promise<void>((resolve, reject) => {
-      try {
-        // Check if Poki SDK is loaded
-        if (typeof window !== "undefined" && (window as PokiWindow).PokiSDK) {
-          const PokiSDK = (window as PokiWindow).PokiSDK!;
-
-          // Initialize Poki ad slot
-          const adContainer = document.getElementById(slotData.containerId);
-          if (adContainer) {
-            adContainer.setAttribute("data-poki-ad-slot", slotData.pokiAdId!);
-            adContainer.setAttribute("data-poki-ad-size", "160x600");
-
-            // Request ad from Poki
-            PokiSDK.displayAd(slotData.containerId)
-              .then(() => resolve())
-              .catch(reject);
-          } else {
-            reject(new Error("Ad container not found"));
-          }
-        } else {
-          // Load Poki SDK if not present
-          loadPokiScript()
-            .then(() => initializePokiAds(slotData))
-            .then(resolve)
-            .catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
-  };
-
-  // Initialize default ad placeholder
-  const initializeDefaultAd = (slotData: AdSlotData) => {
-    const adContainer = document.getElementById(slotData.containerId);
-    if (adContainer) {
-      adContainer.setAttribute("data-ad-slot", slotData.slotId);
-      adContainer.setAttribute("data-ad-size", "160x600");
-      adContainer.setAttribute("data-ad-position", position);
-    }
-  };
-
-  // Load Google Ads script
-  const loadGoogleAdsScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (typeof window === "undefined") {
-        reject(new Error("Window object not available"));
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
-      script.async = true;
-      script.onload = () => {
-        const googleAdsWindow = window as GoogleAdsWindow;
-        if (!googleAdsWindow.googletag) {
-          googleAdsWindow.googletag = {
-            cmd: [],
-            defineSlot: () => null,
-            pubads: () => ({ enableSingleRequest: () => {} }),
-            enableServices: () => {},
-            display: () => {},
-          };
-        }
-        resolve();
-      };
-      script.onerror = () =>
-        reject(new Error("Failed to load Google Ads script"));
-      document.head.appendChild(script);
-    });
-  };
-
-  // Load Poki SDK script
-  const loadPokiScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (typeof window === "undefined") {
-        reject(new Error("Window object not available"));
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () =>
-        reject(new Error("Failed to load Poki SDK script"));
-      document.head.appendChild(script);
-    });
-  };
+  }, [adSlotData, initializeGoogleAds, initializePokiAds, initializeDefaultAd]);
 
   // Initialize ads when slot data is ready and state is idle
   React.useEffect(() => {
     if (adSlotData && loadingState === "idle") {
       initializeAdSlots();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adSlotData?.slotId, loadingState]); // Only depend on slotId to avoid infinite loops
+  }, [adSlotData, loadingState, initializeAdSlots]);
 
   const handleRemoveAdsClick = () => {
     if (upgradeUrl) {
@@ -279,17 +295,16 @@ export default function AdBanner({
   };
 
   return (
-    <div
+    <aside
       className={`
         fixed top-1/2 -translate-y-1/2 z-40
         ${position === "left" ? "left-4" : "right-4"}
         hidden xl:block
       `}
-      role="complementary"
       aria-label={`Advertisement banner - ${position}`}
     >
       {/* Ad Container */}
-      <div
+      <header
         id={adId}
         className="
           w-40 h-[600px] 
@@ -301,8 +316,6 @@ export default function AdBanner({
           overflow-hidden
           relative
         "
-        role="banner"
-        aria-label="Advertisement"
         data-ad-position={position}
         data-ad-id={adId}
         data-ad-slot-id={adSlotData?.slotId}
@@ -340,7 +353,7 @@ export default function AdBanner({
             {localizedRemoveAdsText}
           </Button>
         </div>
-      </div>
-    </div>
+      </header>
+    </aside>
   );
 }

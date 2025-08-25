@@ -44,7 +44,7 @@ export function useUpdateDisplayName(
 
   // Effect to trigger update when debounced value changes
   useEffect(() => {
-    if (debouncedDisplayName && debouncedDisplayName.trim()) {
+    if (debouncedDisplayName?.trim()) {
       handleDebouncedUpdate(debouncedDisplayName);
     }
   }, [debouncedDisplayName, handleDebouncedUpdate]);

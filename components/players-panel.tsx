@@ -59,7 +59,7 @@ export function PlayersList({ players }: PlayersListProps) {
   }, []);
 
   const getScoreBadge = useCallback((score: number, index: number) => {
-    const getScoreColor = (score: number, index: number) => {
+    const getScoreColor = (_score: number, index: number) => {
       if (index === 0) return "bg-yellow-600 text-white";
       if (index === 1) return "bg-gray-600 text-white";
       if (index === 2) return "bg-orange-600 text-white";

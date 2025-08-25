@@ -228,7 +228,6 @@ export function JoinWithCodeSection({
         "h-full justify-between",
         className,
       )}
-      role="region"
       aria-label="Join existing lobby with invitation code"
       onKeyDown={handleKeyDown}
     >
@@ -296,11 +295,10 @@ export function JoinWithCodeSection({
       </motion.div>
 
       {/* Invitation Code Input */}
-      <motion.div
+      <motion.section
         ref={inputRef}
         className="w-full max-w-md"
         variants={microInteractionVariants}
-        role="group"
         aria-labelledby="code-input-label"
       >
         <div id="code-input-label" className="sr-only">
@@ -332,12 +330,12 @@ export function JoinWithCodeSection({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </motion.section>
 
       {/* Lobby Preview */}
       <AnimatePresence mode="wait">
         {lobbyPreview && !error && (
-          <motion.div
+          <motion.section
             variants={successVariants}
             initial="initial"
             animate="animate"
@@ -347,7 +345,6 @@ export function JoinWithCodeSection({
               "bg-blue-500/10 border border-blue-500/30",
               "text-center",
             )}
-            role="region"
             aria-label="Lobby preview information"
           >
             <div className="flex items-center justify-center gap-2 mb-3">
@@ -404,7 +401,7 @@ export function JoinWithCodeSection({
                 </Badge>
               </div>
             </div>
-          </motion.div>
+          </motion.section>
         )}
       </AnimatePresence>
 
@@ -627,14 +624,13 @@ export function JoinWithCodeSection({
       </motion.div>
 
       {/* Helper Text */}
-      <motion.p
+      <motion.aside
         className="text-purple-200/50 text-xs sm:text-sm text-center font-bangers tracking-wide max-w-md"
         variants={microInteractionVariants}
-        role="complementary"
         aria-label="Instructions"
       >
         The invitation code contains 5 alphanumeric characters
-      </motion.p>
+      </motion.aside>
     </motion.div>
   );
 }

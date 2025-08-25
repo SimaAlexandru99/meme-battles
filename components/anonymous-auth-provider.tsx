@@ -122,6 +122,7 @@ export default function AnonymousAuthProvider({
           </h2>
           <p className="text-gray-300 mb-6">{authError}</p>
           <button
+            type="button"
             onClick={() => {
               hasAttemptedAuth.current = false;
               setAuthError(null);

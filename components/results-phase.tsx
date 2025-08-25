@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface ResultsPhaseProps {
-  lobbyCode: string;
   currentUser: User;
   players: Player[];
   situation?: string;
@@ -28,7 +27,6 @@ interface ResultsPhaseProps {
 }
 
 export function ResultsPhase({
-  lobbyCode,
   currentUser,
   players,
   situation,

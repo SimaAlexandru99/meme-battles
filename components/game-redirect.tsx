@@ -23,8 +23,7 @@ export function GameRedirect({ lobbyCode, children }: GameRedirectProps) {
     useState<RedirectReason>("loading");
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  const { lobby, players, isLoading, error, joinLobby } =
-    useLobbyManagement(lobbyCode);
+  const { lobby, isLoading, error, joinLobby } = useLobbyManagement(lobbyCode);
 
   // Check lobby access and permissions
   useEffect(() => {
@@ -59,7 +58,7 @@ export function GameRedirect({ lobbyCode, children }: GameRedirectProps) {
 
     // All checks passed
     setRedirectReason(null);
-  }, [lobby, players, isLoading, error, user?.id, user?.name]);
+  }, [lobby, isLoading, error, user?.id]);
 
   // Handle joining lobby
   const handleJoinLobby = async () => {

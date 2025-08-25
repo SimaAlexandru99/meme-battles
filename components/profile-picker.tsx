@@ -139,6 +139,7 @@ export default function ProfilePicker({
         <div className="grid grid-cols-3 gap-4 p-4">
           {ICON_AVATARS.map((avatar) => (
             <button
+              type="button"
               key={avatar.id}
               onClick={() => handleAvatarSelect(avatar.id)}
               disabled={isUpdating}

@@ -626,9 +626,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   className="space-y-3"
                   variants={microInteractionVariants}
                 >
-                  <label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
+                  <h3 className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
                     Invitation Code
-                  </label>
+                  </h3>
                   <div className="flex items-center gap-2">
                     <motion.div
                       className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2"
@@ -677,9 +677,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   className="space-y-3"
                   variants={microInteractionVariants}
                 >
-                  <label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
+                  <h3 className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
                     Game Settings
-                  </label>
+                  </h3>
                   <div className="space-y-2 text-sm text-purple-200/70 font-bangers tracking-wide">
                     <div className="flex items-center gap-2">
                       <RiTimeLine className="w-4 h-4" />
@@ -724,9 +724,9 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                   >
                     <Separator className="bg-slate-700/50" />
                     <div className="space-y-3">
-                      <label className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
+                      <h3 className="text-sm font-medium text-purple-200/70 font-bangers tracking-wide">
                         Host Controls
-                      </label>
+                      </h3>
                       <motion.div variants={buttonVariants}>
                         <Button
                           onClick={handleStartGame}
@@ -954,7 +954,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
                       lobby.maxPlayers - Object.keys(lobby.players).length,
                   }).map((_, index) => (
                     <motion.div
-                      key={`empty-${index}`}
+                      key={`empty-slot-${lobbyCode}-slot-${index + 1}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-slate-700/10 border border-slate-600/20 border-dashed"
@@ -1107,7 +1107,7 @@ export function GameLobby({ lobbyCode, currentUser }: GameLobbyProps) {
               <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 {[...Array(20)].map((_, i) => (
                   <motion.div
-                    key={i}
+                    key={`particle-${lobbyCode}-particle-${i + 1}`}
                     className="absolute w-2 h-2 bg-purple-400/30 rounded-full"
                     initial={{
                       x: Math.random() * window.innerWidth,

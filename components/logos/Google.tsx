@@ -3,6 +3,7 @@ import type { SVGProps } from "react";
 export default function GoogleIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" className="w-full h-full" {...props}>
+      <title>Google Logo</title>
       {/* Blue */}
       <path
         fill="#4285F4"

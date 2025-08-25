@@ -1,4 +1,3 @@
-import * as React from "react";
 import AdBanner from "./ad-banner";
 
 export default function AdBannerContainer({

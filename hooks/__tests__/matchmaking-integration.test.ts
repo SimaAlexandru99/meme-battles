@@ -63,7 +63,7 @@ jest.mock("../useCurrentUser", () => ({
 jest.mock("@sentry/nextjs", () => ({
   captureException: jest.fn(),
   addBreadcrumb: jest.fn(),
-  startSpan: jest.fn((config, callback) => callback()),
+  startSpan: jest.fn((_config, callback) => callback()),
 }));
 
 describe("Matchmaking Hooks Integration", () => {

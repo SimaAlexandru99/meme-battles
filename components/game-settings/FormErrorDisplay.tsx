@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { AlertCircle, X } from "lucide-react";
-import * as React from "react";
 import { cn } from "@/lib/utils";
 import { messageVariants, microInteractionVariants } from "./animations";
 import type { GameSettingsValidationErrors } from "./types";
@@ -49,7 +48,7 @@ export function FormErrorDisplay({
           <ul className="space-y-1">
             {errorMessages.map((error, index) => (
               <motion.li
-                key={index}
+                key={`error-${error.replace(/\s+/g, "-")}-${Date.now()}-${index}`}
                 className="text-sm text-red-200 font-bangers tracking-wide flex items-start gap-2"
                 variants={microInteractionVariants}
                 initial="initial"

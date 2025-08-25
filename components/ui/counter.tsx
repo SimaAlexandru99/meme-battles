@@ -12,7 +12,7 @@ interface NumberProps {
   height: number;
 }
 
-function Number({ mv, number, height }: NumberProps) {
+function NumberDisplay({ mv, number, height }: NumberProps) {
   const y = useTransform(mv, (latest) => {
     const placeValue = latest % 10;
     const offset = (10 + number - placeValue) % 10;
@@ -62,7 +62,12 @@ function Digit({ place, value, height, digitStyle }: DigitProps) {
   return (
     <div style={{ ...defaultStyle, ...digitStyle }}>
       {Array.from({ length: 10 }, (_, i) => (
-        <Number key={i} mv={animatedValue} number={i} height={height} />
+        <NumberDisplay
+          key={`digit-${i}-${height}`}
+          mv={animatedValue}
+          number={i}
+          height={height}
+        />
       ))}
     </div>
   );

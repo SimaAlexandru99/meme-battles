@@ -314,6 +314,7 @@ const BottomNavigation = memo(function BottomNavigation() {
           </Link>
         </div>
         <button
+          type="button"
           className="flex flex-col items-center gap-1 text-white font-bangers text-base sm:text-lg md:text-xl hover:scale-110 transition-all duration-200"
           aria-label="Learn how to play"
           onClick={() => toast.info("How to play guide coming soon!")}
@@ -460,10 +461,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
   });
 
   return (
-    <section
-      className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden"
-      role="banner"
-    >
+    <header className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       <Header initialUserData={initialUserData} />
       <div className="absolute inset-0 z-0" aria-hidden="true">
         <Particles
@@ -598,6 +596,6 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
       </div>
 
       <BottomNavigation />
-    </section>
+    </header>
   );
 }

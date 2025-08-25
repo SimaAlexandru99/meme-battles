@@ -81,7 +81,7 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
     if (event.key === "Tab") {
       // Announce navigation context for screen readers
       const activeElement = document.activeElement;
-      if (activeElement && activeElement.getAttribute("aria-label")) {
+      if (activeElement?.getAttribute("aria-label")) {
         // Screen readers will naturally announce the focused element
         // No additional action needed
       }
@@ -255,12 +255,11 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
   }
 
   return (
-    <div
+    <main
       className={cn(
         "min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900",
         className,
       )}
-      role="main"
       aria-label="Game lobby interface"
     >
       {/* Connection Status - Always visible when not connected */}
@@ -338,12 +337,11 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
       {/* Loading Overlay */}
       <AnimatePresence>
         {isLoading && (
-          <motion.div
+          <motion.output
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
-            role="status"
             aria-label="Loading"
           >
             <motion.div
@@ -357,9 +355,9 @@ export function LobbyInterface({ lobbyCode, className }: LobbyInterfaceProps) {
                 Loading...
               </span>
             </motion.div>
-          </motion.div>
+          </motion.output>
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 }

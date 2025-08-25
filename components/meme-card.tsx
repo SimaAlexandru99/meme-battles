@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { memo, useCallback, useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -150,7 +149,8 @@ export const MemeCard = memo(function MemeCard({
   const currentRarity = rarityConfig[rarity];
 
   return (
-    <Card
+    <button
+      type="button"
       className={cn(
         "relative cursor-pointer transition-all duration-300 ease-out overflow-hidden",
         "hover:scale-105 focus-visible:scale-105 group",
@@ -173,11 +173,9 @@ export const MemeCard = memo(function MemeCard({
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={disabled ? -1 : 0}
-      role="button"
+      disabled={disabled}
       aria-label={`Meme card: ${card.alt}${isSelected ? " (selected)" : ""} (${rarity})`}
       aria-pressed={isSelected}
-      aria-disabled={disabled}
     >
       {/* Card Content Container */}
       <div className="relative h-full p-1 sm:p-2 flex flex-col">
@@ -245,6 +243,6 @@ export const MemeCard = memo(function MemeCard({
           <div className="animate-spin w-3 h-3 sm:w-4 sm:h-4 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       )}
-    </Card>
+    </button>
   );
 });

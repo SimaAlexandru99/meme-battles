@@ -40,7 +40,7 @@ export function formatJoinTime(dateValue: unknown): string {
     // Handle string (ISO string or other date string)
     if (typeof dateValue === "string") {
       const date = new Date(dateValue);
-      if (!isNaN(date.getTime())) {
+      if (!Number.isNaN(date.getTime())) {
         return date.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -54,7 +54,7 @@ export function formatJoinTime(dateValue: unknown): string {
     // Handle number (timestamp)
     if (typeof dateValue === "number") {
       const date = new Date(dateValue);
-      if (!isNaN(date.getTime())) {
+      if (!Number.isNaN(date.getTime())) {
         return date.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",

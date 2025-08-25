@@ -178,7 +178,6 @@ export function MatchmakingProgress({
           "backdrop-blur-sm",
           phaseContent.borderColor,
         )}
-        role="region"
         aria-label="Matchmaking progress"
         aria-live="polite"
       >

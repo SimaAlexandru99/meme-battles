@@ -81,28 +81,26 @@ const LobbyErrorFallback: React.FC<LobbyErrorFallbackProps> = ({
             )}
 
             {showLobbyActions && (
-              <>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleCreateLobby}
-                    className="flex-1"
-                    size="lg"
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Create Lobby
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleJoinLobby}
-                    className="flex-1"
-                    size="lg"
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Join Lobby
-                  </Button>
-                </div>
-              </>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCreateLobby}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Create Lobby
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleJoinLobby}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Join Lobby
+                </Button>
+              </div>
             )}
 
             <Button

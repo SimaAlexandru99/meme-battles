@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import * as React from "react";
 import { staggerContainerVariants } from "@/lib/animations/private-lobby-variants";
 import { cn } from "@/lib/utils";
 import { LeaveLobbyButton } from "./leave-lobby-button";
@@ -44,12 +43,11 @@ export function LobbyActions({
   );
 
   return (
-    <motion.div
+    <motion.fieldset
       className={containerClasses}
       variants={staggerContainerVariants}
       initial="initial"
       animate="animate"
-      role="group"
       aria-label="Lobby actions"
     >
       {/* Start Game Button - Only visible to host */}
@@ -74,6 +72,6 @@ export function LobbyActions({
         variant={isHost ? "outline" : "outline"}
         size={isHost ? "md" : "md"}
       />
-    </motion.div>
+    </motion.fieldset>
   );
 }

@@ -45,7 +45,7 @@ interface QueuePreferencesProps {
   className?: string;
 }
 
-export function QueuePreferences({
+export function QueuePreferencesComponent({
   onUpdatePreferences,
   isInQueue,
   isLoading,
@@ -174,7 +174,6 @@ export function QueuePreferences({
             "border-slate-600/40 shadow-lg",
             "backdrop-blur-sm",
           )}
-          role="region"
           aria-label="Queue preferences settings"
         >
           <CardHeader>

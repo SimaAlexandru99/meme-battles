@@ -162,7 +162,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     if (gameState?.phase === "game_over") {
       toast.success("Game finished! Check out the results!");
     }
-  }, [gameState?.phase, lobbyCode, router]);
+  }, [gameState?.phase]);
 
   // Handler functions
   const handleSendMessage = useCallback(async () => {
@@ -754,7 +754,6 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <ResultsPhase
-          lobbyCode={lobbyCode}
           currentUser={currentUser}
           players={players}
           situation={gameState.currentSituation}

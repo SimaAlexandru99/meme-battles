@@ -208,7 +208,8 @@ export default function HowToPlay() {
           <div className="flex justify-center mt-8 gap-2">
             {Array.from({ length: count }).map((_, index) => (
               <button
-                key={index}
+                type="button"
+                key={`carousel-indicator-${index}-${tutorialSteps[index].id}`}
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
                   index === current - 1
                     ? "bg-primary scale-125"
@@ -242,7 +243,7 @@ export default function HowToPlay() {
           <Accordion type="single" collapsible className="w-full space-y-4 ">
             {faqItems.map((item, index) => (
               <AccordionItem
-                key={index}
+                key={`faq-${item.question.slice(0, 20)}-${index}`}
                 value={`item-${index}`}
                 className="border rounded-lg px-6 hover:border-primary/50 transition-colors"
               >

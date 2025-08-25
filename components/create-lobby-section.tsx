@@ -154,7 +154,7 @@ export function CreateLobbySection({
   }, [createdCode]);
 
   return (
-    <motion.div
+    <motion.section
       variants={microInteractionVariants}
       className={cn(
         "flex flex-col items-center gap-6 p-6 sm:p-8",
@@ -163,7 +163,6 @@ export function CreateLobbySection({
         "h-full justify-between",
         className,
       )}
-      role="region"
       aria-label="Create new private lobby"
       onKeyDown={handleKeyDown}
     >
@@ -354,7 +353,6 @@ export function CreateLobbySection({
               "bg-blue-500/10 border border-blue-500/30",
               "text-center",
             )}
-            role="region"
             aria-label="Lobby settings preview"
           >
             <p className="text-blue-400 text-sm font-bangers tracking-wide mb-3">
@@ -407,7 +405,6 @@ export function CreateLobbySection({
               "bg-green-500/10 border border-green-500/30",
               "text-center",
             )}
-            role="region"
             aria-label="Created invitation code"
             tabIndex={0}
           >
@@ -426,7 +423,6 @@ export function CreateLobbySection({
                 )}
                 variants={microInteractionVariants}
                 whileHover="hover"
-                role="textbox"
                 aria-label={`Invitation code: ${createdCode}`}
                 aria-describedby="code-instructions"
                 onClick={handleCopyCode}
@@ -601,11 +597,9 @@ export function CreateLobbySection({
       <motion.p
         className="text-purple-200/50 text-xs sm:text-sm text-center font-bangers tracking-wide max-w-md"
         variants={microInteractionVariants}
-        role="complementary"
-        aria-label="Instructions"
       >
         You will receive an invitation code that you can send to friends
       </motion.p>
-    </motion.div>
+    </motion.section>
   );
 }

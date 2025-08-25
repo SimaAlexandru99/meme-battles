@@ -146,7 +146,6 @@ export function QueueStatus({
         isInQueue && "border-purple-500/30 shadow-purple-500/10",
         className,
       )}
-      role="region"
       aria-label="Battle Royale queue status"
     >
       {/* Animated background gradient for queue state */}

@@ -112,10 +112,9 @@ export function InvitationCodeInput({
   }, []);
 
   return (
-    <motion.div
+    <motion.fieldset
       className={cn("flex flex-col items-center gap-2", className)}
       variants={microInteractionVariants}
-      role="group"
       aria-labelledby="otp-input-label"
       aria-describedby="otp-input-description"
     >
@@ -127,13 +126,12 @@ export function InvitationCodeInput({
         navigate between fields.
       </div>
 
-      <motion.div
+      <motion.fieldset
         variants={inputVariants}
         initial="initial"
         animate={error ? "error" : "initial"}
         whileFocus="focus"
         className="w-full box-shado"
-        role="group"
         aria-label="Invitation code input"
         aria-describedby={error ? "otp-error-message" : undefined}
       >
@@ -158,7 +156,7 @@ export function InvitationCodeInput({
           <InputOTPGroup className="gap-2 sm:gap-3">
             {Array.from({ length: 5 }, (_, index) => (
               <motion.div
-                key={index}
+                key={`otp-slot-${index}-${value[index]}`}
                 variants={microInteractionVariants}
                 whileHover="hover"
                 whileTap="tap"
@@ -229,11 +227,11 @@ export function InvitationCodeInput({
             ))}
           </InputOTPGroup>
         </InputOTP>
-      </motion.div>
+      </motion.fieldset>
 
       {/* Helper text */}
       <AnimatePresence mode="wait">
-        <motion.p
+        <motion.output
           key={error || localError ? "error" : "normal"}
           variants={errorVariants}
           initial="initial"
@@ -245,7 +243,6 @@ export function InvitationCodeInput({
             disabled && "opacity-50",
           )}
           id={error || localError ? "otp-error-message" : undefined}
-          role="status"
           aria-live="polite"
         >
           {error
@@ -255,7 +252,7 @@ export function InvitationCodeInput({
               : value.length === 5
                 ? "Code complete - ready to join!"
                 : "Enter 5-character invitation code"}
-        </motion.p>
+        </motion.output>
       </AnimatePresence>
 
       {/* Progress indicator for screen readers */}
@@ -266,6 +263,6 @@ export function InvitationCodeInput({
           `${value.length} of 5 characters entered`}
         {value.length === 5 && "All 5 characters entered"}
       </div>
-    </motion.div>
+    </motion.fieldset>
   );
 }

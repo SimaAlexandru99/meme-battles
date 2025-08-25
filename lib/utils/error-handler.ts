@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 /**
  * Enhanced error handling utility with retry mechanisms and user-friendly messages
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: This is intentionally a utility class with static methods
 export class ErrorHandler {
   private static readonly DEFAULT_RETRY_DELAYS = [1000, 2000, 4000, 8000]; // Exponential backoff
   private static readonly MAX_RETRIES = 3;

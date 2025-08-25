@@ -85,8 +85,9 @@ export function MemeCardHand({
               const rarity = getCardRarity(card.id);
 
               return (
-                <div
+                <button
                   key={card.id}
+                  type="button"
                   className={cn(
                     "relative transition-all duration-300 ease-out",
                     isHovered && "scale-110 z-50",
@@ -96,6 +97,12 @@ export function MemeCardHand({
                   onMouseEnter={() => handleCardHover(card.id)}
                   onMouseLeave={() => handleCardHover(null)}
                   onClick={() => handleCardSelect(card)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleCardSelect(card);
+                    }
+                  }}
                 >
                   <MemeCard
                     card={card}
@@ -104,7 +111,7 @@ export function MemeCardHand({
                     isSelected={isSelected}
                     disabled={hasSubmitted}
                   />
-                </div>
+                </button>
               );
             })}
           </div>
@@ -114,22 +121,8 @@ export function MemeCardHand({
       {/* Mobile Layout - Centered and visible */}
       <div className="lg:hidden w-full">
         {/* Mobile Cards Horizontal Scroll */}
-        <div
-          className="w-full overflow-x-auto overflow-y-hidden"
-          style={{
-            scrollbarWidth: "none" /* Firefox */,
-            msOverflowStyle: "none" /* Internet Explorer 10+ */,
-          }}
-        >
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
-              .overflow-x-auto::-webkit-scrollbar {
-                display: none; /* Safari and Chrome */
-              }
-            `,
-            }}
-          />
+        <div className="w-full overflow-x-auto overflow-y-hidden scrollbar-hide">
+          {/* Custom scrollbar styling handled via CSS classes */}
           <div
             className="flex items-center justify-center gap-4 px-8 py-4 min-w-full"
             style={{ minWidth: `${Math.max(cards.length * 100, 320)}px` }}
@@ -139,8 +132,9 @@ export function MemeCardHand({
               const rarity = getCardRarity(card.id);
 
               return (
-                <div
+                <button
                   key={card.id}
+                  type="button"
                   className={cn(
                     "relative transition-all duration-300 flex-shrink-0",
                     "w-20 h-28", // Slightly larger for better visibility
@@ -158,6 +152,12 @@ export function MemeCardHand({
                     filter: isSelected ? "brightness(1.1)" : "brightness(1)",
                   }}
                   onClick={() => handleCardSelect(card)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleCardSelect(card);
+                    }
+                  }}
                 >
                   <MemeCard
                     card={card}
@@ -166,7 +166,7 @@ export function MemeCardHand({
                     isSelected={isSelected}
                     disabled={hasSubmitted}
                   />
-                </div>
+                </button>
               );
             })}
           </div>

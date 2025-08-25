@@ -178,25 +178,14 @@ export function PlayerList({
                 const isOnline = isPlayerOnline(player);
 
                 return (
-                  <motion.div
-                    key={player.displayName}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                    transition={{
-                      duration: 0.3,
-                      delay: index * 0.05,
-                      layout: { duration: 0.3 },
-                    }}
+                  <motion.li
+                    key={player.id}
                     className={cn(
-                      "flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-all duration-200",
-                      "bg-slate-700/30 border border-slate-600/30",
+                      "flex items-center gap-3 p-3 rounded-lg border border-slate-600/50 transition-all duration-200",
                       "hover:bg-slate-700/50 hover:border-slate-600/50",
                       !isOnline && "opacity-75",
                     )}
                     whileHover={{ scale: 1.01 }}
-                    role="listitem"
                     aria-label={`Player ${player.displayName}${player.isHost ? " (host)" : ""}${isCurrentUser ? " (you)" : ""}`}
                   >
                     {/* Avatar */}
@@ -317,7 +306,7 @@ export function PlayerList({
                         </DropdownMenu>
                       </motion.div>
                     )}
-                  </motion.div>
+                  </motion.li>
                 );
               })}
             </AnimatePresence>
