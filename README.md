@@ -1,281 +1,287 @@
-# 📘 Meme Battles — Project Documentation & Development Plan
+# 🎮 Meme Battles — Advanced Real-Time Multiplayer Gaming Platform
 
-**Meme Battles** is a real-time multiplayer web game where players compete to create the funniest meme matches. Inspired
-by **What Do You Meme?**, players draw seven random meme image cards from a pool of 800 images stored in
-`/public/memes/`, select one to match an AI-generated situation (using Vercel AI SDK), and rate submissions to determine
-the winner.
+**Meme Battles** is a sophisticated real-time multiplayer web game featuring Battle Royale matchmaking, AI-powered opponents, and dynamic meme-based gameplay. This production-ready application serves as a comprehensive gaming platform with advanced real-time features, scalable architecture, and enterprise-grade performance optimizations.
 
 ## 🎯 Project Overview
 
-- **Platform**: Web-based, built with **Next.js**, **Tailwind CSS**, **shadcn/ui**, **Firebase**, and **Vercel AI SDK
-  ** (`npm i ai`).
-- **Core Gameplay**: Players join rooms, receive seven random meme image cards from a folder of 800 images, submit one
-  card to match an AI-generated situation, and rate all submissions (1-5 stars) to score points.
-- **Goal**: Launch by **August 25, 2025 @ 10:00 PM**.
+- **Platform**: Web-based gaming platform with real-time multiplayer capabilities
+- **Core Gameplay**: Players compete in meme-matching games with AI-generated situations
+- **Advanced Features**: Battle Royale mode, skill-based matchmaking, AI opponents
+- **Performance Target**: <200ms latency for 8 concurrent players, mobile-first responsive design
+- **Tech Stack**: Next.js 15.4.5, TypeScript, Firebase, Vercel AI SDK, shadcn/ui
 
-## 🎲 Game Mechanics (Inverted from What Do You Meme?)
+## 🎮 Game Features
 
-1. **Card Distribution**:
-   - Each player receives **seven random meme image cards** from a pool of 800 images in `/public/memes/` (e.g.,
-     `meme001.jpg` to `meme800.jpg`), with no duplicates within their hand.
-   - Memes are tracked in Realtime database(`/rooms/{roomId}/usedMemes`). If the pool runs low (<100 memes), used memes
-     are
-     reshuffled (excluding active hands).
-   - Rounds may feature **themed sub-pools** (e.g., pop culture, animals) to add variety.
+### Core Game Modes
 
-2. **AI-Generated Situation**:
-   - An **AI-generated situation** (e.g., “When you realize the meeting is all-you-can-eat...”) is presented each round
-     using Vercel AI SDK.
-   - A basic keyword filter ensures prompts are appropriate. If AI output fails or is flagged, a pre-approved
-     template (from a curated list of 50–100) is used.
-   - Situations may align with a round theme (e.g., “Workplace Fails”) for cohesive creativity.
+**🎯 Classic Mode**:
+- Traditional meme matching gameplay
+- 7 unique cards from 800+ meme pool per player
+- AI-generated situations using Vercel AI SDK
+- Single vote per player (self-voting prohibited)
+- Point-based scoring with streak bonuses
 
-3. **Meme Submission**:
-   - Players have **60 seconds** or **custom timer** to select and submit one meme card to match the situation.
-   - If a player fails to submit, a random card from their hand is auto-submitted to keep the round moving.
+**🏆 Battle Royale Mode**:
+- Competitive matchmaking with skill-based rating system
+- Elo rating system for player progression
+- Tournament-style elimination rounds
+- XP rewards and achievement system
+- Connection quality monitoring
 
-4. **Voting System**:
-   - Players vote for their favorite submission with a **single vote per player** within a **30-second window**.
-     In rooms with many submissions, players can easily browse all entries to make their choice.
-   - Players cannot vote for their own submission (disabled in UI).
-   - The meme with the **most votes** wins. Ties are broken randomly or by earliest submission time.
-   - Visual feedback shows vote counts and highlights the winner with confetti effects.
+### 🤖 AI Integration
 
-5. **Scoring**:
-   - Players earn **1 point per vote** received, a **3-point bonus** for the winning meme, and **1 participation point
-     ** for submitting.
-   - **Streak Bonus**: +2 points for winning consecutive rounds.
-   - **Power-Ups**: After every three rounds, players earn a random power-up (e.g., “Swap Card” to trade with the deck,
-     “Double Vote” to amplify one vote).
+**Dynamic Situation Generation**:
+- Vercel AI SDK with Google AI integration
+- Contextually relevant, family-friendly prompts
+- Fallback templates for reliability
+- Personality-based AI opponents (Easy/Medium/Hard)
 
-6. **Round Progression**:
-   - After voting, players draw back to seven cards, ensuring no duplicates in their hand.
-   - A new round begins with a fresh AI situation. Minimum three active players are required; otherwise, the game pauses with
-     an “Invite More Players” prompt.
-   - Disconnected players are marked inactive but can rejoin within 2 minutes without losing their score.
+**Smart AI Opponents**:
+- Multiple personality types for varied gameplay
+- Difficulty scaling based on player performance
+- Realistic decision-making patterns
 
-7. **Game End**:
-   - The game ends after **10 rounds** or when a player reaches **50 points**, whichever comes first.
-   - The highest-scoring player is declared the winner, displayed on a leaderboard with shareable winning memes.
+### ⚡ Real-Time Features
 
-### Key Features
+**Multiplayer Infrastructure**:
+- Firebase Realtime Database for live game state
+- Real-time chat with player interactions
+- Live matchmaking queue system
+- Automatic reconnection with heartbeat monitoring
+- Connection status tracking across devices
 
-- **Random Meme Selection**: Ensures unique hands per player, with themed sub-pools for variety.
-- **AI Situations**: Dynamic, moderated prompts with fallback templates for reliability.
-- **Engaging Voting**: Single vote per player with time limits for quick decision-making.
-- **Social Features**: Real-time chat, shareable memes, and power-ups for interactivity.
-- **Robustness**: Handles disconnections, no-submissions, and low player counts gracefully.
+**Performance Optimizations**:
+- <200ms latency target for 8 concurrent players
+- Mobile-first responsive design (320px minimum)
+- Lazy loading for 800+ meme images
+- SWR caching with 5-minute TTL
 
-### Additional Features
+## 🏗️ Architecture & Tech Stack
 
-- **Random Meme Selection**: Randomly assign seven unique meme images per player from 800 images, ensuring no duplicates
-  within a player's hand.
-- **AI Situations**: Dynamic, humorous prompts generated via Vercel AI SDK.
-- **Voting System**: Simple one-vote-per-player system where the meme with the most votes wins.
-- **Social Features**: Real-time chat and shareable winning memes.
-- **Visual Polish**: Meme-centric UI with animations and confetti effects.
+### Core Technologies
+- **Framework**: Next.js 15.4.5 with App Router
+- **Language**: TypeScript 5.8.3 (strict mode)
+- **Styling**: Tailwind CSS 4.1.11 + shadcn/ui (New York style)
+- **Database**: Firebase Realtime Database + Firestore
+- **Authentication**: Firebase Auth (Google + Guest modes)
+- **AI**: Vercel AI SDK with Google AI
+- **Real-time**: Firebase Realtime Database listeners
+- **State Management**: SWR + React hooks
+- **Animations**: Framer Motion + GSAP
+- **Error Tracking**: Sentry with custom spans
+- **Testing**: Jest + Testing Library (70% coverage target)
+- **Linting**: Biome (replaces ESLint)
+- **Package Manager**: pnpm
 
-### 🎯 Simple Voting System
+### Project Structure (MANDATORY)
 
-Players vote for their favorite meme submission:
+```
+/app                    # Next.js App Router - pages and layouts only
+  /(auth)              # Authentication routes (grouped)
+  /(front)             # Main application routes (grouped)
+  layout.tsx           # Root layout with providers
+  globals.css          # Global styles and Tailwind
 
-**Voting Rules:**
+/components             # React components - organized by domain
+  /forms               # Form-specific components
+  /game-settings       # Game configuration components
+  /shared              # Reusable cross-feature components
+  /ui                  # shadcn/ui components ONLY
 
-- Each player can vote for **only one meme** per round
-- Players cannot vote for their own submission
-- The meme with the most votes wins the round
-- In case of a tie, the submission with the unique voters wins
-- Players earn points based on their submission's vote count
+/hooks                  # Custom React hooks - business logic
+/lib                    # Utilities and services
+  /actions             # Next.js Server Actions
+  /services            # Business logic services
+  /utils               # Pure utility functions
 
-**Voting UI:**
-
-- Simple "Vote" button under each meme card
-- Visual feedback showing vote count
-- Disabled state for own submission
-- Clear indication of which meme each player voted for
+/providers              # React context providers
+/firebase               # Firebase configuration files
+/types                  # TypeScript type definitions
+```
 
 ## 🚀 Getting Started
 
-First, install dependencies:
+### Prerequisites
+- Node.js 18+ and pnpm
+- Firebase project with Realtime Database enabled
+- Google AI API key for Vercel AI SDK
+
+### Installation
 
 ```bash
+# Install dependencies
 pnpm install
+
+# Copy environment variables
+cp .env.example .env.local
+
+# Configure your environment variables
 ```
 
-Then, run the development server:
+### Development
 
 ```bash
+# Start development server with Turbopack
 pnpm dev
+
+# Run linting (Biome)
+bun lint
+
+# Run tests with coverage
+pnpm test:coverage
+
+# Build for production
+pnpm build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## 🗓️ Timeline to Launch (Approx. 4 Weeks)
+## 📊 Database Schema
 
-### 🔹 Week 1: July 29 – August 4
-
-#### Goal: Setup & Core Structure
-
-- [ ] Initialize project: Next.js, Tailwind, shadcn/ui, Firebase, Vercel AI SDK.
-- [ ] Configure Firebase: Auth (Google + Guest), Firestore, Storage.
-- [ ] Build Create/Join Room flows with username/avatar input and guest with a random name.
-- [ ] Create a real-time Lobby UI with a player list and game status.
-- [ ] Implement **the MemeCardDeck** component to display seven random meme cards per player.
-
-### 🔹 Week 2: August 5 – August 11
-
-#### Goal: Game Logic MVP
-
-- [ ] Develop logic to randomly select seven unique meme images from `/public/memes/` (800 images).
-- [ ] Set up AI situation generator using Vercel AI SDK.
-- [ ] Build **MemeCardSelector** for players to choose one card.
-- [ ] Develop simple voting system (one vote per player) for submitted cards.
-- [ ] Code round flow: situation → submission → voting → results → next round.
-- [ ] Implement scoreboard logic in Firestore.
-
-### 🔹 Week 3: August 12 – August 18
-
-#### Goal: Polish & Features
-
-- [ ] Style UI with shadcn/ui (Cards, Buttons, Emoji Rating Buttons).
-- [ ] Add **GameChatBox** for real-time banter.
-- [ ] Build Leaderboard page with top scores.
-- [ ] Generate room invite links.
-- [ ] Add confetti effects for round winners.
-
-### 🔹 Week 4: August 19 – August 25
-
-#### Goal: Testing & Launch
-
-- [ ] Optimize for mobile devices.
-- [ ] Test for bugs (multi-device, disconnections, empty submissions).
-- [ ] Implement **shareable meme cards** (image + situation export).
-- [ ] Finalize UI with animations.
-- [ ] Deploy to Vercel by **August 25, 2025 @ 10:00 PM**.
-
-## 🧱 Project Structure
-
-```text
-/pages
-  index.tsx              → Landing Page
-  /create.tsx            → Create Room
-  /join.tsx              → Join Room
-  /game/[roomId].tsx     → Game Room
-  /leaderboard.tsx       → Top Players
-
-/components
-  MemeCardDeck.tsx       → Displays player's 7 random meme cards
-  MemeCardSelector.tsx   → Submits selected meme card
-  VotingPanel.tsx        → Simple voting UI
-  PlayerList.tsx         → Real-time player list
-  Scoreboard.tsx         → Displays scores
-  GameChatBox.tsx        → Real-time chat
-
-/lib
-  firebase.ts            → Firebase config
-  aiSituation.ts         → AI prompt generation (Vercel AI SDK)
-  gameEngine.ts          → Manages rounds, card selection, ratings
-  db.ts                  → Firestore helpers
-  avatarGen.ts           → Random avatars
-  memeSelector.ts        → Logic for random meme card distribution
-
-/public
-  memes/                 → Folder with 800 meme images (e.g., meme001.jpg to meme800.jpg)
-```
-
-## 🔐 Firestore Structure
+### Firebase Realtime Database Structure
 
 ```json
-/rooms/{roomId}
-  - players: [{ id, name, avatar, score, cards: [memeUrl, ...] }] # 7 URLs per player
-  - situation: "AI-generated text"    # E.g., "When you realize the meeting is all-you-can-eat..."
-  - submissions: { playerId: memeUrl } # Selected meme card
-  - votes: { playerId: votedForPlayerId } # Simple vote tracking
-  - status: "submitting" | "rating" | "results"
-  - round: number
-
-/users/{uid}
-  - name
-  - score
-  - gamesPlayed
-```
-
-## 🧪 MVP Feature Checklist
-
-| Feature                             | Status |
-| ----------------------------------- | ------ |
-| Firebase Auth (Google + Guest)      | ⬜️     |
-| Room creation + join                | ⬜️     |
-| Real-time room updates              | ⬜️     |
-| Random 7 meme cards (from 800)      | ⬜️     |
-| AI-generated situation              | ⬜️     |
-| Meme card submission                | ⬜️     |
-| Voting system (one vote per player) | ⬜️     |
-| Winner display + scoring            | ⬜️     |
-| Leaderboard                         | ⬜️     |
-| Real-time chat                      | ⬜️     |
-| Mobile responsive UI                | ⬜️     |
-| Shareable meme cards                | ⬜️     |
-| Deployment (Vercel)                 | ⬜️     |
-
-## 🌟 Stretch Goals
-
-- **AI Caption Suggestions**: Offer AI-generated caption hints for situations.
-- **Themed Meme Packs**: Categorize the 800 memes into themes (e.g., pop culture, animals).
-- **Custom Memes**: Allow moderated image uploads.
-- **Enhanced Voting**: Add voting animations and sound effects.
-- **Freestyle Mode**: Players create custom situations.
-
-## 📋 Meme Card Selection Logic
-
-- **Folder**: `/public/memes/` contains 800 images (e.g., `meme001.jpg` to `meme800.jpg`).
-- **Distribution**: For each player, randomly select seven unique images without replacement within their hand, but
-  allow overlap across players.
-- **Implementation**: Use `memeSelector.ts` to generate a list of image URLs (e.g., `/memes/meme123.jpg`) and store them
-  in Firestore under `players.cards`.
-- **Refill**: After each round, replenish each player's hand to seven cards, ensuring no duplicates in their new hand.
-
-### Sample Code for `memeSelector.ts`
-
-```javascript
-// /lib/memeSelector.ts
-export function getRandomMemeCards(numCards = 7, totalMemes = 800) {
-  const memeUrls = [];
-  const usedIndices = new Set();
-
-  while (memeUrls.length < numCards) {
-    const index = Math.floor(Math.random() * totalMemes) + 1;
-    const paddedIndex = String(index).padStart(3, "0");
-    const memeUrl = `/memes/meme${paddedIndex}.jpg`;
-
-    if (!usedIndices.has(index)) {
-      usedIndices.add(index);
-      memeUrls.push(memeUrl);
+{
+  "lobbies": {
+    "lobbyId": {
+      "code": "ABC123",
+      "hostUid": "user123",
+      "settings": { "rounds": 10, "timeLimit": 60 },
+      "players": {
+        "user123": { "displayName": "EpicChad", "score": 0 }
+      },
+      "gameState": { "phase": "waiting", "currentRound": 1 },
+      "chat": { "msgId": { "message": "Hello!", "timestamp": 1234567890 } }
+    }
+  },
+  "battleRoyaleQueue": {
+    "playerUid": {
+      "skillRating": 1200,
+      "queuedAt": 1234567890
     }
   }
-
-  return memeUrls;
 }
-
-// Usage: Assign to player in Firestore
-// const playerCards = getRandomMemeCards(7, 800);
-// db.collection('rooms').doc(roomId).update({ [`players.${playerId}.cards`]: playerCards });
 ```
 
-## 🛠️ Tech Stack
+## 🔧 Development Guidelines
 
-- **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS + shadcn/ui components
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth (Google + Guest)
-- **AI**: Vercel AI SDK
-- **Deployment**: Vercel
-- **Package Manager**: pnpm
+### File Naming & Organization
+- **Components**: PascalCase exports, kebab-case filenames (`game-lobby.tsx`)
+- **Hooks**: camelCase with `use` prefix (`useCurrentUser`)
+- **Types**: PascalCase (`GameState`, `PlayerData`)
+- **Constants**: UPPER_SNAKE_CASE (`MAX_PLAYERS`)
+- **Directories**: kebab-case (`game-settings`, `shared`)
 
-## 📋 Next Steps
+### Import Order (MANDATORY)
+```typescript
+// 1. External libraries first
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
 
-- **Format**: Generate as a **Notion project**, **GitHub Issues**, or **downloadable doc**?
-- **Development**: Start coding Week 1 (e.g., project setup, Firebase config, `memeSelector.ts`)?
-- **Sample Code**: Provide a starter for `aiSituation.ts` or Firebase setup?
+// 2. Internal imports with path aliases
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { GameService } from "@/lib/services/game-service";
 
-Let me know how to proceed! 🎉
+// 3. Type imports last
+import type { GameState } from "@/types";
+```
+
+### TypeScript Standards
+- **Strict Mode Enabled**: No `any` types, always define proper interfaces
+- **Global Types**: `/types/index.d.ts` contains all interfaces (no import needed)
+- **Component Props**: Always typed with interfaces
+- **Server Actions**: Return typed ServiceResult<T>
+
+## 🧪 Testing Strategy
+
+**Multi-Level Testing**:
+- **Unit Tests**: Individual functions and hooks
+- **Integration Tests**: Service layer with Firebase mocking
+- **E2E Tests**: Critical user flows
+
+**Coverage Targets**: 70% across all metrics
+- Jest + Testing Library for React components
+- Firebase mocking for database operations
+- Custom test utilities in `__tests__/utils/`
+
+## 🚀 Deployment
+
+### Vercel Deployment
+1. Connect your GitHub repository to Vercel
+2. Configure environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
+
+### Environment Variables Required
+```bash
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
+
+# AI Configuration
+GOOGLE_GENERATIVE_AI_API_KEY=your_ai_api_key
+
+# Firebase Admin (Server-side only)
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_service_account_email
+FIREBASE_PRIVATE_KEY=your_private_key
+```
+
+## 🎯 Performance Targets
+
+- **Latency**: <200ms for 8 concurrent players
+- **Mobile**: 320px minimum width, touch-friendly
+- **Images**: Lazy loading for 800+ meme cards
+- **Real-time**: Optimized Firebase listeners with cleanup
+
+## 📈 Features Status
+
+### ✅ Fully Implemented
+- Complete authentication system (Google + Guest)
+- Real-time multiplayer lobby system
+- Battle Royale matchmaking with skill ratings
+- AI bot opponents with personality types
+- Dynamic situation generation with Vercel AI SDK
+- Complete voting and scoring system
+- Real-time chat and player management
+- 800+ meme image collection with intelligent distribution
+- Mobile-responsive UI with animations
+- Production-ready error handling and monitoring
+
+### 🚧 In Development
+- Advanced matchmaking algorithms
+- Tournament system
+- Achievement system
+- Social features expansion
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Quality Standards
+- Follow the established architecture patterns
+- Maintain 70% test coverage
+- Pass all linting checks (`bun lint`)
+- Update documentation for new features
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Inspired by**: What Do You Meme? game mechanics
+- **Built with**: Modern web technologies and AI integration
+- **Powered by**: Firebase, Vercel, and Google AI
+
+---
+
+**🎮 Ready to battle with memes? Join the fun!**

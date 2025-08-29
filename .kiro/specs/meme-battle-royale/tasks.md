@@ -144,13 +144,19 @@
   - Add tooltips and help text to explain matchmaking options
   - _Requirements: 1.4, 4.4, 4.5_
 
-- [ ] 5. Enhance existing LobbyService to support Battle Royale lobbies
+- [x] 5. Enhance existing LobbyService to support Battle Royale lobbies
+
+
+
+
   - Extend LobbyService with Battle Royale specific lobby creation methods
   - Add automatic countdown and game start functionality for competitive matches
   - Implement competitive game settings and XP multipliers
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 8.1, 8.2_
 
-- [ ] 5.1 Extend LobbyService for Battle Royale support
+- [x] 5.1 Extend LobbyService for Battle Royale support
+
+
   - Extend existing createLobby() method to accept lobby type parameter
   - Reuse existing lobby creation logic and add Battle Royale specific settings
   - Leverage existing joinLobby() method for batch player addition with loop
@@ -159,7 +165,9 @@
   - Maintain full backward compatibility with existing private lobby functionality
   - _Requirements: 3.3, 3.4, 6.1, 8.1, 8.2_
 
-- [ ] 5.2 Implement automatic countdown and game start
+- [x] 5.2 Implement automatic countdown and game start
+
+
   - Create startAutoCountdown() method for 30-second countdown when 3+ players present
   - Add cancelAutoCountdown() method when player count drops below minimum
   - Implement countdown acceleration to 10 seconds when lobby reaches 8 players
@@ -167,7 +175,9 @@
   - Add proper error handling and fallback mechanisms for auto-start failures
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 5.3 Create competitive settings and XP system
+
+- [x] 5.3 Create competitive settings and XP system
+
   - Implement standardized competitive settings (8 rounds, 45s time limit, all categories)
   - Add XP multipliers for Battle Royale victories and performance
   - Create win/loss tracking for matchmaking improvements

@@ -900,16 +900,25 @@ export async function getUserActiveLobby(uid: string) {
         }
 
         // Find the lobby where the user is a player
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let userLobby: any = null;
+        interface LobbyPlayer {
+          uid: string;
+          joinedAt?: unknown;
+          [key: string]: unknown;
+        }
+
+        interface LobbyData {
+          players?: LobbyPlayer[];
+          [key: string]: unknown;
+        }
+
+        let userLobby: LobbyData | null = null;
         for (const doc of snapshot.docs) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const lobbyData = doc.data() as any;
+          const lobbyData = doc.data() as LobbyData;
           const players = lobbyData.players || [];
 
           // Check if user is in the players array
           const isPlayer = players.some(
-            (player: { uid: string }) => player.uid === uid,
+            (player: LobbyPlayer) => player.uid === uid,
           );
 
           if (isPlayer) {
@@ -927,18 +936,19 @@ export async function getUserActiveLobby(uid: string) {
         }
 
         // Convert Firestore Timestamps to serializable objects
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const serializedPlayers = userLobby.players.map((player: any) => ({
-          ...player,
-          joinedAt:
-            player.joinedAt &&
-            typeof player.joinedAt === "object" &&
-            "toDate" in player.joinedAt
-              ? player.joinedAt.toDate().toISOString()
-              : player.joinedAt instanceof Date
-                ? player.joinedAt.toISOString()
-                : player.joinedAt,
-        }));
+        const serializedPlayers = userLobby.players?.map(
+          (player: LobbyPlayer) => ({
+            ...player,
+            joinedAt:
+              player.joinedAt &&
+              typeof player.joinedAt === "object" &&
+              "toDate" in player.joinedAt
+                ? player.joinedAt.toDate().toISOString()
+                : player.joinedAt instanceof Date
+                  ? player.joinedAt.toISOString()
+                  : player.joinedAt,
+          }),
+        );
 
         const serializedLobby = {
           code: userLobby.code,

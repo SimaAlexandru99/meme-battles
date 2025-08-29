@@ -2,7 +2,13 @@ import type { SVGProps } from "react";
 
 export default function ReactIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 32 32" className="w-full h-full" {...props}>
+    <svg
+      viewBox="0 0 32 32"
+      className="w-full h-full"
+      role="img"
+      aria-label="React logo"
+      {...props}
+    >
       <path
         d="M18.6789 15.9759C18.6789 14.5415 17.4796 13.3785 16 13.3785C14.5206 13.3785 13.3211 14.5415 13.3211 15.9759C13.3211 17.4105 14.5206 18.5734 16 18.5734C17.4796 18.5734 18.6789 17.4105 18.6789 15.9759Z"
         fill="#53C1DE"

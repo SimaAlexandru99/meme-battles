@@ -52,5 +52,8 @@
   // Next.js specific
   "emmet.includeLanguages": {
     "typescriptreact": "html"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one"
   }
 }

@@ -7,6 +7,8 @@ export default function VSCodium(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 100 100"
       width="1em"
       height="1em"
+      role="img"
+      aria-label="VSCodium logo"
       {...props}
     >
       <defs>

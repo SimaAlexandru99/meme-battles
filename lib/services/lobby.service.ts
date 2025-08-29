@@ -10,8 +10,30 @@ import {
   set,
   update,
 } from "firebase/database";
+
 import { AVAILABLE_AI_PERSONALITIES } from "@/components/game-settings/types";
 import { rtdb } from "@/firebase/client";
+// Import types
+import type {
+  BattleRoyaleLobbyParams,
+  BattleRoyaleStats,
+  CompetitiveSettings,
+  CreateLobbyParams,
+  GameResult,
+  GameSettings,
+  GameState,
+  JoinLobbyParams,
+  LobbyData,
+  LobbyError,
+  LobbyErrorType,
+  LobbyStatus,
+  MemeCard,
+  PlayerData,
+  PlayerStatus,
+  QueueEntry,
+  ServiceResult,
+  ValidationResult,
+} from "@/types";
 import { AIBotService } from "./ai-bot.service";
 
 /**
@@ -317,11 +339,29 @@ export class LobbyService {
 
           // Set default values
           const maxPlayers = params.maxPlayers || 8;
-          const defaultSettings: GameSettings = {
-            rounds: 8,
-            timeLimit: 60,
-            categories: ["general", "reaction", "wholesome"],
-          };
+
+          // Check if this is a Battle Royale lobby to set competitive defaults
+          const isBattleRoyale =
+            "type" in params && params.type === "battle_royale";
+
+          const defaultSettings: GameSettings = isBattleRoyale
+            ? {
+                rounds: 8,
+                timeLimit: 45, // Competitive time limit
+                categories: [
+                  "general",
+                  "reaction",
+                  "wholesome",
+                  "gaming",
+                  "pop_culture",
+                ], // All categories
+              }
+            : {
+                rounds: 8,
+                timeLimit: 60,
+                categories: ["general", "reaction", "wholesome"],
+              };
+
           const settings = { ...defaultSettings, ...params.settings };
 
           // Validate settings
@@ -335,10 +375,6 @@ export class LobbyService {
           }
 
           const now = serverTimestamp();
-
-          // Check if this is a Battle Royale lobby
-          const isBattleRoyale =
-            "type" in params && params.type === "battle_royale";
 
           const lobby: LobbyData & {
             type?: "battle_royale";
@@ -377,7 +413,29 @@ export class LobbyService {
           if (isBattleRoyale) {
             const brParams = params as BattleRoyaleLobbyParams;
             lobby.type = "battle_royale";
-            lobby.competitiveSettings = brParams.competitiveSettings;
+
+            // Set competitive settings with defaults if not provided
+            const defaultCompetitiveSettings: CompetitiveSettings = {
+              rounds: 8,
+              timeLimit: 45,
+              categories: [
+                "general",
+                "reaction",
+                "wholesome",
+                "gaming",
+                "pop_culture",
+              ],
+              autoStart: true,
+              autoStartCountdown: 30,
+              xpMultiplier: 1.5, // 50% XP bonus for Battle Royale
+              rankingEnabled: true,
+            };
+
+            lobby.competitiveSettings = {
+              ...defaultCompetitiveSettings,
+              ...brParams.competitiveSettings,
+            };
+
             lobby.matchmakingInfo = {
               matchId: brParams.matchId,
               createdBy: "matchmaking_system",
@@ -1276,7 +1334,8 @@ export class LobbyService {
           // Sort by joinedAt timestamp to find earliest
           const earliestPlayer = nonHostPlayers.sort(
             ([, a], [, b]) =>
-              new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
+              new Date((a as PlayerData).joinedAt).getTime() -
+              new Date((b as PlayerData).joinedAt).getTime(),
           )[0];
 
           const [newHostUid, newHostData] = earliestPlayer;
@@ -1284,7 +1343,9 @@ export class LobbyService {
           // Update host information
           const updates: Record<string, unknown> = {};
           updates[`lobbies/${code}/hostUid`] = newHostUid;
-          updates[`lobbies/${code}/hostDisplayName`] = newHostData.displayName;
+          updates[`lobbies/${code}/hostDisplayName`] = (
+            newHostData as PlayerData
+          ).displayName;
           updates[`lobbies/${code}/players/${newHostUid}/isHost`] = true;
           updates[`lobbies/${code}/updatedAt`] = new Date().toISOString();
 
@@ -1515,6 +1576,25 @@ export class LobbyService {
 
           await update(ref(rtdb), updates);
 
+          const newPlayerCount = playerCount - 1;
+
+          // For Battle Royale lobbies, cancel countdown if we drop below minimum players
+          if (
+            lobby.type === "battle_royale" &&
+            newPlayerCount < 3 &&
+            lobby.autoCountdown?.active
+          ) {
+            try {
+              await this.cancelAutoCountdown(code);
+            } catch (error) {
+              // Log error but don't fail the leave operation
+              Sentry.captureException(error, {
+                tags: { operation: "auto_countdown_cancel" },
+                extra: { lobbyCode: code, newPlayerCount },
+              });
+            }
+          }
+
           // If the leaving player was the host, transfer to earliest joined player
           if (isHost) {
             await this.transferHostToEarliestPlayer(code);
@@ -1685,11 +1765,16 @@ export class LobbyService {
 
           // Create game state
           const gameState: GameState = {
-            currentRound: 1,
+            roundNumber: 1,
             totalRounds: lobby.settings.rounds,
             timeLeft: lobby.settings.timeLimit,
-            phase: "playing",
-            currentPrompt: currentSituation,
+            phase: "submission",
+            currentSituation,
+            submissions: {},
+            votes: {},
+            abstentions: {},
+            scores: {},
+            playerStreaks: {},
           };
 
           // Prepare database updates - start with transition phase
@@ -1733,10 +1818,10 @@ export class LobbyService {
 
             console.log(
               `✅ Assigned ${cards.length} cards to player ${playerUid}:`,
-              cards
+              `${cards
                 .map((c) => c.filename)
                 .slice(0, 3)
-                .join(", ") + "...",
+                .join(", ")}...`,
             );
           });
 
@@ -2298,37 +2383,87 @@ export class LobbyService {
 
           // Only start countdown if we have minimum players and lobby is waiting
           if (playerCount >= 3 && lobby.status === "waiting") {
-            const countdownDuration = playerCount >= 8 ? 10 : 30; // 10s if full, 30s otherwise
-            const countdownEndTime = Date.now() + countdownDuration * 1000;
+            // Check if countdown is already active
+            const existingCountdown = lobby.autoCountdown;
+            let countdownDuration = playerCount >= 8 ? 10 : 30; // 10s if full, 30s otherwise
 
-            const updates: Record<string, unknown> = {};
-            updates[`lobbies/${lobbyCode}/autoCountdown`] = {
-              active: true,
-              duration: countdownDuration,
-              endTime: countdownEndTime,
-              startedAt: new Date().toISOString(),
-            };
-            updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+            // If countdown is already active and we're accelerating (8 players), update it
+            if (
+              existingCountdown?.active &&
+              playerCount >= 8 &&
+              existingCountdown.duration > 10
+            ) {
+              countdownDuration = 10;
+              const countdownEndTime = Date.now() + countdownDuration * 1000;
 
-            await update(ref(rtdb), updates);
+              const updates: Record<string, unknown> = {};
+              updates[`lobbies/${lobbyCode}/autoCountdown`] = {
+                active: true,
+                duration: countdownDuration,
+                endTime: countdownEndTime,
+                startedAt: new Date().toISOString(),
+                accelerated: true,
+              };
+              updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
 
-            // Schedule automatic game start
-            setTimeout(async () => {
-              try {
-                await this.checkAndStartGame(lobbyCode);
-              } catch (error) {
-                Sentry.captureException(error, {
-                  tags: { operation: "auto_game_start" },
-                  extra: { lobbyCode },
-                });
-              }
-            }, countdownDuration * 1000);
+              await update(ref(rtdb), updates);
 
-            return {
-              success: true,
-              data: { countdownDuration, endTime: countdownEndTime },
-              timestamp: new Date().toISOString(),
-            };
+              // Schedule new accelerated game start
+              setTimeout(async () => {
+                try {
+                  await this.checkAndStartGame(lobbyCode);
+                } catch (error) {
+                  Sentry.captureException(error, {
+                    tags: { operation: "auto_game_start_accelerated" },
+                    extra: { lobbyCode },
+                  });
+                }
+              }, countdownDuration * 1000);
+
+              return {
+                success: true,
+                data: {
+                  countdownDuration,
+                  endTime: countdownEndTime,
+                  accelerated: true,
+                },
+                timestamp: new Date().toISOString(),
+              };
+            }
+
+            // Start new countdown if none exists
+            if (!existingCountdown?.active) {
+              const countdownEndTime = Date.now() + countdownDuration * 1000;
+
+              const updates: Record<string, unknown> = {};
+              updates[`lobbies/${lobbyCode}/autoCountdown`] = {
+                active: true,
+                duration: countdownDuration,
+                endTime: countdownEndTime,
+                startedAt: new Date().toISOString(),
+              };
+              updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+
+              await update(ref(rtdb), updates);
+
+              // Schedule automatic game start
+              setTimeout(async () => {
+                try {
+                  await this.checkAndStartGame(lobbyCode);
+                } catch (error) {
+                  Sentry.captureException(error, {
+                    tags: { operation: "auto_game_start" },
+                    extra: { lobbyCode },
+                  });
+                }
+              }, countdownDuration * 1000);
+
+              return {
+                success: true,
+                data: { countdownDuration, endTime: countdownEndTime },
+                timestamp: new Date().toISOString(),
+              };
+            }
           }
 
           return {
@@ -2393,7 +2528,139 @@ export class LobbyService {
   }
 
   /**
-   * Check if game should start automatically and start it
+   * Add multiple players to a Battle Royale lobby (used by matchmaking system)
+   */
+  async addPlayersToLobby(
+    lobbyCode: string,
+    players: QueueEntry[],
+  ): Promise<ServiceResult> {
+    return Sentry.startSpan(
+      {
+        op: "db.lobby.add_players",
+        name: "Add Players to Lobby",
+      },
+      async () => {
+        try {
+          const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+          const snapshot = await get(lobbyRef);
+
+          if (!snapshot.exists()) {
+            throw this.createLobbyError(
+              "LOBBY_NOT_FOUND",
+              `Lobby ${lobbyCode} not found`,
+              "Lobby not found. It may have been deleted.",
+              false,
+            );
+          }
+
+          const lobby = snapshot.val() as LobbyData;
+
+          // Check if lobby is still waiting
+          if (lobby.status !== "waiting") {
+            throw this.createLobbyError(
+              "LOBBY_ALREADY_STARTED",
+              `Cannot add players to lobby ${lobbyCode} - status is ${lobby.status}`,
+              "Cannot join this lobby as the game has already started.",
+              false,
+            );
+          }
+
+          // Check if there's enough space for all players
+          const currentPlayerCount = Object.keys(lobby.players || {}).length;
+          const availableSlots = lobby.maxPlayers - currentPlayerCount;
+
+          if (players.length > availableSlots) {
+            throw this.createLobbyError(
+              "LOBBY_FULL",
+              `Not enough space in lobby ${lobbyCode}. Need ${players.length} slots, only ${availableSlots} available`,
+              `Lobby is too full. Only ${availableSlots} slots available.`,
+              false,
+            );
+          }
+
+          const now = serverTimestamp();
+          const updates: Record<string, unknown> = {};
+
+          // Add each player to the lobby
+          for (const player of players) {
+            // Skip if player is already in the lobby
+            if (lobby.players[player.playerUid]) {
+              continue;
+            }
+
+            const playerData: PlayerData = {
+              id: player.playerUid,
+              displayName: player.displayName,
+              avatarId: player.avatarId,
+              profileURL: player.profileURL || "",
+              joinedAt: now as unknown as string,
+              isHost: false,
+              score: 0,
+              status: "waiting" as PlayerStatus,
+              lastSeen: now as unknown as string,
+            };
+
+            updates[`lobbies/${lobbyCode}/players/${player.playerUid}`] =
+              playerData;
+          }
+
+          updates[`lobbies/${lobbyCode}/updatedAt`] = now;
+
+          // Apply all updates atomically
+          await update(ref(rtdb), updates);
+
+          const newPlayerCount = currentPlayerCount + players.length;
+
+          // For Battle Royale lobbies, automatically start countdown if we have enough players
+          if (lobby.type === "battle_royale" && newPlayerCount >= 3) {
+            try {
+              await this.startAutoCountdown(lobbyCode);
+            } catch (error) {
+              // Log error but don't fail the player addition
+              Sentry.captureException(error, {
+                tags: { operation: "auto_countdown_trigger" },
+                extra: { lobbyCode, newPlayerCount },
+              });
+            }
+          }
+
+          Sentry.addBreadcrumb({
+            message: "Players added to Battle Royale lobby",
+            data: {
+              lobbyCode,
+              playersAdded: players.length,
+              totalPlayers: newPlayerCount,
+            },
+            level: "info",
+          });
+
+          return {
+            success: true,
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            "type" in error &&
+            (error as LobbyError).type
+          ) {
+            throw error;
+          }
+
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to add players to lobby: ${error}`,
+            "Failed to add players to lobby. Please try again.",
+            true,
+          );
+        }
+      },
+    );
+  }
+
+  /**
+   * Check if game should start automatically and start it with fallback mechanisms
    */
   private async checkAndStartGame(lobbyCode: string): Promise<void> {
     try {
@@ -2409,19 +2676,60 @@ export class LobbyService {
 
       // Only start if we still have minimum players and lobby is still waiting
       if (playerCount >= 3 && lobby.status === "waiting") {
-        // Start the game by updating lobby status
-        const updates: Record<string, unknown> = {};
-        updates[`lobbies/${lobbyCode}/status`] = "starting";
-        updates[`lobbies/${lobbyCode}/autoCountdown`] = null;
-        updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+        try {
+          // Try to start the game using the existing startGame method
+          const hostUid = lobby.hostUid;
+          const startResult = await this.startGame(lobbyCode, hostUid);
 
-        await update(ref(rtdb), updates);
+          if (startResult.success) {
+            Sentry.addBreadcrumb({
+              message: "Battle Royale game started automatically via startGame",
+              data: {
+                lobbyCode,
+                playerCount,
+              },
+              level: "info",
+            });
+          } else {
+            throw new Error(`startGame failed: ${startResult.error}`);
+          }
+        } catch (startGameError) {
+          // Fallback: Just update status to starting if startGame fails
+          Sentry.captureException(startGameError, {
+            tags: { operation: "auto_start_fallback" },
+            extra: { lobbyCode, playerCount },
+          });
+
+          const updates: Record<string, unknown> = {};
+          updates[`lobbies/${lobbyCode}/status`] = "starting";
+          updates[`lobbies/${lobbyCode}/autoCountdown`] = null;
+          updates[`lobbies/${lobbyCode}/updatedAt`] = serverTimestamp();
+
+          await update(ref(rtdb), updates);
+
+          Sentry.addBreadcrumb({
+            message: "Battle Royale game started automatically via fallback",
+            data: {
+              lobbyCode,
+              playerCount,
+              fallbackReason:
+                startGameError instanceof Error
+                  ? startGameError.message
+                  : String(startGameError),
+            },
+            level: "warning",
+          });
+        }
+      } else if (playerCount < 3) {
+        // Not enough players, cancel countdown
+        await this.cancelAutoCountdown(lobbyCode);
 
         Sentry.addBreadcrumb({
-          message: "Battle Royale game started automatically",
+          message: "Auto countdown cancelled due to insufficient players",
           data: {
             lobbyCode,
             playerCount,
+            minimumRequired: 3,
           },
           level: "info",
         });
@@ -2431,7 +2739,279 @@ export class LobbyService {
         tags: { operation: "check_and_start_game" },
         extra: { lobbyCode },
       });
+
+      // Final fallback: try to cancel countdown to prevent stuck state
+      try {
+        await this.cancelAutoCountdown(lobbyCode);
+      } catch (cancelError) {
+        Sentry.captureException(cancelError, {
+          tags: { operation: "check_and_start_game_final_fallback" },
+          extra: { lobbyCode, originalError: error },
+        });
+      }
     }
+  }
+
+  /**
+   * Update player statistics after a Battle Royale match
+   */
+  async updateBattleRoyaleStats(
+    playerUid: string,
+    gameResult: GameResult,
+  ): Promise<ServiceResult> {
+    return Sentry.startSpan(
+      {
+        op: "db.lobby.update_battle_royale_stats",
+        name: "Update Battle Royale Stats",
+      },
+      async () => {
+        try {
+          const statsRef = ref(rtdb, `battleRoyaleStats/${playerUid}`);
+          const snapshot = await get(statsRef);
+
+          const existingStats = snapshot.exists()
+            ? (snapshot.val() as BattleRoyaleStats)
+            : null;
+
+          // Calculate new statistics
+          const isWin = gameResult.position === 1;
+          const gamesPlayed = (existingStats?.gamesPlayed || 0) + 1;
+          const wins = (existingStats?.wins || 0) + (isWin ? 1 : 0);
+          const losses = (existingStats?.losses || 0) + (isWin ? 0 : 1);
+          const winRate = wins / gamesPlayed;
+
+          // Calculate streak
+          let currentStreak = existingStats?.currentStreak || 0;
+          if (isWin) {
+            currentStreak = currentStreak >= 0 ? currentStreak + 1 : 1;
+          } else {
+            currentStreak = currentStreak <= 0 ? currentStreak - 1 : -1;
+          }
+
+          const longestWinStreak = Math.max(
+            existingStats?.longestWinStreak || 0,
+            currentStreak > 0 ? currentStreak : 0,
+          );
+
+          // Calculate average position
+          const totalPositionSum =
+            (existingStats?.averagePosition || 0) *
+              (existingStats?.gamesPlayed || 0) +
+            gameResult.position;
+          const averagePosition = totalPositionSum / gamesPlayed;
+
+          const updatedStats: BattleRoyaleStats = {
+            gamesPlayed,
+            wins,
+            losses,
+            winRate,
+            skillRating: gameResult.skillRatingChange
+              ? (existingStats?.skillRating || 1200) +
+                gameResult.skillRatingChange
+              : existingStats?.skillRating || 1200,
+            highestRating: Math.max(
+              existingStats?.highestRating || 1200,
+              gameResult.skillRatingChange
+                ? (existingStats?.skillRating || 1200) +
+                    gameResult.skillRatingChange
+                : existingStats?.skillRating || 1200,
+            ),
+            currentStreak,
+            longestWinStreak,
+            averagePosition,
+            totalXpEarned:
+              (existingStats?.totalXpEarned || 0) + gameResult.xpEarned,
+            achievements: [
+              ...(existingStats?.achievements || []),
+              ...(gameResult.achievements || []),
+            ].filter(
+              (achievement, index, array) =>
+                array.indexOf(achievement) === index,
+            ), // Remove duplicates
+            lastPlayed: new Date().toISOString(),
+            seasonStats: {
+              ...existingStats?.seasonStats,
+              // Add current season stats (placeholder for now)
+              "2025_season_1": {
+                gamesPlayed:
+                  (existingStats?.seasonStats?.["2025_season_1"]?.gamesPlayed ||
+                    0) + 1,
+                wins:
+                  (existingStats?.seasonStats?.["2025_season_1"]?.wins || 0) +
+                  (isWin ? 1 : 0),
+                skillRatingChange: gameResult.skillRatingChange || 0,
+              },
+            },
+          };
+
+          await set(statsRef, updatedStats);
+
+          Sentry.addBreadcrumb({
+            message: "Battle Royale stats updated",
+            data: {
+              playerUid,
+              position: gameResult.position,
+              isWin,
+              newRating: updatedStats.skillRating,
+              gamesPlayed: updatedStats.gamesPlayed,
+            },
+            level: "info",
+          });
+
+          return {
+            success: true,
+            data: updatedStats,
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to update Battle Royale stats: ${error}`,
+            "Failed to update statistics. Please try again.",
+            true,
+          );
+        }
+      },
+    );
+  }
+
+  /**
+   * Get Battle Royale statistics for a player
+   */
+  async getBattleRoyaleStats(
+    playerUid: string,
+  ): Promise<ServiceResult<BattleRoyaleStats>> {
+    return Sentry.startSpan(
+      {
+        op: "db.lobby.get_battle_royale_stats",
+        name: "Get Battle Royale Stats",
+      },
+      async () => {
+        try {
+          const statsRef = ref(rtdb, `battleRoyaleStats/${playerUid}`);
+          const snapshot = await get(statsRef);
+
+          if (!snapshot.exists()) {
+            // Return default stats for new players
+            const defaultStats: BattleRoyaleStats = {
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              winRate: 0,
+              skillRating: 1200,
+              highestRating: 1200,
+              currentStreak: 0,
+              longestWinStreak: 0,
+              averagePosition: 0,
+              totalXpEarned: 0,
+              achievements: [],
+              lastPlayed: new Date().toISOString(),
+              seasonStats: {},
+            };
+
+            return {
+              success: true,
+              data: defaultStats,
+              timestamp: new Date().toISOString(),
+            };
+          }
+
+          const stats = snapshot.val() as BattleRoyaleStats;
+
+          return {
+            success: true,
+            data: stats,
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to get Battle Royale stats: ${error}`,
+            "Failed to load statistics. Please try again.",
+            true,
+          );
+        }
+      },
+    );
+  }
+
+  /**
+   * Award achievements to a player
+   */
+  async awardAchievement(
+    playerUid: string,
+    achievementId: string,
+  ): Promise<ServiceResult> {
+    return Sentry.startSpan(
+      {
+        op: "db.lobby.award_achievement",
+        name: "Award Achievement",
+      },
+      async () => {
+        try {
+          const statsRef = ref(rtdb, `battleRoyaleStats/${playerUid}`);
+          const snapshot = await get(statsRef);
+
+          if (!snapshot.exists()) {
+            // Create new stats with the achievement
+            const newStats: BattleRoyaleStats = {
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              winRate: 0,
+              skillRating: 1200,
+              highestRating: 1200,
+              currentStreak: 0,
+              longestWinStreak: 0,
+              averagePosition: 0,
+              totalXpEarned: 0,
+              achievements: [achievementId],
+              lastPlayed: new Date().toISOString(),
+              seasonStats: {},
+            };
+
+            await set(statsRef, newStats);
+          } else {
+            const stats = snapshot.val() as BattleRoyaleStats;
+
+            // Check if achievement already exists
+            if (!stats.achievements.includes(achievementId)) {
+              const updates: Record<string, unknown> = {};
+              updates[`battleRoyaleStats/${playerUid}/achievements`] = [
+                ...stats.achievements,
+                achievementId,
+              ];
+
+              await update(ref(rtdb), updates);
+            }
+          }
+
+          Sentry.addBreadcrumb({
+            message: "Achievement awarded",
+            data: {
+              playerUid,
+              achievementId,
+            },
+            level: "info",
+          });
+
+          return {
+            success: true,
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to award achievement: ${error}`,
+            "Failed to award achievement. Please try again.",
+            true,
+          );
+        }
+      },
+    );
   }
 }
 

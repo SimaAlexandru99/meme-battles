@@ -2,7 +2,13 @@ import type { SVGProps } from "react";
 
 export default function JavaIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 32 32" className="w-full h-full" {...props}>
+    <svg
+      viewBox="0 0 32 32"
+      className="w-full h-full"
+      role="img"
+      aria-label="Java logo"
+      {...props}
+    >
       <path
         d="M16.0497 8.44062C22.6378 3.32607 19.2566 0 19.2566 0C19.7598 5.28738 13.813 6.53583 12.2189 10.1692C11.1312 12.6485 12.9638 14.8193 16.0475 17.5554C15.7749 16.9494 15.3544 16.3606 14.9288 15.7645C13.4769 13.7313 11.9645 11.6132 16.0497 8.44062Z"
         fill="#E76F00"

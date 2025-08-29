@@ -68,7 +68,7 @@ export function InvitationLink({ children }: InvitationLinkProps) {
     const newUrl = newSearchParams.toString()
       ? `?${newSearchParams.toString()}`
       : "";
-    router.replace(newUrl);
+    router.replace(newUrl as any);
   };
 
   // Show invitation dialog if invitation code is present

@@ -259,7 +259,7 @@ const Header = memo(function Header({
             </Button>
           ) : (
             <>
-              <Link href="/profile">
+              <Link href={"/profile" as any}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -331,13 +331,15 @@ const BottomNavigation = memo(function BottomNavigation() {
 const GameCardsSection = memo(function GameCardsSection({
   initialUserData,
   onPrivateWarClick,
+  onBattleRoyaleClick,
 }: {
   initialUserData?: User | null;
   onPrivateWarClick: () => void;
+  onBattleRoyaleClick: () => void;
 }) {
   const handleMemeBattleClick = useCallback(() => {
-    toast.success("Starting meme battle!");
-  }, []);
+    onBattleRoyaleClick();
+  }, [onBattleRoyaleClick]);
 
   return (
     <motion.div
@@ -430,6 +432,11 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
     setTimeout(() => setIsTransitioning(false), 300);
   }, []);
 
+  // Handle Battle Royale click - navigate to Battle Royale page
+  const handleBattleRoyaleClick = useCallback(() => {
+    router.push("/battle-royale" as)
+  }, [router]);
+
   // Handle back to main view
   const handleBackToMain = useCallback(() => {
     setCurrentView("main");
@@ -515,6 +522,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
               <GameCardsSection
                 initialUserData={initialUserData}
                 onPrivateWarClick={handlePrivateWarClick}
+                onBattleRoyaleClick={handleBattleRoyaleClick}
               />
               <motion.div
                 variants={buttonVariants}

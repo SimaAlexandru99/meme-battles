@@ -84,92 +84,6 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
   }, []);
 
   /**
-   * Handle subscription errors with proper logging and retry logic
-   */
-  const handleSubscriptionError = useCallback(
-    (error: unknown, subscriptionType: string) => {
-      setConnectionStatus("disconnected");
-
-      Sentry.captureException(error, {
-        tags: {
-          operation: "matchmaking_subscription",
-          subscription_type: subscriptionType,
-          userId: user?.id || "anonymous",
-        },
-      });
-
-      // Trigger automatic reconnection for network errors
-      if (retryCount < MAX_RETRY_ATTEMPTS && isOnline) {
-        const delay = calculateRetryDelay(retryCount);
-        setRetryCount((prev) => prev + 1);
-        setConnectionStatus("reconnecting");
-
-        reconnectTimeoutRef.current = setTimeout(() => {
-          reconnect();
-        }, delay);
-      }
-    },
-    [user?.id, retryCount, isOnline, calculateRetryDelay],
-  );
-
-  /**
-   * Clean up all subscriptions and timers
-   */
-  const cleanup = useCallback(() => {
-    if (queueSubscriptionRef.current) {
-      queueSubscriptionRef.current();
-      queueSubscriptionRef.current = null;
-    }
-    if (positionSubscriptionRef.current) {
-      positionSubscriptionRef.current();
-      positionSubscriptionRef.current = null;
-    }
-    if (matchFoundSubscriptionRef.current) {
-      matchFoundSubscriptionRef.current();
-      matchFoundSubscriptionRef.current = null;
-    }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-  }, []);
-
-  /**
-   * Start heartbeat mechanism to detect connection issues
-   */
-  const startHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
-
-    heartbeatIntervalRef.current = setInterval(() => {
-      const now = new Date();
-      const timeSinceLastHeartbeat = lastHeartbeatRef.current
-        ? now.getTime() - lastHeartbeatRef.current.getTime()
-        : CONNECTION_TIMEOUT + 1;
-
-      // If we haven't received a heartbeat in the timeout period, consider connection lost
-      if (timeSinceLastHeartbeat > CONNECTION_TIMEOUT) {
-        if (connectionStatus === "connected") {
-          setConnectionStatus("disconnected");
-          Sentry.addBreadcrumb({
-            message: "Matchmaking connection lost - heartbeat timeout",
-            data: {
-              timeSinceLastHeartbeat,
-              timeout: CONNECTION_TIMEOUT,
-            },
-            level: "warning",
-          });
-        }
-      }
-    }, HEARTBEAT_INTERVAL);
-  }, [connectionStatus]);
-
-  /**
    * Subscribe to queue updates for all players
    */
   const subscribeToQueue = useCallback(() => {
@@ -202,11 +116,55 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
         });
 
       // Start heartbeat monitoring
-      startHeartbeat();
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
+
+      heartbeatIntervalRef.current = setInterval(() => {
+        const now = new Date();
+        const timeSinceLastHeartbeat = lastHeartbeatRef.current
+          ? now.getTime() - lastHeartbeatRef.current.getTime()
+          : CONNECTION_TIMEOUT + 1;
+
+        // If we haven't received a heartbeat in the timeout period, consider connection lost
+        if (timeSinceLastHeartbeat > CONNECTION_TIMEOUT) {
+          if (connectionStatus === "connected") {
+            setConnectionStatus("disconnected");
+            Sentry.addBreadcrumb({
+              message: "Matchmaking connection lost - heartbeat timeout",
+              data: {
+                timeSinceLastHeartbeat,
+                timeout: CONNECTION_TIMEOUT,
+              },
+              level: "warning",
+            });
+          }
+        }
+      }, HEARTBEAT_INTERVAL);
     } catch (error) {
-      handleSubscriptionError(error, "queue");
+      setConnectionStatus("disconnected");
+
+      Sentry.captureException(error, {
+        tags: {
+          operation: "matchmaking_subscription",
+          subscription_type: "queue",
+          userId: user?.id || "anonymous",
+        },
+      });
+
+      // Trigger automatic reconnection for network errors
+      if (retryCount < MAX_RETRY_ATTEMPTS && isOnline) {
+        const delay = calculateRetryDelay(retryCount);
+        setRetryCount((prev) => prev + 1);
+        setConnectionStatus("reconnecting");
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          setRetryCount(0);
+          setConnectionStatus("connecting");
+        }, delay);
+      }
     }
-  }, [connectionStatus, handleSubscriptionError, startHeartbeat]);
+  }, [connectionStatus, user?.id, retryCount, isOnline, calculateRetryDelay]);
 
   /**
    * Subscribe to queue position updates for individual player position tracking
@@ -238,10 +196,30 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
             },
           );
       } catch (error) {
-        handleSubscriptionError(error, "queue_position");
+        setConnectionStatus("disconnected");
+
+        Sentry.captureException(error, {
+          tags: {
+            operation: "matchmaking_subscription",
+            subscription_type: "queue_position",
+            userId: user?.id || "anonymous",
+          },
+        });
+
+        // Trigger automatic reconnection for network errors
+        if (retryCount < MAX_RETRY_ATTEMPTS && isOnline) {
+          const delay = calculateRetryDelay(retryCount);
+          setRetryCount((prev) => prev + 1);
+          setConnectionStatus("reconnecting");
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            setRetryCount(0);
+            setConnectionStatus("connecting");
+          }, delay);
+        }
       }
     },
-    [handleSubscriptionError],
+    [user?.id, retryCount, isOnline, calculateRetryDelay],
   );
 
   /**
@@ -275,34 +253,57 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
             },
           );
       } catch (error) {
-        handleSubscriptionError(error, "match_found");
+        setConnectionStatus("disconnected");
+
+        Sentry.captureException(error, {
+          tags: {
+            operation: "matchmaking_subscription",
+            subscription_type: "match_found",
+            userId: user?.id || "anonymous",
+          },
+        });
+
+        // Trigger automatic reconnection for network errors
+        if (retryCount < MAX_RETRY_ATTEMPTS && isOnline) {
+          const delay = calculateRetryDelay(retryCount);
+          setRetryCount((prev) => prev + 1);
+          setConnectionStatus("reconnecting");
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            setRetryCount(0);
+            setConnectionStatus("connecting");
+          }, delay);
+        }
       }
     },
-    [handleSubscriptionError],
+    [user?.id, retryCount, isOnline, calculateRetryDelay],
   );
 
   /**
-   * Unsubscribe from all subscriptions
+   * Clean up all subscriptions and timers
    */
-  const unsubscribeAll = useCallback(() => {
-    cleanup();
-    setConnectionStatus("disconnected");
-    setLastSeen(null);
-    setRetryCount(0);
-    lastHeartbeatRef.current = null;
-
-    // Reset state
-    setQueueData([]);
-    setQueueSize(0);
-    setPlayerPosition(-1);
-    setMatchFound(false);
-    setMatchLobbyCode(null);
-
-    Sentry.addBreadcrumb({
-      message: "All matchmaking subscriptions unsubscribed",
-      level: "info",
-    });
-  }, [cleanup]);
+  const cleanup = useCallback(() => {
+    if (queueSubscriptionRef.current) {
+      queueSubscriptionRef.current();
+      queueSubscriptionRef.current = null;
+    }
+    if (positionSubscriptionRef.current) {
+      positionSubscriptionRef.current();
+      positionSubscriptionRef.current = null;
+    }
+    if (matchFoundSubscriptionRef.current) {
+      matchFoundSubscriptionRef.current();
+      matchFoundSubscriptionRef.current = null;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
 
   /**
    * Manual reconnect function for user-initiated recovery
@@ -329,6 +330,29 @@ export function useMatchmakingSubscriptions(): UseMatchmakingSubscriptionsReturn
     subscribeToMatchFound,
     user?.id,
   ]);
+
+  /**
+   * Unsubscribe from all subscriptions
+   */
+  const unsubscribeAll = useCallback(() => {
+    cleanup();
+    setConnectionStatus("disconnected");
+    setLastSeen(null);
+    setRetryCount(0);
+    lastHeartbeatRef.current = null;
+
+    // Reset state
+    setQueueData([]);
+    setQueueSize(0);
+    setPlayerPosition(-1);
+    setMatchFound(false);
+    setMatchLobbyCode(null);
+
+    Sentry.addBreadcrumb({
+      message: "All matchmaking subscriptions unsubscribed",
+      level: "info",
+    });
+  }, [cleanup]);
 
   /**
    * Handle online/offline state transitions

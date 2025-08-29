@@ -194,8 +194,8 @@ export class AIBotService {
                 botId,
                 situation,
                 botCards,
-                botPlayer.aiPersonalityId!,
-                botPlayer.aiDifficulty!,
+                botPlayer.aiPersonalityId || "default",
+                botPlayer.aiDifficulty || "medium",
               );
 
               // Submit the card
@@ -374,8 +374,8 @@ export class AIBotService {
               botId,
               situation,
               filtered,
-              bot.aiPersonalityId!,
-              bot.aiDifficulty!,
+              bot.aiPersonalityId || "default",
+              bot.aiDifficulty || "medium",
             );
 
             // decision.targetPlayerId corresponds to playerId of submission

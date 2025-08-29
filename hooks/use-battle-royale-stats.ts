@@ -122,7 +122,7 @@ export function useBattleRoyaleStats(
           // Simple trend analysis based on current streak and win rate
           const isOnWinStreak = statsData.currentStreak > 0;
           const hasGoodWinRate = statsData.winRate > 0.5;
-          const isImproving =
+          const _isImproving =
             statsData.skillRating > statsData.skillRating * 0.95; // Simplified check
 
           if (isOnWinStreak && hasGoodWinRate) {

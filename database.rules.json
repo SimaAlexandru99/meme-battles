@@ -341,6 +341,292 @@
           }
         }
       }
+    },
+
+    "battleRoyaleQueue": {
+      ".indexOn": ["queuedAt", "skillRating", "region"],
+      ".read": true,
+      ".write": true,
+
+      "$playerUid": {
+        ".read": true,
+        ".write": "$playerUid === auth.uid",
+
+        "playerUid": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "displayName": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "avatarId": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "profileURL": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "skillRating": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "xpLevel": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "queuedAt": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "estimatedWaitTime": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "preferences": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid",
+
+          "maxWaitTime": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          },
+
+          "skillRangeFlexibility": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          },
+
+          "regionPreference": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          }
+        },
+
+        "connectionInfo": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid",
+
+          "region": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          },
+
+          "latency": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          },
+
+          "connectionQuality": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          }
+        }
+      }
+    },
+
+    "battleRoyaleStats": {
+      ".indexOn": ["skillRating", "gamesPlayed", "lastPlayed", "winRate"],
+      ".read": true,
+      ".write": true,
+
+      "$playerUid": {
+        ".read": true,
+        ".write": "$playerUid === auth.uid",
+
+        "gamesPlayed": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "wins": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "losses": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "winRate": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "skillRating": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "highestRating": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "currentStreak": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "longestWinStreak": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "averagePosition": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "totalXpEarned": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "achievements": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid",
+          "$achievementId": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          }
+        },
+
+        "lastPlayed": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid"
+        },
+
+        "seasonStats": {
+          ".read": true,
+          ".write": "$playerUid === auth.uid",
+          "$seasonId": {
+            ".read": true,
+            ".write": "$playerUid === auth.uid"
+          }
+        }
+      }
+    },
+
+    "matchmakingHistory": {
+      ".indexOn": ["createdAt", "matchQuality", "averageSkillRating"],
+      ".read": true,
+      ".write": true,
+
+      "$matchId": {
+        ".read": true,
+        ".write": true,
+
+        "matchId": {
+          ".read": true,
+          ".write": true
+        },
+
+        "averageSkillRating": {
+          ".read": true,
+          ".write": true
+        },
+
+        "skillRatingRange": {
+          ".read": true,
+          ".write": true
+        },
+
+        "matchQuality": {
+          ".read": true,
+          ".write": true
+        },
+
+        "createdAt": {
+          ".read": true,
+          ".write": true
+        },
+
+        "lobbyCode": {
+          ".read": true,
+          ".write": true
+        },
+
+        "estimatedDuration": {
+          ".read": true,
+          ".write": true
+        },
+
+        "players": {
+          ".read": true,
+          ".write": true,
+          "$playerUid": {
+            ".read": true,
+            ".write": true,
+
+            "position": {
+              ".read": true,
+              ".write": true
+            },
+
+            "skillRatingChange": {
+              ".read": true,
+              ".write": true
+            },
+
+            "xpEarned": {
+              ".read": true,
+              ".write": true
+            },
+
+            "submittedAt": {
+              ".read": true,
+              ".write": true
+            }
+          }
+        }
+      }
+    },
+
+    "queueMetrics": {
+      ".indexOn": ["lastUpdated"],
+      ".read": true,
+      ".write": true,
+
+      "currentQueueSize": {
+        ".read": true,
+        ".write": true
+      },
+
+      "averageWaitTime": {
+        ".read": true,
+        ".write": true
+      },
+
+      "lastUpdated": {
+        ".read": true,
+        ".write": true
+      },
+
+      "peakHours": {
+        ".read": true,
+        ".write": true
+      },
+
+      "matchesCreatedToday": {
+        ".read": true,
+        ".write": true
+      },
+
+      "averageMatchQuality": {
+        ".read": true,
+        ".write": true
+      }
     }
   }
 }

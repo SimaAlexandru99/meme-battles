@@ -9,6 +9,8 @@ export default function MagicUI(props: SVGProps<SVGSVGElement>) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="size-6"
+      role="img"
+      aria-label="MagicUI logo"
       {...props}
     >
       <rect

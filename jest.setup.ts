@@ -34,41 +34,81 @@ jest.mock("next/image", () => ({
 
 // Mock Firebase
 jest.mock("firebase/app", () => ({
-  initializeApp: jest.fn(),
+  initializeApp: jest.fn(() => ({})),
   getApps: jest.fn(() => []),
-  getApp: jest.fn(),
+  getApp: jest.fn(() => ({})),
 }));
 
 jest.mock("firebase/auth", () => ({
-  getAuth: jest.fn(),
-  signInAnonymously: jest.fn(),
-  signOut: jest.fn(),
-  onAuthStateChanged: jest.fn(),
+  getAuth: jest.fn(() => ({})),
+  signInAnonymously: jest.fn(() => Promise.resolve({ user: {} })),
+  signOut: jest.fn(() => Promise.resolve()),
+  onAuthStateChanged: jest.fn(() => jest.fn()),
   connectAuthEmulator: jest.fn(),
 }));
 
 jest.mock("firebase/firestore", () => ({
-  getFirestore: jest.fn(),
-  collection: jest.fn(),
-  doc: jest.fn(),
-  addDoc: jest.fn(),
-  getDoc: jest.fn(),
-  getDocs: jest.fn(),
-  updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
-  query: jest.fn(),
-  where: jest.fn(),
-  orderBy: jest.fn(),
-  limit: jest.fn(),
+  getFirestore: jest.fn(() => ({})),
+  collection: jest.fn(() => ({})),
+  doc: jest.fn(() => ({})),
+  addDoc: jest.fn(() => Promise.resolve({})),
+  getDoc: jest.fn(() =>
+    Promise.resolve({ data: () => ({}), exists: () => true }),
+  ),
+  getDocs: jest.fn(() => Promise.resolve({ docs: [] })),
+  updateDoc: jest.fn(() => Promise.resolve()),
+  deleteDoc: jest.fn(() => Promise.resolve()),
+  query: jest.fn(() => ({})),
+  where: jest.fn(() => ({})),
+  orderBy: jest.fn(() => ({})),
+  limit: jest.fn(() => ({})),
   connectFirestoreEmulator: jest.fn(),
 }));
 
 jest.mock("firebase/storage", () => ({
-  getStorage: jest.fn(),
-  ref: jest.fn(),
-  uploadBytes: jest.fn(),
-  getDownloadURL: jest.fn(),
+  getStorage: jest.fn(() => ({})),
+  ref: jest.fn(() => ({})),
+  uploadBytes: jest.fn(() => Promise.resolve()),
+  getDownloadURL: jest.fn(() => Promise.resolve("")),
   connectStorageEmulator: jest.fn(),
+}));
+
+// Mock Firebase Realtime Database
+jest.mock("firebase/database", () => ({
+  getDatabase: jest.fn(() => ({})),
+  ref: jest.fn(() => ({})),
+  set: jest.fn(() => Promise.resolve()),
+  get: jest.fn(() =>
+    Promise.resolve({
+      val: () => ({}),
+      exists: () => true,
+      key: null,
+      ref: {},
+      toJSON: () => ({}),
+    }),
+  ),
+  update: jest.fn(() => Promise.resolve()),
+  remove: jest.fn(() => Promise.resolve()),
+  onValue: jest.fn(() => jest.fn()),
+  off: jest.fn(),
+  query: jest.fn(() => ({})),
+  orderByChild: jest.fn(() => ({})),
+  orderByKey: jest.fn(() => ({})),
+  orderByValue: jest.fn(() => ({})),
+  limitToFirst: jest.fn(() => ({})),
+  limitToLast: jest.fn(() => ({})),
+  startAt: jest.fn(() => ({})),
+  endAt: jest.fn(() => ({})),
+  equalTo: jest.fn(() => ({})),
+  onDisconnect: jest.fn(() => ({
+    set: jest.fn(() => Promise.resolve()),
+    update: jest.fn(() => Promise.resolve()),
+    remove: jest.fn(() => Promise.resolve()),
+    cancel: jest.fn(() => Promise.resolve()),
+  })),
+  serverTimestamp: jest.fn(() => ({ ".sv": "timestamp" })),
+  push: jest.fn(() => ({ key: "mock-key" })),
+  connectDatabaseEmulator: jest.fn(),
 }));
 
 // Global test configuration
@@ -117,8 +157,6 @@ global.IntersectionObserver = class IntersectionObserver {
   root = null;
   rootMargin = "";
   thresholds: number[] = [];
-
-  constructor() {}
   disconnect() {}
   observe() {}
   unobserve() {}
@@ -129,7 +167,6 @@ global.IntersectionObserver = class IntersectionObserver {
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
-  constructor() {}
   disconnect() {}
   observe() {}
   unobserve() {}

@@ -8,6 +8,8 @@ export default function Replit(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 20 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Replit logo"
       {...props}
     >
       <path

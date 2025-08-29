@@ -8,6 +8,8 @@ export default function GooglePaLM(props: SVGProps<SVGSVGElement>) {
       height="1em"
       preserveAspectRatio="xMidYMid"
       viewBox="0 0 256 229"
+      role="img"
+      aria-label="Google PaLM logo"
       {...props}
     >
       <path

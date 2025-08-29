@@ -2,7 +2,13 @@ import type { SVGProps } from "react";
 
 export default function TypeScriptIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 256 256" className="w-full h-full" {...props}>
+    <svg
+      viewBox="0 0 256 256"
+      className="w-full h-full"
+      role="img"
+      aria-label="TypeScript logo"
+      {...props}
+    >
       <g>
         <polygon
           fill="#007ACC"

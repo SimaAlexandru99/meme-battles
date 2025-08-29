@@ -33,7 +33,32 @@ if (!getApps().length) {
 }
 const rtdb = getDatabase();
 
-async function readPath<T = any>(path: string): Promise<T | null> {
+interface GameState {
+  phase: string;
+  roundNumber?: number;
+  scoredRound?: number;
+  timeLeft?: number;
+  phaseStartTime?: number;
+  submissions?: Record<string, unknown>;
+  votes?: Record<string, string>;
+  winner?: string;
+  roundResults?: {
+    roundNumber: number;
+    ranking: Array<{ pid: string; votes: number; delta: number }>;
+  };
+}
+
+interface Player {
+  score?: number;
+  lastSeen?: string;
+  joinedAt?: string;
+}
+
+interface Players {
+  [playerId: string]: Player;
+}
+
+async function readPath<T = unknown>(path: string): Promise<T | null> {
   const snap = await rtdb.ref(path).once("value");
   return snap.exists() ? (snap.val() as T) : null;
 }
@@ -50,17 +75,19 @@ export const onSubmissionCreated = onValueCreated(
       readPath(`lobbies/${lobbyCode}/players`),
     ]);
     if (!gameState || !players) return;
-    if ((gameState as any).phase !== "submission") return;
+    if ((gameState as GameState).phase !== "submission") return;
     const submissions =
       (await readPath(`lobbies/${lobbyCode}/gameState/submissions`)) || {};
-    const totalPlayers = Object.keys(players as any).length;
-    const submittedCount = Object.keys(submissions as any).length;
+    const totalPlayers = Object.keys(players as Players).length;
+    const submittedCount = Object.keys(
+      submissions as Record<string, unknown>,
+    ).length;
     if (submittedCount >= totalPlayers) {
       const currentPhaseSnap = await rtdb
         .ref(`lobbies/${lobbyCode}/gameState/phase`)
         .once("value");
       if (currentPhaseSnap.val() !== "submission") return;
-      const updates: Record<string, any> = {};
+      const updates: Record<string, unknown> = {};
       updates[`lobbies/${lobbyCode}/gameState/phase`] = "results";
       updates[`lobbies/${lobbyCode}/gameState/timeLeft`] = 30;
       updates[`lobbies/${lobbyCode}/gameState/phaseStartTime`] =
@@ -83,12 +110,12 @@ export const onVoteCreated = onValueCreated(
       readPath(`lobbies/${lobbyCode}/players`),
     ]);
     if (!gameState || !players) return;
-    if ((gameState as any).phase !== "results") return;
+    if ((gameState as GameState).phase !== "results") return;
     const [votes, abstentions] = await Promise.all([
       readPath(`lobbies/${lobbyCode}/gameState/votes`),
       readPath(`lobbies/${lobbyCode}/gameState/abstentions`),
     ]);
-    const totalPlayers = Object.keys(players as any).length;
+    const totalPlayers = Object.keys(players as Players).length;
     const votesCount = Object.keys(votes || {}).length;
     const abstainCount = Object.keys(abstentions || {}).length;
     if (votesCount + abstainCount >= totalPlayers) {
@@ -96,7 +123,7 @@ export const onVoteCreated = onValueCreated(
         .ref(`lobbies/${lobbyCode}/gameState/phase`)
         .once("value");
       if (currentPhaseSnap.val() !== "results") return;
-      const updates: Record<string, any> = {};
+      const updates: Record<string, unknown> = {};
       updates[`lobbies/${lobbyCode}/gameState/timeLeft`] = 10;
       updates[`lobbies/${lobbyCode}/gameState/phaseStartTime`] =
         ServerValue.TIMESTAMP;
@@ -125,17 +152,17 @@ export const onResultsPhase = onValueWritten(
       readPath(`${gameStatePath}/votes`),
     ]);
     if (!gameState || !players) return;
-    const roundNumber = Number((gameState as any).roundNumber || 1);
-    const scoredRound = Number((gameState as any).scoredRound || 0);
+    const roundNumber = Number((gameState as GameState).roundNumber || 1);
+    const scoredRound = Number((gameState as GameState).scoredRound || 0);
     if (scoredRound === roundNumber) return;
     const voteCounts: Record<string, number> = {};
-    Object.values(votes || {}).forEach((v: any) => {
+    Object.values(votes || {}).forEach((v: unknown) => {
       const pid = String(v);
       voteCounts[pid] = (voteCounts[pid] || 0) + 1;
     });
     let winnerId: string | null = null;
     let bestVotes = -1;
-    for (const pid of Object.keys(players as any)) {
+    for (const pid of Object.keys(players as Players)) {
       const v = voteCounts[pid] || 0;
       if (v > bestVotes) {
         bestVotes = v;
@@ -145,12 +172,14 @@ export const onResultsPhase = onValueWritten(
       }
     }
     const submissionMap = submissions || {};
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     const ranking: Array<{ pid: string; votes: number; delta: number }> = [];
-    for (const pid of Object.keys(players as any)) {
-      const currentScore = Number((players as any)[pid]?.score || 0);
+    for (const pid of Object.keys(players as Players)) {
+      const currentScore = Number((players as Players)[pid]?.score || 0);
       const receivedVotes = voteCounts[pid] || 0;
-      const participation = (submissionMap as any)[pid] ? 1 : 0;
+      const participation = (submissionMap as Record<string, unknown>)[pid]
+        ? 1
+        : 0;
       const winnerBonus = pid === winnerId ? 3 : 0;
       const delta = receivedVotes + participation + winnerBonus;
       updates[`lobbies/${lobbyCode}/players/${pid}/score`] =
@@ -174,8 +203,8 @@ export const cleanupLobbiesV2 = onSchedule("every 5 minutes", async () => {
   const abandonedLobbyTimeout = 30 * 60 * 1000;
   const lobbiesSnapshot = await rtdb.ref("lobbies").once("value");
   if (!lobbiesSnapshot.exists()) return;
-  const lobbies = (lobbiesSnapshot.val() || {}) as Record<string, any>;
-  const updates: Record<string, any> = {};
+  const lobbies = (lobbiesSnapshot.val() || {}) as Record<string, unknown>;
+  const updates: Record<string, unknown> = {};
   for (const [code, lobby] of Object.entries(lobbies)) {
     const createdAt = lobby?.createdAt
       ? new Date(lobby.createdAt).getTime()
@@ -187,8 +216,9 @@ export const cleanupLobbiesV2 = onSchedule("every 5 minutes", async () => {
       }
     } else {
       const playerLastSeenTimes = Object.values(lobby.players || {}).map(
-        (p: any) => {
-          const ts = p?.lastSeen || p?.joinedAt;
+        (p: unknown) => {
+          const player = p as Player;
+          const ts = player?.lastSeen || player?.joinedAt;
           return ts ? new Date(ts).getTime() : 0;
         },
       );

@@ -189,7 +189,7 @@ export class DatabaseOptimizationService {
       this.pendingUpdates.set(path, []);
     }
 
-    this.pendingUpdates.get(path)!.push(update);
+    this.pendingUpdates.get(path)?.push(update);
 
     // Schedule batch update if not already scheduled
     if (!this.updateBatchTimeout) {
@@ -445,49 +445,51 @@ export class DatabaseOptimizationService {
 /**
  * Utility functions for database path optimization
  */
-export class DatabasePathOptimizer {
-  /**
-   * Generate optimized paths for minimal data transfer
-   */
-  static getLobbyPlayerPath(lobbyCode: string, playerId: string): string {
-    return `lobbies/${lobbyCode}/players/${playerId}`;
+
+/**
+ * Generate optimized paths for minimal data transfer
+ */
+export function getLobbyPlayerPath(
+  lobbyCode: string,
+  playerId: string,
+): string {
+  return `lobbies/${lobbyCode}/players/${playerId}`;
+}
+
+export function getLobbySettingsPath(lobbyCode: string): string {
+  return `lobbies/${lobbyCode}/settings`;
+}
+
+export function getLobbyStatusPath(lobbyCode: string): string {
+  return `lobbies/${lobbyCode}/status`;
+}
+
+export function getPlayerSessionPath(playerId: string): string {
+  return `playerSessions/${playerId}`;
+}
+
+/**
+ * Create delta update paths for specific field updates
+ */
+export function createDeltaUpdatePaths(
+  basePath: string,
+  updates: Record<string, unknown>,
+): Record<string, unknown> {
+  const deltaPaths: Record<string, unknown> = {};
+
+  Object.entries(updates).forEach(([field, value]) => {
+    deltaPaths[`${basePath}/${field}`] = value;
+  });
+
+  // Always update the parent's updatedAt timestamp (server time)
+  try {
+    deltaPaths[`${basePath}/updatedAt`] = serverTimestamp();
+  } catch {
+    // Fallback: leave as-is if serverTimestamp is unavailable in this context
+    deltaPaths[`${basePath}/updatedAt`] = Date.now();
   }
 
-  static getLobbySettingsPath(lobbyCode: string): string {
-    return `lobbies/${lobbyCode}/settings`;
-  }
-
-  static getLobbyStatusPath(lobbyCode: string): string {
-    return `lobbies/${lobbyCode}/status`;
-  }
-
-  static getPlayerSessionPath(playerId: string): string {
-    return `playerSessions/${playerId}`;
-  }
-
-  /**
-   * Create delta update paths for specific field updates
-   */
-  static createDeltaUpdatePaths(
-    basePath: string,
-    updates: Record<string, unknown>,
-  ): Record<string, unknown> {
-    const deltaPaths: Record<string, unknown> = {};
-
-    Object.entries(updates).forEach(([field, value]) => {
-      deltaPaths[`${basePath}/${field}`] = value;
-    });
-
-    // Always update the parent's updatedAt timestamp (server time)
-    try {
-      deltaPaths[`${basePath}/updatedAt`] = serverTimestamp();
-    } catch {
-      // Fallback: leave as-is if serverTimestamp is unavailable in this context
-      deltaPaths[`${basePath}/updatedAt`] = Date.now();
-    }
-
-    return deltaPaths;
-  }
+  return deltaPaths;
 }
 
 // Export singleton instance

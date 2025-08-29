@@ -279,7 +279,7 @@ export function useLobbyConnection(
     }
 
     return cleanup;
-  }, [lobbyCode, isOnline]);
+  }, [lobbyCode, isOnline, cleanup, connect]);
 
   /**
    * Automatic reconnection for connection drops
@@ -299,7 +299,14 @@ export function useLobbyConnection(
         connect();
       }, delay);
     }
-  }, [connectionStatus, isOnline, retryCount, lobbyCode, calculateRetryDelay]);
+  }, [
+    connectionStatus,
+    isOnline,
+    retryCount,
+    lobbyCode,
+    calculateRetryDelay,
+    connect,
+  ]);
 
   return {
     connectionStatus,

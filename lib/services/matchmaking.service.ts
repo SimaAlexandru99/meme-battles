@@ -25,7 +25,6 @@ export class MatchmakingService {
   private readonly METRICS_PATH = "queueMetrics";
   private readonly HISTORY_PATH = "matchmakingHistory";
   private readonly MIN_PLAYERS_PER_MATCH = 3;
-  private readonly MAX_PLAYERS_PER_MATCH = 8;
   private readonly OPTIMAL_PLAYERS_PER_MATCH = 6;
   private readonly RETRY_DELAYS = [100, 200, 400, 800, 1600]; // Exponential backoff in ms
   private readonly MAX_RETRY_ATTEMPTS = 5;
@@ -99,7 +98,7 @@ export class MatchmakingService {
     operationName: string,
     maxRetries: number = this.MAX_RETRY_ATTEMPTS,
   ): Promise<T> {
-    let lastError: Error;
+    let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -132,7 +131,9 @@ export class MatchmakingService {
       }
     }
 
-    throw lastError!;
+    throw (
+      lastError || new Error("Unknown error occurred during retry operation")
+    );
   }
 
   /**
@@ -1342,20 +1343,6 @@ export class MatchmakingService {
   }
 
   /**
-   * Determine if skill range should be expanded for players waiting too long
-   */
-  private shouldExpandSkillRange(
-    waitTime: number,
-    preferences: QueuePreferences,
-  ): boolean {
-    const waitMinutes = waitTime / (60 * 1000);
-    const maxWaitMinutes = preferences.maxWaitTime / 60;
-
-    // Expand range if waited more than 75% of max wait time
-    return waitMinutes > maxWaitMinutes * 0.75;
-  }
-
-  /**
    * Calculate average skill rating for a group of players
    */
   private calculateAverageSkillRating(players: QueueEntry[]): number {
@@ -2113,7 +2100,7 @@ export class MatchmakingService {
 
             const skillRatings = playerStats
               .filter((stats) => stats !== null)
-              .map((stats) => stats!.skillRating);
+              .map((stats) => stats?.skillRating);
 
             const averageSkillRating =
               skillRatings.length > 0

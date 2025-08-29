@@ -59,93 +59,91 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
 /**
  * Client-side rate limiting service
  */
-export class RateLimitingService {
-  /**
-   * Check if a user can perform an action based on rate limits
-   */
-  static async checkRateLimit(
-    userId: string,
-    action: keyof typeof RATE_LIMITS,
-  ): Promise<RateLimitResult> {
-    const config = RATE_LIMITS[action];
-    const now = Date.now();
 
-    try {
-      const rateLimitRef = ref(rtdb, `rateLimits/${userId}/${action}`);
-      const snapshot = await get(rateLimitRef);
+/**
+ * Check if a user can perform an action based on rate limits
+ */
+export async function checkRateLimit(
+  userId: string,
+  action: keyof typeof RATE_LIMITS,
+): Promise<RateLimitResult> {
+  const config = RATE_LIMITS[action];
+  const now = Date.now();
 
-      let data: RateLimitData = snapshot.exists()
-        ? snapshot.val()
-        : {
-            count: 0,
-            windowStart: now,
-            lastRequest: now,
-          };
+  try {
+    const rateLimitRef = ref(rtdb, `rateLimits/${userId}/${action}`);
+    const snapshot = await get(rateLimitRef);
 
-      // Check if currently blocked
-      if (data.blocked && data.blockExpiresAt && now < data.blockExpiresAt) {
-        return {
-          allowed: false,
-          remainingRequests: 0,
-          resetTime: data.blockExpiresAt,
-          blocked: true,
-          blockExpiresAt: data.blockExpiresAt,
-        };
-      }
-
-      // Reset window if expired
-      if (now - data.windowStart > config.windowMs) {
-        data = {
+    let data: RateLimitData = snapshot.exists()
+      ? snapshot.val()
+      : {
           count: 0,
           windowStart: now,
           lastRequest: now,
         };
-      }
 
-      // Check if limit exceeded
-      if (data.count >= config.maxRequests) {
-        const blockExpiresAt =
-          now + (config.blockDurationMs || config.windowMs);
-
-        // Update with block information
-        await set(rateLimitRef, {
-          ...data,
-          blocked: true,
-          blockExpiresAt,
-          lastRequest: now,
-        });
-
-        return {
-          allowed: false,
-          remainingRequests: 0,
-          resetTime: data.windowStart + config.windowMs,
-          blocked: true,
-          blockExpiresAt,
-        };
-      }
-
-      // Allow the request and increment counter
-      const newData: RateLimitData = {
-        count: data.count + 1,
-        windowStart: data.windowStart,
-        lastRequest: now,
-      };
-
-      await set(rateLimitRef, newData);
-
+    // Check if currently blocked
+    if (data.blocked && data.blockExpiresAt && now < data.blockExpiresAt) {
       return {
-        allowed: true,
-        remainingRequests: config.maxRequests - newData.count,
-        resetTime: data.windowStart + config.windowMs,
-      };
-    } catch (error) {
-      console.error("Rate limit check failed:", error);
-      // Fail open - allow the request if rate limiting fails
-      return {
-        allowed: true,
-        remainingRequests: config.maxRequests,
-        resetTime: now + config.windowMs,
+        allowed: false,
+        remainingRequests: 0,
+        resetTime: data.blockExpiresAt,
+        blocked: true,
+        blockExpiresAt: data.blockExpiresAt,
       };
     }
+
+    // Reset window if expired
+    if (now - data.windowStart > config.windowMs) {
+      data = {
+        count: 0,
+        windowStart: now,
+        lastRequest: now,
+      };
+    }
+
+    // Check if limit exceeded
+    if (data.count >= config.maxRequests) {
+      const blockExpiresAt = now + (config.blockDurationMs || config.windowMs);
+
+      // Update with block information
+      await set(rateLimitRef, {
+        ...data,
+        blocked: true,
+        blockExpiresAt,
+        lastRequest: now,
+      });
+
+      return {
+        allowed: false,
+        remainingRequests: 0,
+        resetTime: data.windowStart + config.windowMs,
+        blocked: true,
+        blockExpiresAt,
+      };
+    }
+
+    // Allow the request and increment counter
+    const newData: RateLimitData = {
+      count: data.count + 1,
+      windowStart: data.windowStart,
+      lastRequest: now,
+    };
+
+    await set(rateLimitRef, newData);
+
+    return {
+      allowed: true,
+      remainingRequests: config.maxRequests - newData.count,
+      resetTime: data.windowStart + config.windowMs,
+    };
+  } catch (error) {
+    console.error("Rate limit check failed:", error);
+    // Fail open - allow the request if rate limiting fails
+    return {
+      allowed: true,
+      remainingRequests: config.maxRequests,
+      resetTime: now + config.windowMs,
+    };
   }
 }

@@ -48,7 +48,7 @@ export function getAdLocalization(
   customLocalizations?: AdLocalizationConfig,
 ): AdLocalization {
   // Check custom localizations first
-  if (customLocalizations && customLocalizations[locale]) {
+  if (customLocalizations?.[locale]) {
     return customLocalizations[locale];
   }
 

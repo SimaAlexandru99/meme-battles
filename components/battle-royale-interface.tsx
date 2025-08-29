@@ -2,13 +2,16 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Crown, Gamepad2, Target, Trophy, Zap } from "lucide-react";
 import * as React from "react";
 import { MatchmakingProgress } from "@/components/matchmaking-progress";
-import { QueuePreferences } from "@/components/queue-preferences";
+import { QueuePreferencesComponent } from "@/components/queue-preferences";
 import { QueueStatus } from "@/components/queue-status";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBattleRoyaleStats } from "@/hooks/use-battle-royale-stats";
 import { useMatchmakingQueue } from "@/hooks/use-matchmaking-queue";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -45,6 +48,14 @@ export function BattleRoyaleInterface({
     clearError,
     retry,
   } = useMatchmakingQueue();
+
+  // Battle Royale Statistics
+  const {
+    stats,
+    rank,
+    nextRankProgress,
+    isLoading: statsLoading,
+  } = useBattleRoyaleStats();
 
   // Focus management refs - reusing existing patterns
   const backButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -276,18 +287,18 @@ export function BattleRoyaleInterface({
             "w-full grid gap-8 sm:gap-12",
             // Mobile: Stack vertically
             "grid-cols-1",
-            // Desktop: Two columns with queue status taking more space
+            // Desktop: Three columns for queue, preferences, and stats
             "lg:grid-cols-3 lg:gap-16",
             // Ensure equal height on desktop
             "lg:items-start",
           )}
           aria-label="Battle Royale matchmaking options"
         >
-          {/* Queue Status Section - spans 2 columns on desktop */}
+          {/* Queue Status Section */}
           <motion.section
             ref={queueStatusRef}
             variants={lobbySectionVariants}
-            className="lg:col-span-2 w-full flex justify-center"
+            className="w-full flex justify-center"
             aria-label="Queue status and matchmaking progress"
           >
             <div className="w-full max-w-2xl space-y-6">
@@ -328,12 +339,138 @@ export function BattleRoyaleInterface({
             className="w-full flex justify-center"
             aria-label="Matchmaking preferences"
           >
-            <QueuePreferences
+            <QueuePreferencesComponent
               onUpdatePreferences={handleUpdatePreferences}
               isInQueue={isInQueue}
               isLoading={isLoading}
               className="w-full max-w-md"
             />
+          </motion.section>
+
+          {/* Battle Royale Statistics Section */}
+          <motion.section
+            variants={lobbySectionVariants}
+            className="w-full flex justify-center"
+            aria-label="Battle Royale statistics and ranking"
+          >
+            <div className="w-full max-w-md">
+              <Card
+                className={cn(
+                  "relative overflow-hidden",
+                  "bg-gradient-to-br from-slate-800/70 to-slate-700/70",
+                  "border-slate-600/40 shadow-lg",
+                  "backdrop-blur-sm",
+                )}
+                aria-label="Battle Royale player statistics"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-white font-bangers text-lg tracking-wide">
+                    <Trophy className="w-5 h-5 text-yellow-400" />
+                    Your Stats
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {statsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                    </div>
+                  ) : stats ? (
+                    <>
+                      {/* Current Rank */}
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Crown className="w-4 h-4 text-yellow-400" />
+                          <span className="text-slate-200 text-sm">Rank</span>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-white border-current",
+                            rank === "Bronze" &&
+                              "text-orange-400 border-orange-400",
+                            rank === "Silver" &&
+                              "text-slate-400 border-slate-400",
+                            rank === "Gold" &&
+                              "text-yellow-400 border-yellow-400",
+                            rank === "Platinum" &&
+                              "text-slate-300 border-slate-300",
+                            rank === "Diamond" &&
+                              "text-blue-400 border-blue-400",
+                            rank === "Master" && "text-red-400 border-red-400",
+                          )}
+                        >
+                          {rank}
+                        </Badge>
+                      </div>
+
+                      {/* Skill Rating */}
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-blue-400" />
+                          <span className="text-slate-200 text-sm">
+                            Skill Rating
+                          </span>
+                        </div>
+                        <span className="text-purple-300 font-medium">
+                          {stats.skillRating}
+                        </span>
+                      </div>
+
+                      {/* Games Played */}
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Gamepad2 className="w-4 h-4 text-green-400" />
+                          <span className="text-slate-200 text-sm">Games</span>
+                        </div>
+                        <span className="text-green-300 font-medium">
+                          {stats.gamesPlayed}
+                        </span>
+                      </div>
+
+                      {/* Win Rate */}
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4 text-orange-400" />
+                          <span className="text-slate-200 text-sm">
+                            Win Rate
+                          </span>
+                        </div>
+                        <span className="text-orange-300 font-medium">
+                          {stats.winRate
+                            ? `${(stats.winRate * 100).toFixed(1)}%`
+                            : "0%"}
+                        </span>
+                      </div>
+
+                      {/* Rank Progress */}
+                      {rank !== "Master" && nextRankProgress > 0 && (
+                        <div className="space-y-2 p-3 bg-slate-700/50 rounded-lg">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span>Progress to Next Rank</span>
+                            <span>{nextRankProgress.toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-slate-600/50 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${nextRankProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Trophy className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">
+                        Complete your first Battle Royale match to see your
+                        stats!
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </motion.section>
         </motion.section>
 

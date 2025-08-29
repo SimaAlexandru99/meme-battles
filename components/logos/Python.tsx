@@ -2,7 +2,13 @@ import type { SVGProps } from "react";
 
 export default function PythonIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0.21 -0.077 110 110" className="w-full h-full" {...props}>
+    <svg
+      viewBox="0.21 -0.077 110 110"
+      className="w-full h-full"
+      role="img"
+      aria-label="Python logo"
+      {...props}
+    >
       <defs>
         <linearGradient
           id="python-blue"

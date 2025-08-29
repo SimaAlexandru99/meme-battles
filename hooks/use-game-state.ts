@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import {
+  get,
   off,
   onValue,
   ref,
@@ -12,6 +13,7 @@ import { rtdb } from "@/firebase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { AIBotService } from "@/lib/services/ai-bot.service";
 import { lobbyService } from "@/lib/services/lobby.service";
+import { MatchmakingService } from "@/lib/services/matchmaking.service";
 import { MemeCardPool } from "@/lib/utils/meme-card-pool";
 import { calculateRoundScoring, type PlayerStreak } from "@/lib/utils/scoring";
 
@@ -96,6 +98,9 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   // Total rounds from lobby settings
   const [totalRounds, setTotalRounds] = useState<number>(8);
   const isHost = Boolean(user && hostUid && user.id === hostUid);
+
+  // Battle Royale service instance
+  const matchmakingService = useRef(MatchmakingService.getInstance());
 
   const gameStateUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
   const playersUnsubscribeRef = useRef<UnsubscribeFunction | null>(null);
@@ -519,6 +524,104 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   }, [user, gameState, lobbyCode, handleError, players]);
 
   /**
+   * Update Battle Royale statistics when game ends
+   */
+  const updateBattleRoyaleStats = useCallback(async (): Promise<void> => {
+    if (!user || !lobbyCode || !gameState) {
+      return;
+    }
+
+    try {
+      // Check if this is a Battle Royale lobby
+      const lobbyRef = ref(rtdb, `lobbies/${lobbyCode}`);
+      const lobbySnapshot = await get(lobbyRef);
+
+      if (!lobbySnapshot.exists()) {
+        return;
+      }
+
+      const lobby = lobbySnapshot.val();
+      const isBattleRoyale = lobby.type === "battle_royale";
+
+      if (!isBattleRoyale) {
+        return; // Not a Battle Royale game
+      }
+
+      // Calculate final positions based on scores
+      const playerScores = gameState.scores || {};
+      const sortedPlayers = players
+        .map((player) => ({
+          playerUid: player.id,
+          score: playerScores[player.id] || 0,
+          position: 0,
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      // Assign positions
+      sortedPlayers.forEach((player, index) => {
+        player.position = index + 1;
+      });
+
+      // Update statistics for each player
+      const updatePromises = sortedPlayers.map(async (playerResult) => {
+        const player = players.find((p) => p.id === playerResult.playerUid);
+        if (!player) return;
+
+        // Calculate rounds won (based on player streaks or scores)
+        const playerStreaks = gameState.playerStreaks?.[playerResult.playerUid];
+        const roundsWon = playerStreaks?.currentStreak || 0;
+
+        // Calculate XP earned (based on position and rounds played)
+        const baseXp = 50; // Base XP per game
+        const positionBonus = Math.max(
+          0,
+          (players.length - playerResult.position) * 25,
+        );
+        const roundsBonus = gameState.roundNumber * 10;
+        const xpEarned = baseXp + positionBonus + roundsBonus;
+
+        const gameResult = {
+          playerUid: playerResult.playerUid,
+          position: playerResult.position,
+          totalPlayers: players.length,
+          score: playerResult.score || 0,
+          roundsWon,
+          totalRounds: gameState.roundNumber,
+          gameMode: "battle_royale" as const,
+          duration: Math.floor(
+            (Date.now() - (gameState.phaseStartTime || Date.now())) / 1000,
+          ),
+          xpEarned,
+          skillRatingChange: 0, // Will be calculated by the service
+          matchId: `match_${lobbyCode}_${Date.now()}`,
+          lobbyCode,
+          submittedAt: new Date().toISOString(),
+        };
+
+        try {
+          await matchmakingService.current.updatePlayerStats(
+            playerResult.playerUid,
+            gameResult,
+          );
+        } catch (error) {
+          console.error(
+            `Failed to update stats for ${playerResult.playerUid}:`,
+            error,
+          );
+          // Don't throw - continue with other players
+        }
+      });
+
+      await Promise.allSettled(updatePromises);
+
+      console.log("🎯 Battle Royale statistics updated for all players");
+    } catch (error) {
+      console.error("Failed to update Battle Royale stats:", error);
+      // Don't throw - this shouldn't prevent game end
+    }
+  }, [user, lobbyCode, gameState, players]);
+
+  /**
    * End the game (host only)
    */
   const endGame = useCallback(async (): Promise<void> => {
@@ -538,13 +641,16 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             phase: "game_over",
             timeLeft: 0,
           });
+
+          // Update Battle Royale statistics if this is a BR game
+          await updateBattleRoyaleStats();
         } catch (error) {
           handleError(error, "end_game");
           throw error;
         }
       },
     );
-  }, [user, lobbyCode, handleError]);
+  }, [user, lobbyCode, handleError, updateBattleRoyaleStats]);
 
   /**
    * Complete game transition (host only)
@@ -673,7 +779,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
       totalPlayers,
       submittedCount,
       submissions: Object.keys(submissions),
-      timeElapsed: Math.round(timeElapsed / 1000) + "s",
+      timeElapsed: `${Math.round(timeElapsed / 1000)}s`,
       minTimeReached: timeElapsed >= MIN_SUBMISSION_TIME,
       shouldTransition:
         totalPlayers > 0 &&
