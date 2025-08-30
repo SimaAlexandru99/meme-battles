@@ -259,7 +259,7 @@ const Header = memo(function Header({
             </Button>
           ) : (
             <>
-              <Link href={"/profile" as any}>
+              <Link href={"/profile"}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -434,7 +434,7 @@ export default function HeroSection({ initialUserData }: HeroSectionProps) {
 
   // Handle Battle Royale click - navigate to Battle Royale page
   const handleBattleRoyaleClick = useCallback(() => {
-    router.push("/battle-royale" as)
+    router.push("/battle-royale");
   }, [router]);
 
   // Handle back to main view

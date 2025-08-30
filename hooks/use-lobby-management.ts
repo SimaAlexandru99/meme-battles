@@ -4,7 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LobbyService } from "@/lib/services/lobby.service";
 
 // Hook return interface
-interface UseLobbyManagementReturn {
+export interface UseLobbyManagementReturn {
   // State
   lobby: LobbyData | null;
   players: PlayerData[];

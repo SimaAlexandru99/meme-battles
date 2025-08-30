@@ -1,8 +1,7 @@
 "use client";
 
 import { AlertTriangle, Home, RefreshCw, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import type React from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,24 +22,23 @@ interface LobbyErrorFallbackProps {
 /**
  * Specialized error fallback for lobby-related errors
  */
-const LobbyErrorFallback: React.FC<LobbyErrorFallbackProps> = ({
+const LobbyErrorFallback = ({
   error,
   resetError,
   errorId,
-}) => {
-  const router = useRouter();
+}: LobbyErrorFallbackProps) => {
   const friendlyError = ErrorHandler.getUserFriendlyMessage(error);
 
   const handleGoHome = () => {
-    router.push("/");
+    window.location.href = "/";
   };
 
   const handleCreateLobby = () => {
-    router.push("/create");
+    window.location.href = "/create";
   };
 
   const handleJoinLobby = () => {
-    router.push("/join");
+    window.location.href = "/join";
   };
 
   // Determine which actions to show based on error type
@@ -135,17 +133,17 @@ const LobbyErrorFallback: React.FC<LobbyErrorFallbackProps> = ({
  * Error boundary specifically designed for lobby components
  */
 interface LobbyErrorBoundaryProps {
-  children: React.ReactNode;
+  children: ReactNode;
   lobbyCode?: string;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
-export const LobbyErrorBoundary: React.FC<LobbyErrorBoundaryProps> = ({
+export const LobbyErrorBoundary = ({
   children,
   lobbyCode,
   onError,
-}) => {
-  const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
+}: LobbyErrorBoundaryProps) => {
+  const handleError = (error: Error, errorInfo: ErrorInfo) => {
     // Log lobby-specific error context
     ErrorHandler.logError(error, {
       operation: "lobby_error_boundary",

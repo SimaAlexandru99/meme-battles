@@ -1,7 +1,7 @@
 "use client";
 
 import * as Sentry from "@sentry/nextjs";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ interface InvitationLinkProps {
 export function InvitationLink({ children }: InvitationLinkProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { user } = useCurrentUser();
   const [isProcessing, setIsProcessing] = useState(false);
   const [invitationCode, setInvitationCode] = useState<string | null>(null);
@@ -65,10 +66,12 @@ export function InvitationLink({ children }: InvitationLinkProps) {
     // Remove the invitation parameter from URL
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.delete("join");
+
+    // Use window.history to avoid router typing issues
     const newUrl = newSearchParams.toString()
-      ? `?${newSearchParams.toString()}`
-      : "";
-    router.replace(newUrl as any);
+      ? `${pathname}?${newSearchParams.toString()}`
+      : pathname;
+    window.history.replaceState({}, "", newUrl);
   };
 
   // Show invitation dialog if invitation code is present

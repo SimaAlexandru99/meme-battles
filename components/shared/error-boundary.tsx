@@ -36,11 +36,11 @@ interface ErrorFallbackProps {
 /**
  * Default error fallback component with user-friendly messaging
  */
-const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({
+const DefaultErrorFallback = ({
   error,
   resetError,
   errorId,
-}) => {
+}: ErrorFallbackProps) => {
   const friendlyError = ErrorHandler.getUserFriendlyMessage(error);
 
   return (

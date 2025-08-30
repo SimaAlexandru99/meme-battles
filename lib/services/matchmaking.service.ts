@@ -26,11 +26,16 @@ export class MatchmakingService {
   private readonly HISTORY_PATH = "matchmakingHistory";
   private readonly MIN_PLAYERS_PER_MATCH = 3;
   private readonly OPTIMAL_PLAYERS_PER_MATCH = 6;
-  private readonly RETRY_DELAYS = [100, 200, 400, 800, 1600]; // Exponential backoff in ms
   private readonly MAX_RETRY_ATTEMPTS = 5;
+  private readonly BATCH_SIZE = 20; // Process queue in batches
+  private readonly MATCH_CACHE_TTL = 30000; // 30 seconds cache for matches
 
   private lobbyService: LobbyService;
   private skillRatingSystem: SkillRatingSystem;
+  private matchCache = new Map<
+    string,
+    { matches: QueueEntry[][]; timestamp: number }
+  >();
 
   private constructor() {
     this.lobbyService = LobbyService.getInstance();
@@ -91,48 +96,32 @@ export class MatchmakingService {
   }
 
   /**
-   * Retry operation with exponential backoff
+   * Retry operation with enhanced error categorization and intelligent backoff
    */
   private async retryOperation<T>(
     operation: () => Promise<T>,
     operationName: string,
     maxRetries: number = this.MAX_RETRY_ATTEMPTS,
   ): Promise<T> {
-    let lastError: Error | undefined;
+    const { retryWithCategorization } = await import("./error-categorization");
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error as Error;
-
-        if (attempt === maxRetries - 1) {
-          break;
-        }
-
-        // Calculate delay with jitter
-        const baseDelay =
-          this.RETRY_DELAYS[Math.min(attempt, this.RETRY_DELAYS.length - 1)];
-        const jitter = Math.random() * 100;
-        const delay = baseDelay + jitter;
-
+    return retryWithCategorization(
+      operation,
+      operationName,
+      maxRetries,
+      (attempt, categorizedError) => {
         Sentry.addBreadcrumb({
-          message: `Retrying ${operationName}`,
+          message: `Retrying ${operationName} (attempt ${attempt})`,
           data: {
-            attempt: attempt + 1,
+            attempt,
             maxRetries,
-            delay,
-            error: lastError.message,
+            errorCategory: categorizedError.category,
+            userMessage: categorizedError.userMessage,
+            technicalMessage: categorizedError.technicalMessage,
           },
-          level: "info",
+          level: categorizedError.category === "permanent" ? "error" : "info",
         });
-
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-
-    throw (
-      lastError || new Error("Unknown error occurred during retry operation")
+      },
     );
   }
 
@@ -2416,6 +2405,128 @@ export class MatchmakingService {
             "Matchmaking is currently unavailable. Please try again.",
             true,
           );
+        }
+      },
+    );
+  }
+
+  /**
+   * Optimized queue retrieval with pagination and skill-based clustering
+   */
+  async getQueuedPlayersOptimized(skillRating?: number): Promise<QueueEntry[]> {
+    return Sentry.startSpan(
+      {
+        op: "db.matchmaking.get_queue_optimized",
+        name: "Get Queued Players Optimized",
+      },
+      async () => {
+        try {
+          // Check cache first
+          const cacheKey = `queue_${skillRating || "all"}`;
+          const cached = this.matchCache.get(cacheKey);
+
+          if (cached && Date.now() - cached.timestamp < this.MATCH_CACHE_TTL) {
+            return cached.matches.flat();
+          }
+
+          let queueQuery = query(
+            ref(rtdb, this.QUEUE_PATH),
+            orderByChild("queuedAt"),
+          );
+
+          // If we have a specific skill rating, optimize query range
+          if (skillRating) {
+            // For now, we'll still use the timestamp ordering for simplicity
+            // Future: implement composite indexing for skill-based range queries
+            queueQuery = query(
+              ref(rtdb, this.QUEUE_PATH),
+              orderByChild("skillRating"),
+            );
+          }
+
+          const snapshot = await get(queueQuery);
+
+          if (!snapshot.exists()) {
+            return [];
+          }
+
+          const allPlayers = Object.values(snapshot.val()) as QueueEntry[];
+
+          // Sort by queue time for fairness
+          allPlayers.sort(
+            (a, b) =>
+              new Date(a.queuedAt).getTime() - new Date(b.queuedAt).getTime(),
+          );
+
+          // Process in batches to prevent blocking
+          const batches: QueueEntry[][] = [];
+          for (let i = 0; i < allPlayers.length; i += this.BATCH_SIZE) {
+            batches.push(allPlayers.slice(i, i + this.BATCH_SIZE));
+          }
+
+          // Cache the result
+          this.matchCache.set(cacheKey, {
+            matches: batches,
+            timestamp: Date.now(),
+          });
+
+          // Clean expired cache entries
+          this.cleanMatchCache();
+
+          return allPlayers;
+        } catch (error) {
+          Sentry.captureException(error);
+          throw error;
+        }
+      },
+    );
+  }
+
+  /**
+   * Clean expired cache entries
+   */
+  private cleanMatchCache(): void {
+    const now = Date.now();
+    for (const [key, value] of this.matchCache.entries()) {
+      if (now - value.timestamp > this.MATCH_CACHE_TTL) {
+        this.matchCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Optimized batch operations for queue updates
+   */
+  async batchUpdateQueue(updates: Record<string, unknown>): Promise<void> {
+    return Sentry.startSpan(
+      {
+        op: "db.matchmaking.batch_update",
+        name: "Batch Update Queue",
+      },
+      async () => {
+        try {
+          // Split large updates into smaller batches to prevent Firebase limits
+          const updateEntries = Object.entries(updates);
+          const batchSize = 50; // Firebase write batch limit consideration
+
+          for (let i = 0; i < updateEntries.length; i += batchSize) {
+            const batchUpdates = Object.fromEntries(
+              updateEntries.slice(i, i + batchSize),
+            );
+
+            await this.retryOperation(
+              async () => {
+                await update(ref(rtdb), batchUpdates);
+              },
+              `batch_update_${Math.floor(i / batchSize)}`,
+            );
+          }
+
+          // Clear relevant cache after updates
+          this.matchCache.clear();
+        } catch (error) {
+          Sentry.captureException(error);
+          throw error;
         }
       },
     );

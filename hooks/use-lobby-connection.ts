@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { rtdb } from "@/firebase/client";
 
 // Hook return interface
-interface UseLobbyConnectionReturn {
+export interface UseLobbyConnectionReturn {
   connectionStatus:
     | "connected"
     | "connecting"

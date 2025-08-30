@@ -1,6 +1,5 @@
 "use client";
 import { Camera, Geometry, Mesh, Program, Renderer } from "ogl";
-import type React from "react";
 import { useEffect, useRef } from "react";
 
 interface ParticlesProps {
@@ -94,7 +93,7 @@ const fragment = /* glsl */ `
   }
 `;
 
-const Particles: React.FC<ParticlesProps> = ({
+const Particles = ({
   particleCount = 200,
   particleSpread = 10,
   speed = 0.1,
@@ -107,7 +106,7 @@ const Particles: React.FC<ParticlesProps> = ({
   cameraDistance = 20,
   disableRotation = false,
   className,
-}) => {
+}: ParticlesProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 

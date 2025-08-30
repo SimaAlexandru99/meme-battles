@@ -16,7 +16,7 @@ export type { UseMatchmakingQueueReturn } from "./use-matchmaking-queue";
 export { useMatchmakingQueue } from "./use-matchmaking-queue";
 export type { UseMatchmakingSubscriptionsReturn } from "./use-matchmaking-subscriptions";
 export { useMatchmakingSubscriptions } from "./use-matchmaking-subscriptions";
-export { useMobile } from "./use-mobile";
+export { useIsMobile } from "./use-mobile";
 // Existing hooks
 export {
   useCurrentUser,

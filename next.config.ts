@@ -2,6 +2,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig = {
   typedRoutes: true,
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
   experimental: {
     browserDebugInfoInTerminal: true,
   },

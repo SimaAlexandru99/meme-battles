@@ -1,7 +1,7 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true,
+    ".read": false,
+    ".write": false,
 
     "lobbies": {
       ".indexOn": ["status", "createdAt", "hostUid", "updatedAt"],
@@ -345,8 +345,8 @@
 
     "battleRoyaleQueue": {
       ".indexOn": ["queuedAt", "skillRating", "region"],
-      ".read": true,
-      ".write": true,
+      ".read": "auth != null",
+      ".write": false,
 
       "$playerUid": {
         ".read": true,
@@ -436,8 +436,8 @@
 
     "battleRoyaleStats": {
       ".indexOn": ["skillRating", "gamesPlayed", "lastPlayed", "winRate"],
-      ".read": true,
-      ".write": true,
+      ".read": "auth != null",
+      ".write": false,
 
       "$playerUid": {
         ".read": true,
@@ -520,8 +520,8 @@
 
     "matchmakingHistory": {
       ".indexOn": ["createdAt", "matchQuality", "averageSkillRating"],
-      ".read": true,
-      ".write": true,
+      ".read": "auth != null",
+      ".write": false,
 
       "$matchId": {
         ".read": true,
@@ -595,8 +595,8 @@
 
     "queueMetrics": {
       ".indexOn": ["lastUpdated"],
-      ".read": true,
-      ".write": true,
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin == true",
 
       "currentQueueSize": {
         ".read": true,

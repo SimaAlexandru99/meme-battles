@@ -1,6 +1,5 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { RiGamepadLine, RiUserLine } from "react-icons/ri";
@@ -53,7 +52,7 @@ export function GameTransition({
       }, 1000);
     } catch (error) {
       console.error("Error generating situation:", error);
-      Sentry.captureException(error);
+
       toast.error("Failed to generate situation. Using fallback...");
 
       // Use fallback situation

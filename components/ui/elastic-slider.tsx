@@ -23,7 +23,7 @@ interface ElasticSliderProps {
   rightIcon?: React.ReactNode;
 }
 
-const ElasticSlider: React.FC<ElasticSliderProps> = ({
+const ElasticSlider = ({
   defaultValue = 50,
   startingValue = 0,
   maxValue = 100,
@@ -32,7 +32,7 @@ const ElasticSlider: React.FC<ElasticSliderProps> = ({
   stepSize = 1,
   leftIcon = <>-</>,
   rightIcon = <>+</>,
-}) => {
+}: ElasticSliderProps) => {
   return (
     <div
       className={`flex flex-col items-center justify-center gap-4 w-48 ${className}`}
@@ -60,7 +60,7 @@ interface SliderProps {
   rightIcon: React.ReactNode;
 }
 
-const Slider: React.FC<SliderProps> = ({
+const Slider = ({
   defaultValue,
   startingValue,
   maxValue,
@@ -68,7 +68,7 @@ const Slider: React.FC<SliderProps> = ({
   stepSize,
   leftIcon,
   rightIcon,
-}) => {
+}: SliderProps) => {
   const [value, setValue] = useState<number>(defaultValue);
   const sliderRef = useRef<HTMLDivElement>(null);
   const [region, setRegion] = useState<"left" | "middle" | "right">("middle");

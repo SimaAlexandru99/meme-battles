@@ -943,7 +943,7 @@ export async function getUserActiveLobby(uid: string) {
               player.joinedAt &&
               typeof player.joinedAt === "object" &&
               "toDate" in player.joinedAt
-                ? player.joinedAt.toDate().toISOString()
+                ? (player.joinedAt as { toDate(): Date }).toDate().toISOString()
                 : player.joinedAt instanceof Date
                   ? player.joinedAt.toISOString()
                   : player.joinedAt,
@@ -959,8 +959,8 @@ export async function getUserActiveLobby(uid: string) {
         };
 
         span.setAttribute("lobby.found", true);
-        span.setAttribute("lobby.code", userLobby.code);
-        span.setAttribute("lobby.status", userLobby.status);
+        span.setAttribute("lobby.code", String(userLobby.code || ""));
+        span.setAttribute("lobby.status", String(userLobby.status || ""));
 
         return serializedLobby;
       } catch (error) {

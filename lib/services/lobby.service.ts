@@ -14,27 +14,34 @@ import {
 import { AVAILABLE_AI_PERSONALITIES } from "@/components/game-settings/types";
 import { rtdb } from "@/firebase/client";
 // Import types
-import type {
-  BattleRoyaleLobbyParams,
-  BattleRoyaleStats,
-  CompetitiveSettings,
-  CreateLobbyParams,
-  GameResult,
-  GameSettings,
-  GameState,
-  JoinLobbyParams,
-  LobbyData,
-  LobbyError,
-  LobbyErrorType,
-  LobbyStatus,
-  MemeCard,
-  PlayerData,
-  PlayerStatus,
-  QueueEntry,
-  ServiceResult,
-  ValidationResult,
-} from "@/types";
+// Types are available globally from types/index.d.ts
 import { AIBotService } from "./ai-bot.service";
+import { BattleRoyalePostGameService } from "./battle-royale-post-game.service";
+
+// Local type definitions for post-game processing
+interface PlayerMatchResult {
+  playerUid: string;
+  finalPosition: number;
+  xpEarned: number;
+  opponentSkillRatings?: number[];
+}
+
+interface BattleRoyaleMatchResult {
+  matchId: string;
+  lobbyCode: string;
+  completedAt: string;
+  matchDuration: number;
+  totalPlayers: number;
+  competitiveSettings: CompetitiveSettings;
+  playerResults: PlayerMatchResult[];
+}
+
+interface CompetitiveSettings extends GameSettings {
+  autoStart: boolean;
+  autoStartCountdown: number;
+  xpMultiplier: number;
+  rankingEnabled: boolean;
+}
 
 /**
  * Enhanced service for managing lobby operations using Firebase Realtime Database
@@ -46,7 +53,13 @@ export class LobbyService {
   private readonly CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   private readonly MAX_CODE_GENERATION_ATTEMPTS = 10;
   private readonly RETRY_DELAYS = [100, 200, 400, 800, 1600]; // Exponential backoff in ms
+  private readonly LOBBIES_PATH = "lobbies";
   private settingsUpdateTimeouts = new Map<string, NodeJS.Timeout>();
+  private postGameService: BattleRoyalePostGameService;
+
+  private constructor() {
+    this.postGameService = BattleRoyalePostGameService.getInstance();
+  }
 
   static getInstance(): LobbyService {
     if (!LobbyService.instance) {
@@ -3012,6 +3025,133 @@ export class LobbyService {
         }
       },
     );
+  }
+
+  /**
+   * Process Battle Royale match completion and update player statistics
+   */
+  async processBattleRoyaleMatchCompletion(
+    lobbyCode: string,
+    matchDuration: number,
+  ): Promise<ServiceResult> {
+    return Sentry.startSpan(
+      {
+        op: "db.lobby.process_battle_royale_completion",
+        name: "Process Battle Royale Match Completion",
+      },
+      async () => {
+        try {
+          // Get final lobby state
+          const lobbySnapshot = await get(
+            ref(rtdb, `${this.LOBBIES_PATH}/${lobbyCode}`),
+          );
+
+          if (!lobbySnapshot.exists()) {
+            throw this.createLobbyError(
+              "LOBBY_NOT_FOUND",
+              `Lobby ${lobbyCode} not found for post-game processing`,
+              "Lobby not found.",
+              false,
+            );
+          }
+
+          const lobby = lobbySnapshot.val() as LobbyData;
+
+          // Only process Battle Royale lobbies
+          const lobbyWithType = lobby as LobbyData & { lobbyType?: string };
+          if (lobbyWithType.lobbyType !== "battle_royale") {
+            return {
+              success: true,
+              data: {
+                message:
+                  "Not a Battle Royale lobby, skipping post-game processing",
+              },
+              timestamp: new Date().toISOString(),
+            };
+          }
+
+          // Extract match results
+          const playerResults: PlayerMatchResult[] = [];
+          const players = Object.values(lobby.players || {}) as PlayerData[];
+
+          // Sort players by final score (descending) to determine positions
+          const sortedPlayers = players.sort(
+            (a, b) => (b.score || 0) - (a.score || 0),
+          );
+
+          sortedPlayers.forEach((player, index) => {
+            playerResults.push({
+              playerUid: player.id,
+              finalPosition: index + 1,
+              xpEarned: this.calculateBattleRoyaleXP(
+                index + 1,
+                sortedPlayers.length,
+              ),
+              opponentSkillRatings: sortedPlayers
+                .filter((p) => p.id !== player.id)
+                .map(() => 1200), // Default skill rating for all players
+            });
+          });
+
+          const competitiveSettings: CompetitiveSettings = {
+            ...lobby.settings,
+            autoStart: true,
+            autoStartCountdown: 30,
+            xpMultiplier: 1.5,
+            rankingEnabled: true,
+          };
+
+          const matchResult: BattleRoyaleMatchResult = {
+            matchId: `match_${lobbyCode}_${Date.now()}`,
+            lobbyCode,
+            completedAt: new Date().toISOString(),
+            matchDuration,
+            totalPlayers: sortedPlayers.length,
+            competitiveSettings,
+            playerResults,
+          };
+
+          // Process match results through the post-game service
+          const processingResult =
+            await this.postGameService.processMatchResults(matchResult);
+
+          Sentry.addBreadcrumb({
+            message: "Battle Royale match completion processed successfully",
+            data: {
+              lobbyCode,
+              playersProcessed: playerResults.length,
+              matchDuration,
+            },
+            level: "info",
+          });
+
+          return processingResult;
+        } catch (error) {
+          Sentry.captureException(error);
+          throw this.createLobbyError(
+            "UNKNOWN_ERROR",
+            `Failed to process Battle Royale match completion: ${error}`,
+            "Failed to process match results. Some statistics may not be updated.",
+            true,
+          );
+        }
+      },
+    );
+  }
+
+  /**
+   * Calculate XP earned based on Battle Royale position
+   */
+  private calculateBattleRoyaleXP(
+    position: number,
+    totalPlayers: number,
+  ): number {
+    const baseXP = 50;
+    const positionBonus = Math.max(0, (totalPlayers - position) * 10);
+    const winBonus = position === 1 ? 100 : 0;
+    const topThreeBonus = position <= 3 ? 25 : 0;
+
+    return baseXP + positionBonus + winBonus + topThreeBonus;
   }
 }
 

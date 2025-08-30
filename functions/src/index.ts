@@ -58,6 +58,13 @@ interface Players {
   [playerId: string]: Player;
 }
 
+interface Lobby {
+  createdAt?: string;
+  updatedAt?: string;
+  players?: Players;
+  [key: string]: unknown;
+}
+
 async function readPath<T = unknown>(path: string): Promise<T | null> {
   const snap = await rtdb.ref(path).once("value");
   return snap.exists() ? (snap.val() as T) : null;
@@ -203,7 +210,7 @@ export const cleanupLobbiesV2 = onSchedule("every 5 minutes", async () => {
   const abandonedLobbyTimeout = 30 * 60 * 1000;
   const lobbiesSnapshot = await rtdb.ref("lobbies").once("value");
   if (!lobbiesSnapshot.exists()) return;
-  const lobbies = (lobbiesSnapshot.val() || {}) as Record<string, unknown>;
+  const lobbies = (lobbiesSnapshot.val() || {}) as Record<string, Lobby>;
   const updates: Record<string, unknown> = {};
   for (const [code, lobby] of Object.entries(lobbies)) {
     const createdAt = lobby?.createdAt

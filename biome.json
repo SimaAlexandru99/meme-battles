@@ -44,6 +44,12 @@
           }
         }
       }
+    },
+    {
+      "includes": ["components/ui/**"],
+      "linter": {
+        "enabled": false
+      }
     }
   ],
   "assist": {

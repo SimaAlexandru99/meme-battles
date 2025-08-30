@@ -10,7 +10,7 @@ import { dbOptimization } from "./database-optimization";
 import { firebaseOptimization } from "./firebase-config";
 import { lobbyCleanup } from "./lobby-cleanup";
 import { lobbyMonitoring } from "./lobby-monitoring";
-import { RateLimitingService } from "./rate-limiting";
+import { checkRateLimit } from "./rate-limiting";
 
 export interface LobbySystemConfig {
   enableOptimization: boolean;
@@ -210,10 +210,7 @@ export class LobbySystemIntegrationService {
     try {
       // Rate limiting check
       if (this.config.enableRateLimiting && !options.skipRateLimit) {
-        const rateLimitResult = await RateLimitingService.checkRateLimit(
-          userId,
-          "LOBBY_CREATION",
-        );
+        const rateLimitResult = await checkRateLimit(userId, "LOBBY_CREATION");
 
         if (!rateLimitResult.allowed) {
           const error = `Rate limit exceeded: ${rateLimitResult.remainingRequests} requests remaining`;
@@ -301,10 +298,7 @@ export class LobbySystemIntegrationService {
     try {
       // Rate limiting check
       if (this.config.enableRateLimiting) {
-        const rateLimitResult = await RateLimitingService.checkRateLimit(
-          userId,
-          "PLAYER_ACTIONS",
-        );
+        const rateLimitResult = await checkRateLimit(userId, "PLAYER_ACTIONS");
 
         if (!rateLimitResult.allowed) {
           const error = `Rate limit exceeded for player actions`;

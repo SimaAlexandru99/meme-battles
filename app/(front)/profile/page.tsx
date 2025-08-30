@@ -308,7 +308,7 @@ export default function ProfilePage() {
                     statistics!
                   </p>
                   <Button
-                    onClick={() => router.push("/battle-royale" as any)}
+                    onClick={() => router.push("/battle-royale")}
                     className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     <Gamepad2 className="w-4 h-4 mr-2" />

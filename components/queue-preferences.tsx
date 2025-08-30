@@ -34,7 +34,6 @@ import {
   microInteractionVariants,
 } from "@/lib/animations/private-lobby-variants";
 import { cn } from "@/lib/utils";
-import type { QueuePreferences } from "@/types/index.d";
 
 interface QueuePreferencesProps {
   onUpdatePreferences: (
