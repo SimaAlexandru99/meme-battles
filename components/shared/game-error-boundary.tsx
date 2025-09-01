@@ -1,1 +1,524 @@
-"use client";\n\nimport * as Sentry from "@sentry/nextjs";\nimport React from "react";\nimport { AlertTriangle, RefreshCw, Home, Bug } from "lucide-react";\nimport { Button } from "@/components/ui/button";\nimport { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";\nimport { Badge } from "@/components/ui/badge";\nimport { cn } from "@/lib/utils";\nimport { firebaseConnectionManager } from "@/lib/services/firebase-connection-manager";\n\ninterface GameErrorBoundaryState {\n  hasError: boolean;\n  error: Error | null;\n  errorInfo: React.ErrorInfo | null;\n  errorId: string | null;\n  retryCount: number;\n  lastErrorTime: number;\n  errorType: 'network' | 'game_state' | 'rendering' | 'firebase' | 'unknown';\n  canRecover: boolean;\n  recoveryActions: string[];\n}\n\ninterface GameErrorBoundaryProps {\n  children: React.ReactNode;\n  fallback?: React.ComponentType<{\n    error: Error;\n    reset: () => void;\n    errorInfo: React.ErrorInfo;\n  }>;\n  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;\n  maxRetries?: number;\n  lobbyCode?: string;\n  currentUser?: { id: string; name: string };\n}\n\nexport class GameErrorBoundary extends React.Component<\n  GameErrorBoundaryProps,\n  GameErrorBoundaryState\n> {\n  private retryTimeout: NodeJS.Timeout | null = null;\n  private readonly MAX_AUTO_RETRIES = 3;\n  private readonly RETRY_DELAY = 2000;\n\n  constructor(props: GameErrorBoundaryProps) {\n    super(props);\n    \n    this.state = {\n      hasError: false,\n      error: null,\n      errorInfo: null,\n      errorId: null,\n      retryCount: 0,\n      lastErrorTime: 0,\n      errorType: 'unknown',\n      canRecover: true,\n      recoveryActions: []\n    };\n  }\n\n  static getDerivedStateFromError(error: Error): Partial<GameErrorBoundaryState> {\n    const errorType = GameErrorBoundary.categorizeError(error);\n    const { canRecover, recoveryActions } = GameErrorBoundary.getRecoveryInfo(error, errorType);\n    \n    return {\n      hasError: true,\n      error,\n      errorType,\n      canRecover,\n      recoveryActions,\n      lastErrorTime: Date.now()\n    };\n  }\n\n  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {\n    const errorId = Sentry.captureException(error, {\n      tags: {\n        component: 'GameErrorBoundary',\n        error_type: this.state.errorType,\n        lobby_code: this.props.lobbyCode || 'unknown',\n        user_id: this.props.currentUser?.id || 'anonymous'\n      },\n      contexts: {\n        react: {\n          componentStack: errorInfo.componentStack\n        },\n        game: {\n          lobbyCode: this.props.lobbyCode,\n          currentUser: this.props.currentUser,\n          retryCount: this.state.retryCount\n        }\n      },\n      extra: {\n        errorInfo,\n        connectionInfo: firebaseConnectionManager.getConnectionInfo()\n      }\n    });\n\n    this.setState({ errorId, errorInfo });\n    \n    // Call custom error handler if provided\n    if (this.props.onError) {\n      this.props.onError(error, errorInfo);\n    }\n\n    // Attempt auto-recovery for certain error types\n    if (this.shouldAutoRecover(error) && this.state.retryCount < this.MAX_AUTO_RETRIES) {\n      this.scheduleAutoRetry();\n    }\n  }\n\n  private static categorizeError(error: Error): GameErrorBoundaryState['errorType'] {\n    const message = error.message.toLowerCase();\n    const stack = error.stack?.toLowerCase() || '';\n\n    if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {\n      return 'network';\n    }\n    \n    if (message.includes('firebase') || stack.includes('firebase')) {\n      return 'firebase';\n    }\n    \n    if (message.includes('game') || message.includes('lobby') || message.includes('player')) {\n      return 'game_state';\n    }\n    \n    if (message.includes('render') || message.includes('hook') || stack.includes('react')) {\n      return 'rendering';\n    }\n    \n    return 'unknown';\n  }\n\n  private static getRecoveryInfo(error: Error, errorType: GameErrorBoundaryState['errorType']): {\n    canRecover: boolean;\n    recoveryActions: string[];\n  } {\n    switch (errorType) {\n      case 'network':\n        return {\n          canRecover: true,\n          recoveryActions: [\n            'Check your internet connection',\n            'Retry the connection',\n            'Refresh the page if issues persist'\n          ]\n        };\n      \n      case 'firebase':\n        return {\n          canRecover: true,\n          recoveryActions: [\n            'Reconnecting to game servers',\n            'Your progress should be saved',\n            'Try refreshing if connection fails'\n          ]\n        };\n      \n      case 'game_state':\n        return {\n          canRecover: true,\n          recoveryActions: [\n            'Refreshing game state',\n            'Your current game progress may be lost',\n            'Return to lobby to start fresh'\n          ]\n        };\n      \n      case 'rendering':\n        return {\n          canRecover: false,\n          recoveryActions: [\n            'A display error occurred',\n            'Please refresh the page',\n            'Report this issue if it continues'\n          ]\n        };\n      \n      default:\n        return {\n          canRecover: false,\n          recoveryActions: [\n            'An unexpected error occurred',\n            'Please refresh the page',\n            'Contact support if this persists'\n          ]\n        };\n    }\n  }\n\n  private shouldAutoRecover(error: Error): boolean {\n    const { errorType } = this.state;\n    \n    // Auto-recover for network and Firebase errors\n    return errorType === 'network' || errorType === 'firebase';\n  }\n\n  private scheduleAutoRetry(): void {\n    if (this.retryTimeout) {\n      clearTimeout(this.retryTimeout);\n    }\n\n    this.retryTimeout = setTimeout(() => {\n      this.handleRetry(true);\n    }, this.RETRY_DELAY);\n  }\n\n  private handleRetry = (isAutoRetry: boolean = false): void => {\n    if (this.retryTimeout) {\n      clearTimeout(this.retryTimeout);\n      this.retryTimeout = null;\n    }\n\n    // Clean up Firebase connections before retry\n    try {\n      firebaseConnectionManager.cleanup();\n    } catch (cleanupError) {\n      console.warn('Error during Firebase cleanup:', cleanupError);\n    }\n\n    Sentry.addBreadcrumb({\n      message: isAutoRetry ? 'Auto-retrying after error' : 'Manual retry triggered',\n      data: {\n        errorType: this.state.errorType,\n        retryCount: this.state.retryCount + 1,\n        errorId: this.state.errorId\n      },\n      level: 'info'\n    });\n\n    this.setState({\n      hasError: false,\n      error: null,\n      errorInfo: null,\n      errorId: null,\n      retryCount: this.state.retryCount + 1\n    });\n  };\n\n  private handleGoHome = (): void => {\n    // Clean up before navigation\n    firebaseConnectionManager.cleanup();\n    \n    Sentry.addBreadcrumb({\n      message: 'User navigating home from error boundary',\n      data: {\n        errorType: this.state.errorType,\n        errorId: this.state.errorId\n      },\n      level: 'info'\n    });\n    \n    window.location.href = '/';\n  };\n\n  private handleRefresh = (): void => {\n    Sentry.addBreadcrumb({\n      message: 'User refreshing page from error boundary',\n      data: {\n        errorType: this.state.errorType,\n        errorId: this.state.errorId\n      },\n      level: 'info'\n    });\n    \n    window.location.reload();\n  };\n\n  private handleReportBug = (): void => {\n    const bugReportUrl = `mailto:support@example.com?subject=Game Error Report&body=${encodeURIComponent(\n      `Error ID: ${this.state.errorId}\\n` +\n      `Error Type: ${this.state.errorType}\\n` +\n      `Lobby Code: ${this.props.lobbyCode || 'N/A'}\\n` +\n      `User: ${this.props.currentUser?.name || 'Anonymous'}\\n` +\n      `Time: ${new Date().toISOString()}\\n` +\n      `Error: ${this.state.error?.message || 'Unknown'}\\n\\n` +\n      `Please describe what you were doing when this error occurred:`\n    )}`;\n    \n    window.open(bugReportUrl);\n  };\n\n  componentWillUnmount() {\n    if (this.retryTimeout) {\n      clearTimeout(this.retryTimeout);\n    }\n  }\n\n  render() {\n    if (this.state.hasError && this.state.error) {\n      // Use custom fallback if provided\n      if (this.props.fallback) {\n        const FallbackComponent = this.props.fallback;\n        return (\n          <FallbackComponent\n            error={this.state.error}\n            reset={this.handleRetry}\n            errorInfo={this.state.errorInfo!}\n          />\n        );\n      }\n\n      // Default error UI\n      const getErrorIcon = () => {\n        switch (this.state.errorType) {\n          case 'network':\n          case 'firebase':\n            return <RefreshCw className=\"w-12 h-12 text-orange-400 animate-pulse\" />;\n          case 'game_state':\n            return <AlertTriangle className=\"w-12 h-12 text-yellow-400\" />;\n          default:\n            return <Bug className=\"w-12 h-12 text-red-400\" />;\n        }\n      };\n\n      const getErrorTitle = () => {\n        switch (this.state.errorType) {\n          case 'network':\n            return 'Connection Error';\n          case 'firebase':\n            return 'Server Connection Lost';\n          case 'game_state':\n            return 'Game State Error';\n          case 'rendering':\n            return 'Display Error';\n          default:\n            return 'Unexpected Error';\n        }\n      };\n\n      const isRetrying = this.retryTimeout !== null;\n      const maxRetriesReached = this.state.retryCount >= (this.props.maxRetries || this.MAX_AUTO_RETRIES);\n\n      return (\n        <div className=\"min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4\">\n          <Card className=\"bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10 max-w-lg w-full\">\n            <CardHeader>\n              <div className=\"flex items-center justify-between\">\n                <CardTitle className=\"text-white font-bangers text-2xl tracking-wide\">\n                  {getErrorTitle()}\n                </CardTitle>\n                <Badge \n                  variant=\"outline\" \n                  className={cn(\n                    \"text-xs\",\n                    this.state.errorType === 'network' && \"border-orange-400 text-orange-400\",\n                    this.state.errorType === 'firebase' && \"border-blue-400 text-blue-400\",\n                    this.state.errorType === 'game_state' && \"border-yellow-400 text-yellow-400\",\n                    this.state.errorType === 'rendering' && \"border-red-400 text-red-400\",\n                    this.state.errorType === 'unknown' && \"border-gray-400 text-gray-400\"\n                  )}\n                >\n                  {this.state.errorType.replace('_', ' ').toUpperCase()}\n                </Badge>\n              </div>\n            </CardHeader>\n            \n            <CardContent className=\"space-y-6\">\n              {/* Error Icon and Message */}\n              <div className=\"text-center\">\n                <div className=\"flex justify-center mb-4\">\n                  {getErrorIcon()}\n                </div>\n                \n                <p className=\"text-slate-300 font-bangers text-lg tracking-wide mb-4\">\n                  {this.state.error.message || 'Something went wrong while playing the game.'}\n                </p>\n\n                {this.state.errorId && (\n                  <p className=\"text-slate-500 text-sm mb-4\">\n                    Error ID: {this.state.errorId.substring(0, 8)}\n                  </p>\n                )}\n              </div>\n\n              {/* Recovery Actions */}\n              {this.state.recoveryActions.length > 0 && (\n                <div className=\"bg-slate-700/30 rounded-lg p-4\">\n                  <h3 className=\"text-white font-bangers text-sm tracking-wide mb-2 uppercase\">\n                    What's happening?\n                  </h3>\n                  <ul className=\"text-slate-300 text-sm space-y-1\">\n                    {this.state.recoveryActions.map((action, index) => (\n                      <li key={index} className=\"flex items-start gap-2\">\n                        <span className=\"text-purple-400 mt-0.5\">•</span>\n                        {action}\n                      </li>\n                    ))}\n                  </ul>\n                </div>\n              )}\n\n              {/* Auto-retry indicator */}\n              {isRetrying && (\n                <div className=\"text-center\">\n                  <div className=\"flex items-center justify-center gap-2 text-orange-400 mb-2\">\n                    <RefreshCw className=\"w-4 h-4 animate-spin\" />\n                    <span className=\"text-sm font-bangers tracking-wide\">\n                      Automatically retrying...\n                    </span>\n                  </div>\n                  <div className=\"w-full bg-slate-700/50 rounded-full h-1\">\n                    <div className=\"bg-orange-500 h-1 rounded-full animate-pulse w-3/4\"></div>\n                  </div>\n                </div>\n              )}\n\n              {/* Action Buttons */}\n              <div className=\"space-y-3\">\n                {this.state.canRecover && !isRetrying && (\n                  <Button\n                    onClick={this.handleRetry}\n                    disabled={maxRetriesReached}\n                    className=\"w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg disabled:opacity-50\"\n                  >\n                    <RefreshCw className=\"w-4 h-4 mr-2\" />\n                    {maxRetriesReached ? 'Max Retries Reached' : `Try Again (${this.state.retryCount}/${this.props.maxRetries || this.MAX_AUTO_RETRIES})`}\n                  </Button>\n                )}\n                \n                <div className=\"flex gap-3\">\n                  <Button\n                    onClick={this.handleRefresh}\n                    variant=\"outline\"\n                    className=\"flex-1 border-slate-600 text-slate-300 hover:bg-slate-700 font-bangers text-base\"\n                  >\n                    <RefreshCw className=\"w-4 h-4 mr-2\" />\n                    Refresh Page\n                  </Button>\n                  \n                  <Button\n                    onClick={this.handleGoHome}\n                    variant=\"outline\"\n                    className=\"flex-1 border-slate-600 text-slate-300 hover:bg-slate-700 font-bangers text-base\"\n                  >\n                    <Home className=\"w-4 h-4 mr-2\" />\n                    Go Home\n                  </Button>\n                </div>\n\n                {this.state.errorId && (\n                  <Button\n                    onClick={this.handleReportBug}\n                    variant=\"ghost\"\n                    className=\"w-full text-slate-400 hover:text-white font-bangers text-sm\"\n                  >\n                    <Bug className=\"w-4 h-4 mr-2\" />\n                    Report this issue\n                  </Button>\n                )}\n              </div>\n\n              {/* Debug info for development */}\n              {process.env.NODE_ENV === 'development' && (\n                <details className=\"text-xs text-slate-500\">\n                  <summary className=\"cursor-pointer hover:text-slate-400\">Debug Info</summary>\n                  <pre className=\"mt-2 p-2 bg-slate-900/50 rounded overflow-auto max-h-32\">\n                    {JSON.stringify({\n                      error: this.state.error.message,\n                      stack: this.state.error.stack?.substring(0, 500),\n                      errorType: this.state.errorType,\n                      retryCount: this.state.retryCount,\n                      connectionInfo: firebaseConnectionManager.getConnectionInfo()\n                    }, null, 2)}\n                  </pre>\n                </details>\n              )}\n            </CardContent>\n          </Card>\n        </div>\n      );\n    }\n\n    return this.props.children;\n  }\n}
+"use client";
+
+import * as Sentry from "@sentry/nextjs";
+import { AlertTriangle, Bug, Home, RefreshCw } from "lucide-react";
+import React from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { firebaseConnectionManager } from "@/lib/services/firebase-connection-manager";
+import { cn } from "@/lib/utils";
+
+interface GameErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: React.ErrorInfo | null;
+  errorId: string | null;
+  retryCount: number;
+  lastErrorTime: number;
+  errorType: "network" | "game_state" | "rendering" | "firebase" | "unknown";
+  canRecover: boolean;
+  recoveryActions: string[];
+}
+
+interface GameErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ComponentType<{
+    error: Error;
+    reset: () => void;
+    errorInfo: React.ErrorInfo;
+  }>;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  maxRetries?: number;
+  lobbyCode?: string;
+  currentUser?: { id: string; name: string };
+}
+
+export class GameErrorBoundary extends React.Component<
+  GameErrorBoundaryProps,
+  GameErrorBoundaryState
+> {
+  private retryTimeout: NodeJS.Timeout | null = null;
+  private readonly MAX_AUTO_RETRIES = 3;
+  private readonly RETRY_DELAY = 2000;
+
+  constructor(props: GameErrorBoundaryProps) {
+    super(props);
+
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorId: null,
+      retryCount: 0,
+      lastErrorTime: 0,
+      errorType: "unknown",
+      canRecover: true,
+      recoveryActions: [],
+    };
+  }
+
+  static getDerivedStateFromError(
+    error: Error,
+  ): Partial<GameErrorBoundaryState> {
+    const errorType = GameErrorBoundary.categorizeError(error);
+    const { canRecover, recoveryActions } = GameErrorBoundary.getRecoveryInfo(
+      error,
+      errorType,
+    );
+
+    return {
+      hasError: true,
+      error,
+      errorType,
+      canRecover,
+      recoveryActions,
+      lastErrorTime: Date.now(),
+    };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    const errorId = Sentry.captureException(error, {
+      tags: {
+        component: "GameErrorBoundary",
+        error_type: this.state.errorType,
+        lobby_code: this.props.lobbyCode || "unknown",
+        user_id: this.props.currentUser?.id || "anonymous",
+      },
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack,
+        },
+        game: {
+          lobbyCode: this.props.lobbyCode,
+          currentUser: this.props.currentUser,
+          retryCount: this.state.retryCount,
+        },
+      },
+      extra: {
+        errorInfo,
+        connectionInfo: firebaseConnectionManager.getConnectionInfo(),
+      },
+    });
+
+    this.setState({ errorId, errorInfo });
+
+    // Call custom error handler if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+
+    // Attempt auto-recovery for certain error types
+    if (
+      this.shouldAutoRecover(error) &&
+      this.state.retryCount < this.MAX_AUTO_RETRIES
+    ) {
+      this.scheduleAutoRetry();
+    }
+  }
+
+  private static categorizeError(
+    _error: Error,
+  ): GameErrorBoundaryState["errorType"] {
+    const message = _error.message.toLowerCase();
+    const stack = _error.stack?.toLowerCase() || "";
+
+    if (
+      message.includes("network") ||
+      message.includes("fetch") ||
+      message.includes("connection")
+    ) {
+      return "network";
+    }
+
+    if (message.includes("firebase") || stack.includes("firebase")) {
+      return "firebase";
+    }
+
+    if (
+      message.includes("game") ||
+      message.includes("lobby") ||
+      message.includes("player")
+    ) {
+      return "game_state";
+    }
+
+    if (
+      message.includes("render") ||
+      message.includes("hook") ||
+      stack.includes("react")
+    ) {
+      return "rendering";
+    }
+
+    return "unknown";
+  }
+
+  private static getRecoveryInfo(
+    _error: Error,
+    errorType: GameErrorBoundaryState["errorType"],
+  ): {
+    canRecover: boolean;
+    recoveryActions: string[];
+  } {
+    switch (errorType) {
+      case "network":
+        return {
+          canRecover: true,
+          recoveryActions: [
+            "Check your internet connection",
+            "Retry the connection",
+            "Refresh the page if issues persist",
+          ],
+        };
+
+      case "firebase":
+        return {
+          canRecover: true,
+          recoveryActions: [
+            "Reconnecting to game servers",
+            "Your progress should be saved",
+            "Try refreshing if connection fails",
+          ],
+        };
+
+      case "game_state":
+        return {
+          canRecover: true,
+          recoveryActions: [
+            "Refreshing game state",
+            "Your current game progress may be lost",
+            "Return to lobby to start fresh",
+          ],
+        };
+
+      case "rendering":
+        return {
+          canRecover: false,
+          recoveryActions: [
+            "A display error occurred",
+            "Please refresh the page",
+            "Report this issue if it continues",
+          ],
+        };
+
+      default:
+        return {
+          canRecover: false,
+          recoveryActions: [
+            "An unexpected error occurred",
+            "Please refresh the page",
+            "Contact support if this persists",
+          ],
+        };
+    }
+  }
+
+  private shouldAutoRecover(_error: Error): boolean {
+    const { errorType } = this.state;
+
+    // Auto-recover for network and Firebase errors
+    return errorType === "network" || errorType === "firebase";
+  }
+
+  private scheduleAutoRetry(): void {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+    }
+
+    this.retryTimeout = setTimeout(() => {
+      this.handleRetry(true);
+    }, this.RETRY_DELAY);
+  }
+
+  private handleRetry = (isAutoRetry: boolean = false): void => {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
+
+    // Clean up Firebase connections before retry
+    try {
+      firebaseConnectionManager.cleanup();
+    } catch (cleanupError) {
+      console.warn("Error during Firebase cleanup:", cleanupError);
+    }
+
+    Sentry.addBreadcrumb({
+      message: isAutoRetry
+        ? "Auto-retrying after error"
+        : "Manual retry triggered",
+      data: {
+        errorType: this.state.errorType,
+        retryCount: this.state.retryCount + 1,
+        errorId: this.state.errorId,
+      },
+      level: "info",
+    });
+
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorId: null,
+      retryCount: this.state.retryCount + 1,
+    });
+  };
+
+  private handleGoHome = (): void => {
+    // Clean up before navigation
+    firebaseConnectionManager.cleanup();
+
+    Sentry.addBreadcrumb({
+      message: "User navigating home from error boundary",
+      data: {
+        errorType: this.state.errorType,
+        errorId: this.state.errorId,
+      },
+      level: "info",
+    });
+
+    window.location.href = "/";
+  };
+
+  private handleRefresh = (): void => {
+    Sentry.addBreadcrumb({
+      message: "User refreshing page from error boundary",
+      data: {
+        errorType: this.state.errorType,
+        errorId: this.state.errorId,
+      },
+      level: "info",
+    });
+
+    window.location.reload();
+  };
+
+  private handleReportBug = (): void => {
+    const bugReportUrl = `mailto:support@example.com?subject=Game Error Report&body=${encodeURIComponent(
+      `Error ID: ${this.state.errorId}\n` +
+        `Error Type: ${this.state.errorType}\n` +
+        `Lobby Code: ${this.props.lobbyCode || "N/A"}\n` +
+        `User: ${this.props.currentUser?.name || "Anonymous"}\n` +
+        `Time: ${new Date().toISOString()}\n` +
+        `Error: ${this.state.error?.message || "Unknown"}\n\n` +
+        `Please describe what you were doing when this error occurred:`,
+    )}`;
+
+    window.open(bugReportUrl);
+  };
+
+  componentWillUnmount() {
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+    }
+  }
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      // Use custom fallback if provided
+      if (this.props.fallback) {
+        const FallbackComponent = this.props.fallback;
+        return (
+          <FallbackComponent
+            error={this.state.error}
+            reset={this.handleRetry}
+            errorInfo={this.state.errorInfo as React.ErrorInfo}
+          />
+        );
+      }
+
+      // Default error UI
+      const getErrorIcon = () => {
+        switch (this.state.errorType) {
+          case "network":
+          case "firebase":
+            return (
+              <RefreshCw className="w-12 h-12 text-orange-400 animate-pulse" />
+            );
+          case "game_state":
+            return <AlertTriangle className="w-12 h-12 text-yellow-400" />;
+          default:
+            return <Bug className="w-12 h-12 text-red-400" />;
+        }
+      };
+
+      const getErrorTitle = () => {
+        switch (this.state.errorType) {
+          case "network":
+            return "Connection Error";
+          case "firebase":
+            return "Server Connection Lost";
+          case "game_state":
+            return "Game State Error";
+          case "rendering":
+            return "Display Error";
+          default:
+            return "Unexpected Error";
+        }
+      };
+
+      const isRetrying = this.retryTimeout !== null;
+      const maxRetriesReached =
+        this.state.retryCount >=
+        (this.props.maxRetries || this.MAX_AUTO_RETRIES);
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10 max-w-lg w-full">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white font-bangers text-2xl tracking-wide">
+                  {getErrorTitle()}
+                </CardTitle>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs",
+                    this.state.errorType === "network" &&
+                      "border-orange-400 text-orange-400",
+                    this.state.errorType === "firebase" &&
+                      "border-blue-400 text-blue-400",
+                    this.state.errorType === "game_state" &&
+                      "border-yellow-400 text-yellow-400",
+                    this.state.errorType === "rendering" &&
+                      "border-red-400 text-red-400",
+                    this.state.errorType === "unknown" &&
+                      "border-gray-400 text-gray-400",
+                  )}
+                >
+                  {this.state.errorType.replace("_", " ").toUpperCase()}
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* Error Icon and Message */}
+              <div className="text-center">
+                <div className="flex justify-center mb-4">{getErrorIcon()}</div>
+
+                <p className="text-slate-300 font-bangers text-lg tracking-wide mb-4">
+                  {this.state.error.message ||
+                    "Something went wrong while playing the game."}
+                </p>
+
+                {this.state.errorId && (
+                  <p className="text-slate-500 text-sm mb-4">
+                    Error ID: {this.state.errorId.substring(0, 8)}
+                  </p>
+                )}
+              </div>
+
+              {/* Recovery Actions */}
+              {this.state.recoveryActions.length > 0 && (
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <h3 className="text-white font-bangers text-sm tracking-wide mb-2 uppercase">
+                    What's happening?
+                  </h3>
+                  <ul className="text-slate-300 text-sm space-y-1">
+                    {this.state.recoveryActions.map((action, index) => (
+                      <li
+                        key={`recovery-${index}-${action}`}
+                        className="flex items-start gap-2"
+                      >
+                        <span className="text-purple-400 mt-0.5">•</span>
+                        {action}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Auto-retry indicator */}
+              {isRetrying && (
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 text-orange-400 mb-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-bangers tracking-wide">
+                      Automatically retrying...
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-700/50 rounded-full h-1">
+                    <div className="bg-orange-500 h-1 rounded-full animate-pulse w-3/4"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                {this.state.canRecover && !isRetrying && (
+                  <Button
+                    onClick={() => this.handleRetry(false)}
+                    disabled={maxRetriesReached}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    {maxRetriesReached
+                      ? "Max Retries Reached"
+                      : `Try Again (${this.state.retryCount}/${this.props.maxRetries || this.MAX_AUTO_RETRIES})`}
+                  </Button>
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={this.handleRefresh}
+                    variant="outline"
+                    className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700 font-bangers text-base"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Page
+                  </Button>
+
+                  <Button
+                    onClick={this.handleGoHome}
+                    variant="outline"
+                    className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700 font-bangers text-base"
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Go Home
+                  </Button>
+                </div>
+
+                {this.state.errorId && (
+                  <Button
+                    onClick={this.handleReportBug}
+                    variant="ghost"
+                    className="w-full text-slate-400 hover:text-white font-bangers text-sm"
+                  >
+                    <Bug className="w-4 h-4 mr-2" />
+                    Report this issue
+                  </Button>
+                )}
+              </div>
+
+              {/* Debug info for development */}
+              {process.env.NODE_ENV === "development" && (
+                <details className="text-xs text-slate-500">
+                  <summary className="cursor-pointer hover:text-slate-400">
+                    Debug Info
+                  </summary>
+                  <pre className="mt-2 p-2 bg-slate-900/50 rounded overflow-auto max-h-32">
+                    {JSON.stringify(
+                      {
+                        error: this.state.error.message,
+                        stack: this.state.error.stack?.substring(0, 500),
+                        errorType: this.state.errorType,
+                        retryCount: this.state.retryCount,
+                        connectionInfo:
+                          firebaseConnectionManager.getConnectionInfo(),
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </details>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
