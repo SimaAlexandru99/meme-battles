@@ -1,7 +1,9 @@
 "use client";
 
 import * as Sentry from "@sentry/nextjs";
-import { onValue, push, ref } from "firebase/database";
+import { push, ref } from "firebase/database";
+import { createFirebaseListener, removeFirebaseListener } from "@/lib/services/firebase-connection-manager";
+import { GameErrorBoundary } from "@/components/shared/game-error-boundary";
 import { Clock, Gamepad2, MessageCircle, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -68,35 +70,100 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     });
   }, [rawPlayers, players.length, gameState?.phase]);
 
-  // Debug logging and auto-retry for card state
+  // Enhanced card loading state management with proper race condition handling
+  const [cardLoadingState, setCardLoadingState] = useState<{
+    status: 'idle' | 'loading' | 'loaded' | 'error' | 'retrying';
+    retryCount: number;
+    lastRetryTime: number | null;
+  }>({ status: 'idle', retryCount: 0, lastRetryTime: null });
+
+  const [cardLoadRetryToken, setCardLoadRetryToken] = useState<string | null>(null);
+
+  // Card loading effect with proper race condition prevention
   useEffect(() => {
-    if (gameState?.phase === "submission" && playerCards.length === 0) {
-      console.warn("⚠️ In submission phase but no player cards available");
-
-      // Auto-retry after 3 seconds if cards are still missing
-      const retryTimeout = setTimeout(() => {
-        if (playerCards.length === 0) {
-          console.log(
-            "🔄 Retrying card load - cards still missing after 3 seconds",
-          );
-          toast.warning("Loading your cards... Please wait.");
+    if (gameState?.phase === "submission") {
+      const currentToken = `${Date.now()}-${Math.random()}`;
+      setCardLoadRetryToken(currentToken);
+      
+      if (playerCards.length === 0) {
+        setCardLoadingState(prev => ({ 
+          ...prev, 
+          status: prev.retryCount > 0 ? 'retrying' : 'loading' 
+        }));
+        
+        console.warn("⚠️ Submission phase started but no player cards available");
+        
+        // Immediate retry if we haven't tried yet
+        if (cardLoadingState.retryCount === 0) {
+          console.log("🔄 Initial card load attempt");
+          // Give the hook a moment to load cards naturally
+          const immediateCheck = setTimeout(() => {
+            if (cardLoadRetryToken === currentToken && playerCards.length === 0) {
+              setCardLoadingState(prev => ({ 
+                ...prev, 
+                status: 'loading',
+                retryCount: 1,
+                lastRetryTime: Date.now()
+              }));
+            }
+          }, 500);
+          
+          return () => clearTimeout(immediateCheck);
         }
-      }, 3000);
+        
+        // Progressive retry with exponential backoff
+        const retryDelay = Math.min(3000 * Math.pow(1.5, cardLoadingState.retryCount), 10000);
+        const retryTimeout = setTimeout(() => {
+          if (cardLoadRetryToken === currentToken && playerCards.length === 0) {
+            if (cardLoadingState.retryCount < 3) {
+              console.log(`🔄 Retrying card load (attempt ${cardLoadingState.retryCount + 1})`);
+              setCardLoadingState(prev => ({ 
+                ...prev,
+                status: 'retrying',
+                retryCount: prev.retryCount + 1,
+                lastRetryTime: Date.now()
+              }));
+              
+              if (cardLoadingState.retryCount === 0) {
+                toast.info("Loading your cards...");
+              } else {
+                toast.warning(`Retrying card load (${cardLoadingState.retryCount + 1}/3)...`);
+              }
+            } else {
+              console.error("❌ Cards failed to load after maximum retries");
+              setCardLoadingState(prev => ({ ...prev, status: 'error' }));
+              toast.error("Failed to load your cards. Please refresh the page.", {
+                duration: 10000,
+                action: {
+                  label: 'Refresh',
+                  onClick: () => window.location.reload()
+                }
+              });
+            }
+          }
+        }, retryDelay);
 
-      // Show error after 10 seconds if cards still not loaded
-      const errorTimeout = setTimeout(() => {
-        if (playerCards.length === 0) {
-          console.error("❌ Cards failed to load after 10 seconds");
-          toast.error("Failed to load your cards. Please refresh the page.");
+        return () => {
+          clearTimeout(retryTimeout);
+        };
+      } else {
+        // Cards loaded successfully
+        if (cardLoadingState.status !== 'loaded') {
+          console.log("✅ Player cards loaded successfully");
+          setCardLoadingState({ status: 'loaded', retryCount: 0, lastRetryTime: null });
+          if (cardLoadingState.retryCount > 0) {
+            toast.success("Cards loaded successfully!");
+          }
         }
-      }, 10000);
-
-      return () => {
-        clearTimeout(retryTimeout);
-        clearTimeout(errorTimeout);
-      };
+      }
+    } else {
+      // Reset card loading state when not in submission phase
+      if (cardLoadingState.status !== 'idle') {
+        setCardLoadingState({ status: 'idle', retryCount: 0, lastRetryTime: null });
+        setCardLoadRetryToken(null);
+      }
     }
-  }, [gameState?.phase, playerCards.length]);
+  }, [gameState?.phase, playerCards.length, cardLoadingState.retryCount, cardLoadRetryToken]);
 
   // Track game state changes for debugging in non-production
   useEffect(() => {
@@ -126,26 +193,40 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
 
-  // Real-time chat listener
+  // Real-time chat listener with proper cleanup
   useEffect(() => {
     if (!lobbyCode) return;
 
-    const chatRef = ref(rtdb, `lobbies/${lobbyCode}/chat`);
-    const unsubscribe = onValue(chatRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const chatData = snapshot.val() as Record<string, ChatMessage>;
-        const messagesList = Object.values(chatData).sort(
-          (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-        );
-        setMessages(messagesList);
-      } else {
-        setMessages([]);
+    const listenerId = `arena_chat_${lobbyCode}_${currentUser.id}`;
+    const chatPath = `lobbies/${lobbyCode}/chat`;
+    
+    const { unsubscribe } = createFirebaseListener(
+      listenerId,
+      chatPath,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const chatData = snapshot.val() as Record<string, ChatMessage>;
+          const messagesList = Object.values(chatData).sort(
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          );
+          setMessages(messagesList);
+        } else {
+          setMessages([]);
+        }
+      },
+      (error) => {
+        console.error('Chat listener error:', error);
+        Sentry.captureException(error, {
+          tags: { operation: 'arena_chat_listener' },
+          extra: { lobbyCode, currentUser: currentUser.id }
+        });
+        toast.error('Chat connection lost. Messages may not update.');
       }
-    });
+    );
 
     return unsubscribe;
-  }, [lobbyCode]);
+  }, [lobbyCode, currentUser.id]);
 
   // Handle errors
   useEffect(() => {
@@ -430,28 +511,102 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   }
 
   if (gameState.phase === "submission") {
-    // Check if player has cards before showing submission interface
-    if (playerCards.length === 0) {
+    // Enhanced card loading state with proper error handling
+    if (playerCards.length === 0 && cardLoadingState.status !== 'error') {
+      const getLoadingMessage = () => {
+        switch (cardLoadingState.status) {
+          case 'retrying':
+            return `Retrying... (${cardLoadingState.retryCount}/3)`;
+          case 'loading':
+            return cardLoadingState.retryCount > 0 ? 'Retrying card load...' : 'Loading your cards...';
+          default:
+            return 'Preparing your meme arsenal...';
+        }
+      };
+
+      const getProgressWidth = () => {
+        if (cardLoadingState.status === 'retrying') {
+          return `${33 + (cardLoadingState.retryCount * 20)}%`;
+        }
+        return cardLoadingState.status === 'loading' ? '60%' : '20%';
+      };
+
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10">
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10 max-w-md mx-4">
             <CardHeader>
               <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
-                Loading Your Cards...
+                {cardLoadingState.status === 'retrying' ? 'Retrying...' : 'Loading Your Cards...'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center">
                 <div className="text-4xl font-bangers text-purple-400 mb-4">
-                  🃏
+                  {cardLoadingState.status === 'retrying' ? '🔄' : '🃏'}
                 </div>
-                <p className="text-purple-200/70 font-bangers text-lg tracking-wide">
-                  Preparing your meme arsenal...
+                <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
+                  {getLoadingMessage()}
                 </p>
-                <div className="mt-4">
-                  <div className="w-full bg-slate-700/50 rounded-full h-2">
-                    <div className="bg-purple-500 h-2 rounded-full animate-pulse w-3/4"></div>
+                <div className="space-y-2">
+                  <div className="w-full bg-slate-700/50 rounded-full h-3">
+                    <div 
+                      className={cn(
+                        "h-3 rounded-full transition-all duration-500",
+                        cardLoadingState.status === 'retrying' 
+                          ? "bg-gradient-to-r from-yellow-500 to-orange-500 animate-pulse"
+                          : "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"
+                      )}
+                      style={{ width: getProgressWidth() }}
+                    />
                   </div>
+                  {cardLoadingState.retryCount > 0 && (
+                    <p className="text-xs text-slate-400">
+                      Connection may be slow. Retrying automatically...
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Show error state if card loading failed
+    if (playerCards.length === 0 && cardLoadingState.status === 'error') {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+          <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-red-700/50 shadow-2xl shadow-red-500/10 max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="text-red-400 font-bangers text-2xl tracking-wide text-center">
+                Card Loading Failed
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center">
+                <div className="text-4xl font-bangers text-red-400 mb-4">
+                  ❌
+                </div>
+                <p className="text-red-200/70 font-bangers text-lg tracking-wide mb-6">
+                  Unable to load your cards after multiple attempts
+                </p>
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => {
+                      setCardLoadingState({ status: 'idle', retryCount: 0, lastRetryTime: null });
+                      toast.info('Attempting to reload cards...');
+                    }}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
+                  >
+                    Try Again
+                  </Button>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                    className="w-full border-red-500/50 text-red-300 hover:bg-red-500/10 font-bangers text-lg"
+                  >
+                    Refresh Page
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -462,7 +617,18 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
     // Show the main game interface for card submission
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <GameErrorBoundary 
+        lobbyCode={lobbyCode} 
+        currentUser={currentUser}
+        onError={(error, errorInfo) => {
+          console.error('Arena game interface error:', error);
+          Sentry.captureException(error, {
+            tags: { component: 'Arena', phase: 'submission', lobbyCode },
+            extra: { errorInfo, currentUser, gameState }
+          });
+        }}
+      >
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         {/* Fixed Top Bar */}
         <div className="fixed top-0 left-0 right-0 z-10 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50">
           <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
@@ -709,6 +875,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
           </div>
         </div>
       </div>
+      </GameErrorBoundary>
     );
   }
 

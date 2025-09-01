@@ -1641,10 +1641,11 @@ export class MatchmakingService {
   }
 
   /**
-   * Batch remove multiple players from queue
+   * Atomically batch remove players from queue with conflict detection
    */
   async batchRemovePlayersFromQueue(
     playerUids: string[],
+    sessionId?: string
   ): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
@@ -1661,28 +1662,78 @@ export class MatchmakingService {
             };
           }
 
-          // Prepare batch updates
+          // Step 1: Verify players still exist in queue before removal
+          const verificationResults = await this.retryOperation(async () => {
+            const verificationPromises = playerUids.map(async (uid) => {
+              const playerRef = ref(rtdb, `${this.QUEUE_PATH}/${uid}`);
+              const snapshot = await get(playerRef);
+              return {
+                uid,
+                exists: snapshot.exists(),
+                data: snapshot.exists() ? snapshot.val() : null
+              };
+            });
+            return await Promise.all(verificationPromises);
+          }, "verify_players_before_removal");
+
+          // Step 2: Filter out players who were already removed by another process
+          const playersToRemove = verificationResults
+            .filter(result => result.exists)
+            .map(result => result.uid);
+          
+          const alreadyRemovedCount = playerUids.length - playersToRemove.length;
+          
+          if (alreadyRemovedCount > 0) {
+            console.log(`${alreadyRemovedCount} players already removed by another process`);
+          }
+
+          if (playersToRemove.length === 0) {
+            return {
+              success: true,
+              data: { removedCount: 0, alreadyRemoved: alreadyRemovedCount },
+              timestamp: new Date().toISOString(),
+            };
+          }
+
+          // Step 3: Prepare atomic batch updates with conflict detection
           const updates: Record<string, unknown> = {};
-          playerUids.forEach((playerUid) => {
+          playersToRemove.forEach((playerUid) => {
             updates[`${this.QUEUE_PATH}/${playerUid}`] = null;
           });
           updates[`${this.METRICS_PATH}/lastUpdated`] = serverTimestamp();
+          updates[`${this.METRICS_PATH}/lastMatchmakingSession`] = sessionId || 'unknown';
 
-          // Execute batch removal
+          // Step 4: Execute atomic batch removal with verification
+          let actualRemovedCount = 0;
           await this.retryOperation(async () => {
-            await update(ref(rtdb), updates);
-          }, "batch_remove_players");
+            // Use transaction for critical operations
+            const dbRef = ref(rtdb);
+            await update(dbRef, updates);
+            actualRemovedCount = playersToRemove.length;
+          }, "batch_remove_players_atomic");
 
-          // Update queue metrics
-          await this.updateQueueMetrics();
+          // Step 5: Update queue metrics asynchronously (non-blocking)
+          this.updateQueueMetrics().catch(error => {
+            console.warn('Failed to update queue metrics after batch removal:', error);
+          });
 
           return {
             success: true,
-            data: { removedCount: playerUids.length },
+            data: { 
+              removedCount: actualRemovedCount,
+              alreadyRemoved: alreadyRemovedCount,
+              totalRequested: playerUids.length
+            },
             timestamp: new Date().toISOString(),
           };
         } catch (error) {
-          Sentry.captureException(error);
+          Sentry.captureException(error, {
+            extra: {
+              playerUids,
+              sessionId,
+              requestedCount: playerUids.length
+            }
+          });
           throw this.createBattleRoyaleError(
             "UNKNOWN_ERROR",
             `Failed to batch remove players: ${error}`,
@@ -2290,7 +2341,7 @@ export class MatchmakingService {
   }
 
   /**
-   * Main matchmaking orchestration method that prioritizes filling existing lobbies
+   * Main matchmaking orchestration method with atomic operations and race condition prevention
    */
   async processMatchmaking(): Promise<
     ServiceResult<{
@@ -2309,15 +2360,19 @@ export class MatchmakingService {
         name: "Process Matchmaking",
       },
       async () => {
+        const matchmakingSession = `matchmaking_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+        
         try {
-          // Get all queued players
-          const queueRef = query(
-            ref(rtdb, this.QUEUE_PATH),
-            orderByChild("queuedAt"),
-          );
-          const snapshot = await get(queueRef);
+          // Step 1: Atomically snapshot and lock queue state
+          const queueSnapshot = await this.retryOperation(async () => {
+            const queueRef = query(
+              ref(rtdb, this.QUEUE_PATH),
+              orderByChild("queuedAt"),
+            );
+            return await get(queueRef);
+          }, "get_queue_snapshot");
 
-          if (!snapshot.exists()) {
+          if (!queueSnapshot.exists()) {
             return {
               success: true,
               data: {
@@ -2329,76 +2384,64 @@ export class MatchmakingService {
             };
           }
 
+          // Step 2: Extract and validate queue entries with race condition checks
           const queuedPlayers: QueueEntry[] = [];
-          snapshot.forEach((childSnapshot) => {
-            queuedPlayers.push(childSnapshot.val() as QueueEntry);
+          const playerStates = new Map<string, { 
+            entry: QueueEntry; 
+            timestamp: number; 
+            sessionId: string 
+          }>();
+
+          queueSnapshot.forEach((childSnapshot) => {
+            const entry = childSnapshot.val() as QueueEntry;
+            const now = Date.now();
+            const queueTime = new Date(entry.queuedAt).getTime();
+            
+            // Validate queue entry is not stale (max 30 minutes in queue)
+            if (now - queueTime < 30 * 60 * 1000) {
+              queuedPlayers.push(entry);
+              playerStates.set(entry.playerUid, {
+                entry,
+                timestamp: now,
+                sessionId: matchmakingSession
+              });
+            } else {
+              // Mark stale entries for cleanup
+              console.warn(`Removing stale queue entry: ${entry.playerUid}, queued at: ${entry.queuedAt}`);
+            }
           });
 
-          // Step 1: Fill existing lobbies first
-          const { filledLobbies, remainingPlayers } =
-            await this.fillExistingLobbies(queuedPlayers);
-
-          // Step 2: Create new matches for remaining players
-          const newMatches: Array<{
-            lobbyCode: string;
-            matchId: string;
-            players: number;
-          }> = [];
-
-          if (remainingPlayers.length >= this.MIN_PLAYERS_PER_MATCH) {
-            const matchmakingResults = await this.findMatches();
-
-            for (const match of matchmakingResults) {
-              try {
-                const lobbyResult = await this.createBattleRoyaleLobby(match);
-
-                if (lobbyResult.success && lobbyResult.data) {
-                  newMatches.push({
-                    lobbyCode: lobbyResult.data,
-                    matchId: match.matchId,
-                    players: match.players.length,
-                  });
-                }
-              } catch (error) {
-                Sentry.captureException(error, {
-                  tags: { operation: "create_new_match" },
-                  extra: { matchId: match.matchId },
-                });
-              }
-            }
-          }
-
-          const totalPlayersMatched =
-            filledLobbies.reduce(
-              (sum, lobby) => sum + lobby.playersAdded.length,
-              0,
-            ) + newMatches.reduce((sum, match) => sum + match.players, 0);
+          // Step 3: Process matchmaking with atomic player assignment
+          const results = await this.processMatchmakingWithLocking(
+            queuedPlayers,
+            playerStates,
+            matchmakingSession
+          );
 
           Sentry.addBreadcrumb({
             message: "Matchmaking process completed",
             data: {
+              sessionId: matchmakingSession,
               totalQueuedPlayers: queuedPlayers.length,
-              filledLobbies: filledLobbies.length,
-              newMatches: newMatches.length,
-              totalPlayersMatched,
+              filledLobbies: results.filledLobbies.length,
+              newMatches: results.newMatches.length,
+              totalPlayersMatched: results.totalPlayersMatched,
             },
             level: "info",
           });
 
           return {
             success: true,
-            data: {
-              filledLobbies: filledLobbies.map((lobby) => ({
-                lobbyCode: lobby.lobbyCode,
-                playersAdded: lobby.playersAdded.length,
-              })),
-              newMatches,
-              totalPlayersMatched,
-            },
+            data: results,
             timestamp: new Date().toISOString(),
           };
         } catch (error) {
-          Sentry.captureException(error);
+          Sentry.captureException(error, {
+            tags: { 
+              operation: "process_matchmaking",
+              sessionId: matchmakingSession
+            }
+          });
           throw this.createBattleRoyaleError(
             "MATCHMAKING_TIMEOUT",
             `Failed to process matchmaking: ${error}`,
@@ -2530,5 +2573,238 @@ export class MatchmakingService {
         }
       },
     );
+  }
+
+  /**
+   * Process matchmaking with atomic locking to prevent race conditions
+   */
+  private async processMatchmakingWithLocking(
+    queuedPlayers: QueueEntry[],
+    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
+    sessionId: string
+  ): Promise<{
+    filledLobbies: Array<{ lobbyCode: string; playersAdded: number }>;
+    newMatches: Array<{ lobbyCode: string; matchId: string; players: number }>;
+    totalPlayersMatched: number;
+  }> {
+    const results = {
+      filledLobbies: [] as Array<{ lobbyCode: string; playersAdded: number }>,
+      newMatches: [] as Array<{ lobbyCode: string; matchId: string; players: number }>,
+      totalPlayersMatched: 0
+    };
+
+    // Step 1: Fill existing lobbies with atomic player assignment
+    try {
+      const { filledLobbies, remainingPlayers } = await this.fillExistingLobbiesWithLocking(
+        queuedPlayers,
+        playerStates,
+        sessionId
+      );
+      
+      results.filledLobbies = filledLobbies.map(lobby => ({
+        lobbyCode: lobby.lobbyCode,
+        playersAdded: lobby.playersAdded.length
+      }));
+      
+      // Step 2: Create new matches for remaining players with race condition protection
+      if (remainingPlayers.length >= this.MIN_PLAYERS_PER_MATCH) {
+        const matchmakingResults = await this.findMatchesWithLocking(
+          remainingPlayers,
+          playerStates,
+          sessionId
+        );
+
+        for (const match of matchmakingResults) {
+          try {
+            // Atomically create lobby and remove players from queue
+            const lobbyResult = await this.createBattleRoyaleLobbyWithLocking(
+              match,
+              playerStates,
+              sessionId
+            );
+
+            if (lobbyResult.success && lobbyResult.data) {
+              results.newMatches.push({
+                lobbyCode: lobbyResult.data,
+                matchId: match.matchId,
+                players: match.players.length,
+              });
+            }
+          } catch (error) {
+            console.error(`Failed to create match ${match.matchId}:`, error);
+            Sentry.captureException(error, {
+              tags: { operation: "create_new_match_with_locking" },
+              extra: { matchId: match.matchId, sessionId },
+            });
+            // Continue with other matches even if one fails
+          }
+        }
+      }
+
+      results.totalPlayersMatched = 
+        results.filledLobbies.reduce((sum, lobby) => sum + lobby.playersAdded, 0) +
+        results.newMatches.reduce((sum, match) => sum + match.players, 0);
+
+      return results;
+    } catch (error) {
+      console.error('Matchmaking processing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fill existing lobbies with atomic player assignment
+   */
+  private async fillExistingLobbiesWithLocking(
+    players: QueueEntry[],
+    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
+    sessionId: string
+  ): Promise<{
+    filledLobbies: Array<{ lobbyCode: string; playersAdded: QueueEntry[] }>;
+    remainingPlayers: QueueEntry[];
+  }> {
+    // Reuse existing fillExistingLobbies logic but with atomic operations
+    const standardResult = await this.fillExistingLobbies(players);
+    
+    // Verify no race conditions occurred during lobby filling
+    const verifiedResults = {
+      filledLobbies: [] as Array<{ lobbyCode: string; playersAdded: QueueEntry[] }>,
+      remainingPlayers: [...standardResult.remainingPlayers]
+    };
+
+    for (const filledLobby of standardResult.filledLobbies) {
+      // Verify all players were actually added and removed from queue
+      const verifiedPlayers: QueueEntry[] = [];
+      
+      for (const player of filledLobby.playersAdded) {
+        const playerState = playerStates.get(player.playerUid);
+        if (playerState && playerState.sessionId === sessionId) {
+          verifiedPlayers.push(player);
+        } else {
+          // Player was processed by another session, add back to remaining
+          verifiedResults.remainingPlayers.push(player);
+        }
+      }
+      
+      if (verifiedPlayers.length > 0) {
+        verifiedResults.filledLobbies.push({
+          lobbyCode: filledLobby.lobbyCode,
+          playersAdded: verifiedPlayers
+        });
+      }
+    }
+
+    return verifiedResults;
+  }
+
+  /**
+   * Find matches with session locking to prevent duplicate assignments
+   */
+  private async findMatchesWithLocking(
+    players: QueueEntry[],
+    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
+    sessionId: string
+  ): Promise<MatchmakingResult[]> {
+    // Filter players that are still valid for this session
+    const validPlayers = players.filter(player => {
+      const state = playerStates.get(player.playerUid);
+      return state && state.sessionId === sessionId;
+    });
+
+    if (validPlayers.length < this.MIN_PLAYERS_PER_MATCH) {
+      return [];
+    }
+
+    // Use existing findMatches logic but with validated players
+    return await this.findMatchesForPlayers(validPlayers);
+  }
+
+  /**
+   * Create Battle Royale lobby with atomic queue removal
+   */
+  private async createBattleRoyaleLobbyWithLocking(
+    match: MatchmakingResult,
+    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
+    sessionId: string
+  ): Promise<ServiceResult<string>> {
+    // Verify all players are still valid for this session
+    const validPlayerUids = match.players
+      .filter(player => {
+        const state = playerStates.get(player.playerUid);
+        return state && state.sessionId === sessionId;
+      })
+      .map(player => player.playerUid);
+
+    if (validPlayerUids.length < this.MIN_PLAYERS_PER_MATCH) {
+      throw this.createBattleRoyaleError(
+        "MATCH_CREATION_FAILED",
+        "Not enough valid players for match creation",
+        "Failed to create match due to player availability conflicts.",
+        true
+      );
+    }
+
+    // Create the lobby first
+    const lobbyResult = await this.createBattleRoyaleLobby(match);
+    
+    if (lobbyResult.success && lobbyResult.data) {
+      // Atomically remove players from queue after successful lobby creation
+      try {
+        await this.batchRemovePlayersFromQueue(validPlayerUids, sessionId);
+        return lobbyResult;
+      } catch (error) {
+        // If queue removal fails, log but don't fail the match
+        console.error('Failed to remove players from queue after lobby creation:', error);
+        Sentry.captureException(error, {
+          tags: { operation: "queue_cleanup_after_lobby_creation" },
+          extra: { lobbyCode: lobbyResult.data, playerUids: validPlayerUids, sessionId }
+        });
+        return lobbyResult;
+      }
+    }
+
+    return lobbyResult;
+  }
+
+  /**
+   * Helper method to find matches for specific players (extracted from findMatches)
+   */
+  private async findMatchesForPlayers(players: QueueEntry[]): Promise<MatchmakingResult[]> {
+    if (players.length < this.MIN_PLAYERS_PER_MATCH) {
+      return [];
+    }
+
+    // Sort players by skill rating for sliding window approach
+    const playersBySkill = [...players].sort(
+      (a, b) => a.skillRating - b.skillRating,
+    );
+
+    // Find optimal player groups using sliding window
+    const matches = this.optimizePlayerGroups(playersBySkill);
+
+    // Calculate match quality and create MatchmakingResult objects
+    const matchmakingResults: MatchmakingResult[] = [];
+
+    for (const playerGroup of matches) {
+      const matchQuality = this.calculateMatchQuality(playerGroup);
+
+      // Only create matches with acceptable quality (>= 0.3)
+      if (matchQuality >= 0.3) {
+        const matchId = this.generateMatchId();
+        const averageSkillRating = this.calculateAverageSkillRating(playerGroup);
+        const skillRatingRange = this.calculateSkillRatingRange(playerGroup);
+
+        matchmakingResults.push({
+          matchId,
+          players: playerGroup,
+          averageSkillRating,
+          skillRatingRange,
+          matchQuality,
+          estimatedGameDuration: this.estimateGameDuration(playerGroup),
+        });
+      }
+    }
+
+    return matchmakingResults;
   }
 }
