@@ -23,7 +23,6 @@ import { CustomFormField } from "@/components/forms";
 import { Google } from "@/components/logos";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { Label } from "@/components/ui/label";
 import { auth } from "@/firebase/client";
 
 import {
@@ -472,16 +471,10 @@ const AuthForm = ({
                   !isVerifyEmail &&
                   !isResendVerification && (
                     <div className="relative flex flex-col gap-1">
-                      <Label
-                        htmlFor="name"
-                        className="text-sm text-foreground font-medium cursor-pointer"
-                      >
-                        Name
-                      </Label>
                       <CustomFormField
                         control={form.control}
                         name="name"
-                        label=""
+                        label="Name"
                         placeholder="Your name"
                         type="text"
                       />
@@ -490,16 +483,10 @@ const AuthForm = ({
 
                 {!isResetPassword && !isVerifyEmail && (
                   <div className="relative flex flex-col gap-1">
-                    <Label
-                      htmlFor="email"
-                      className="text-sm text-foreground font-medium cursor-pointer "
-                    >
-                      Email
-                    </Label>
                     <CustomFormField
                       control={form.control}
                       name="email"
-                      label=""
+                      label="Email"
                       placeholder="Enter your email address"
                       type="email"
                     />
@@ -510,16 +497,10 @@ const AuthForm = ({
                   !isVerifyEmail &&
                   !isResendVerification && (
                     <div className="relative flex flex-col gap-1">
-                      <Label
-                        htmlFor="password"
-                        className="text-sm text-foreground font-medium cursor-pointer"
-                      >
-                        Password
-                      </Label>
                       <CustomFormField
                         control={form.control}
                         name="password"
-                        label=""
+                        label="Password"
                         placeholder={
                           isResetPassword
                             ? "Enter your new password"
@@ -541,16 +522,10 @@ const AuthForm = ({
 
                 {isResetPassword && (
                   <div className="relative flex flex-col gap-1">
-                    <Label
-                      htmlFor="confirmPassword"
-                      className="text-sm text-foreground font-medium cursor-pointer"
-                    >
-                      Confirm new password
-                    </Label>
                     <CustomFormField
                       control={form.control}
                       name="confirmPassword"
-                      label=""
+                      label="Confirm new password"
                       placeholder="Confirm new password"
                       type="password"
                     />

@@ -41,11 +41,14 @@ export function MatchmakingProgress({
   const getCurrentPhase = React.useCallback((): MatchmakingPhase => {
     const timeInQueueSeconds = Math.floor(timeInQueue / 1000);
 
-    if (queuePosition > 5) {
+    // Handle unknown position (0) - assume mid-range position
+    const effectivePosition = queuePosition === 0 ? 4 : queuePosition;
+
+    if (effectivePosition > 5) {
       return "waiting";
-    } else if (queuePosition <= 3 && timeInQueueSeconds < 30) {
+    } else if (effectivePosition <= 3 && timeInQueueSeconds < 30) {
       return "searching";
-    } else if (queuePosition <= 3 && timeInQueueSeconds < 60) {
+    } else if (effectivePosition <= 3 && timeInQueueSeconds < 60) {
       return "matching";
     } else {
       return "expanding";
@@ -297,7 +300,19 @@ export function MatchmakingProgress({
               <Target className="w-4 h-4 text-purple-400" />
               <div>
                 <p className="text-slate-400">Position</p>
-                <p className="text-white font-medium">#{queuePosition}</p>
+                <p
+                  className={cn(
+                    "font-medium",
+                    queuePosition === 0 ? "text-orange-400" : "text-white",
+                  )}
+                >
+                  {queuePosition === 0 ? "?" : `#${queuePosition}`}
+                </p>
+                {queuePosition === 0 && (
+                  <p className="text-xs text-orange-300/80">
+                    Connection issues
+                  </p>
+                )}
               </div>
             </div>
 

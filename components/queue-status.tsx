@@ -33,8 +33,12 @@ interface QueueStatusProps {
   onLeaveQueue: () => Promise<void>;
   onClearError: () => void;
   onRetry: () => Promise<void>;
+  onManualRetry?: () => Promise<void>;
   canJoinQueue: boolean;
   timeInQueue: number;
+  retryCount?: number;
+  nextRetryTime?: Date | null;
+  isRetrying?: boolean;
   className?: string;
 }
 
@@ -49,8 +53,12 @@ export function QueueStatus({
   onLeaveQueue,
   onClearError,
   onRetry,
+  onManualRetry,
   canJoinQueue,
   timeInQueue,
+  retryCount = 0,
+  nextRetryTime = null,
+  isRetrying = false,
   className,
 }: QueueStatusProps) {
   // Local loading states for individual actions
@@ -106,8 +114,42 @@ export function QueueStatus({
     }
   }, [onRetry]);
 
+  // Handle manual retry
+  const handleManualRetry = React.useCallback(async () => {
+    if (onManualRetry) {
+      try {
+        await onManualRetry();
+      } catch (error) {
+        console.error("Manual retry failed:", error);
+      }
+    }
+  }, [onManualRetry]);
+
+  // Countdown timer for next retry
+  const [timeUntilRetry, setTimeUntilRetry] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    if (!nextRetryTime) {
+      setTimeUntilRetry(0);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const retryTime = nextRetryTime.getTime();
+      const timeLeft = Math.max(0, retryTime - now);
+      setTimeUntilRetry(Math.ceil(timeLeft / 1000));
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [nextRetryTime]);
+
   // Determine if any operation is in progress
-  const isAnyOperationInProgress = isLoading || isJoining || isLeaving;
+  const isAnyOperationInProgress =
+    isLoading || isJoining || isLeaving || isRetrying;
 
   // Get queue status message
   const getQueueStatusMessage = React.useCallback(() => {
@@ -212,25 +254,64 @@ export function QueueStatus({
               <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 space-y-2">
                 <p className="text-red-300 text-sm font-medium">{error}</p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onClearError}
-                    className="border-red-500/30 text-red-300 hover:bg-red-500/10"
-                  >
-                    Dismiss
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleRetry}
-                    disabled={isAnyOperationInProgress}
-                    className="border-red-500/30 text-red-300 hover:bg-red-500/10"
-                  >
-                    <RefreshCw className="w-3 h-3 mr-1" />
-                    Retry
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  {/* Retry information */}
+                  {retryCount > 0 && (
+                    <div className="text-xs text-red-400/80">
+                      {timeUntilRetry > 0
+                        ? `Auto-retry in ${formatTime(timeUntilRetry)} (${retryCount}/5)`
+                        : `Retry attempts: ${retryCount}/5`}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={onClearError}
+                      className="border-red-500/30 text-red-300 hover:bg-red-500/10"
+                    >
+                      Dismiss
+                    </Button>
+
+                    {/* Manual retry button - only show when auto-retry is not active */}
+                    {onManualRetry &&
+                      (!nextRetryTime || timeUntilRetry === 0) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleManualRetry}
+                          disabled={isAnyOperationInProgress}
+                          className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                        >
+                          <RefreshCw
+                            className={cn(
+                              "w-3 h-3 mr-1",
+                              isRetrying && "animate-spin",
+                            )}
+                          />
+                          {isRetrying ? "Retrying..." : "Retry Now"}
+                        </Button>
+                      )}
+
+                    {/* Auto-retry button - show when auto-retry is scheduled */}
+                    {nextRetryTime && timeUntilRetry > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRetry}
+                        disabled={
+                          isAnyOperationInProgress || timeUntilRetry > 0
+                        }
+                        className="border-red-500/30 text-red-300 hover:bg-red-500/10"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        {timeUntilRetry > 0
+                          ? `Retry (${formatTime(timeUntilRetry)})`
+                          : "Retry"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>

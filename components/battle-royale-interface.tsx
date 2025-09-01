@@ -47,6 +47,10 @@ export function BattleRoyaleInterface({
     timeInQueue,
     clearError,
     retry,
+    retryCount,
+    nextRetryTime,
+    isRetrying,
+    manualRetry,
   } = useMatchmakingQueue();
 
   // Battle Royale Statistics
@@ -208,11 +212,13 @@ export function BattleRoyaleInterface({
 
   React.useEffect(() => {
     if (isInQueue) {
+      const positionText =
+        queuePosition === 0 ? "unknown" : queuePosition.toString();
       const announcement = document.createElement("div");
       announcement.setAttribute("aria-live", "polite");
       announcement.setAttribute("aria-atomic", "true");
       announcement.className = "sr-only";
-      announcement.textContent = `Joined Battle Royale queue. Position: ${queuePosition}, Estimated wait: ${estimatedWaitTime} seconds.`;
+      announcement.textContent = `Joined Battle Royale queue. Position: ${positionText}, Estimated wait: ${estimatedWaitTime} seconds.`;
       document.body.appendChild(announcement);
 
       setTimeout(() => {
@@ -313,8 +319,12 @@ export function BattleRoyaleInterface({
                 onLeaveQueue={handleLeaveQueue}
                 onClearError={clearError}
                 onRetry={retry}
+                onManualRetry={manualRetry}
                 canJoinQueue={canJoinQueue}
                 timeInQueue={timeInQueue}
+                retryCount={retryCount}
+                nextRetryTime={nextRetryTime}
+                isRetrying={isRetrying}
                 className="w-full"
               />
 

@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MatchmakingService } from "@/lib/services/matchmaking.service";
@@ -18,6 +19,11 @@ export interface UseMatchmakingQueueReturn {
   matchFound: boolean;
   lobbyCode: string | null;
 
+  // Retry State
+  retryCount: number;
+  nextRetryTime: Date | null;
+  isRetrying: boolean;
+
   // Actions
   joinQueue: (preferences?: Partial<QueuePreferences>) => Promise<void>;
   leaveQueue: () => Promise<void>;
@@ -28,6 +34,7 @@ export interface UseMatchmakingQueueReturn {
   timeInQueue: number;
   clearError: () => void;
   retry: () => Promise<void>;
+  manualRetry: () => Promise<void>;
 }
 
 /**
@@ -52,10 +59,21 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
   // Queue timing
   const [queueStartTime, setQueueStartTime] = useState<Date | null>(null);
   const [timeInQueue, setTimeInQueue] = useState(0);
+  const queueStartTimeRef = useRef<Date | null>(null);
+
+  // Fallback position tracking
+  const [fallbackPosition, setFallbackPosition] = useState<number>(-1);
+  const [lastSuccessfulPositionUpdate, setLastSuccessfulPositionUpdate] =
+    useState<Date | null>(null);
 
   // Service and user references - reusing existing patterns
   const matchmakingService = useRef(MatchmakingService.getInstance());
   const { user } = useCurrentUser();
+
+  // Keep ref in sync with state
+  React.useEffect(() => {
+    queueStartTimeRef.current = queueStartTime;
+  }, [queueStartTime]);
 
   // Subscription references for cleanup
   const queueSubscriptionRef = useRef<UnsubscribeFunction | null>(null);
@@ -64,8 +82,45 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Retry state management
+  const [retryCount, setRetryCount] = useState(0);
+  const [nextRetryTime, setNextRetryTime] = useState<Date | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+
   // Derived state
   const canJoinQueue = !!(user && !isInQueue && !isLoading && !matchFound);
+
+  // Fallback position calculation
+  const getFallbackPosition = useCallback(async (): Promise<number> => {
+    if (!user || !isInQueue) return -1;
+
+    try {
+      // Try to get position directly from service
+      const position = await matchmakingService.current.getQueuePosition(
+        user.id,
+      );
+      if (position > 0) {
+        setLastSuccessfulPositionUpdate(new Date());
+        setFallbackPosition(position);
+        return position;
+      }
+      return fallbackPosition > 0 ? fallbackPosition : 0;
+    } catch (error) {
+      console.warn("Fallback position calculation failed:", error);
+      return fallbackPosition > 0 ? fallbackPosition : 0;
+    }
+  }, [user, isInQueue, fallbackPosition]);
+
+  // Check if we should use fallback position
+  const shouldUseFallbackPosition = useCallback((): boolean => {
+    if (!lastSuccessfulPositionUpdate) return false;
+
+    const timeSinceLastUpdate =
+      Date.now() - lastSuccessfulPositionUpdate.getTime();
+    const fallbackThreshold = 30000; // 30 seconds
+
+    return timeSinceLastUpdate > fallbackThreshold;
+  }, [lastSuccessfulPositionUpdate]);
 
   /**
    * Clear error state - reusing existing error handling patterns
@@ -167,14 +222,48 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         positionSubscriptionRef.current =
           matchmakingService.current.subscribeToQueuePosition(
             playerUid,
-            (position) => {
-              setQueuePosition(position);
-              setIsInQueue(position > 0);
+            async (position) => {
+              // Handle different position states:
+              // -1: Player not in queue
+              // 0: Position unknown (network issues) - try fallback
+              // >0: Actual position in queue
+              let finalPosition = position;
 
-              if (position === -1) {
+              if (position === 0 && shouldUseFallbackPosition()) {
+                // Try fallback position calculation
+                const fallbackPos = await getFallbackPosition();
+                if (fallbackPos > 0) {
+                  finalPosition = fallbackPos;
+                  setError(null); // Clear network error when fallback works
+                } else {
+                  finalPosition = 0;
+                  if (!error || !error.includes("network")) {
+                    setError(
+                      "Connection issues detected. Using estimated queue position.",
+                    );
+                  }
+                }
+              } else if (position > 0) {
+                // Valid position - update fallback tracking
+                setLastSuccessfulPositionUpdate(new Date());
+                setFallbackPosition(position);
+                setError(null); // Clear network error when position is available
+              }
+
+              setQueuePosition(finalPosition);
+
+              if (finalPosition === -1) {
                 // Player no longer in queue
                 setIsInQueue(false);
                 setQueueStartTime(null);
+                queueStartTimeRef.current = null;
+                setError(null); // Clear any previous errors
+              } else if (finalPosition === 0) {
+                // Position still unknown
+                setIsInQueue(true); // Assume still in queue
+              } else {
+                // Valid position
+                setIsInQueue(true);
               }
             },
           );
@@ -188,6 +277,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
               setLobbyCode(foundLobbyCode);
               setIsInQueue(false);
               setQueueStartTime(null);
+              queueStartTimeRef.current = null;
 
               Sentry.addBreadcrumb({
                 message: "Match found",
@@ -207,7 +297,14 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         handleError(error, "setup_queue_subscriptions");
       }
     },
-    [cleanup, handleError, queueStartTime],
+    [
+      cleanup,
+      handleError,
+      queueStartTime,
+      shouldUseFallbackPosition,
+      getFallbackPosition,
+      error,
+    ],
   );
 
   /**
@@ -263,13 +360,15 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         setupSubscriptions(user.id);
 
         setIsInQueue(true);
-        setQueueStartTime(new Date());
+        const startTime = new Date();
+        setQueueStartTime(startTime);
+        queueStartTimeRef.current = startTime;
         setIsLoading(false);
 
         // Start time tracking
         timeUpdateIntervalRef.current = setInterval(() => {
-          if (queueStartTime) {
-            setTimeInQueue(Date.now() - queueStartTime.getTime());
+          if (queueStartTimeRef.current) {
+            setTimeInQueue(Date.now() - queueStartTimeRef.current.getTime());
           }
         }, 1000);
 
@@ -286,7 +385,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
         throw error;
       }
     },
-    [user, isInQueue, setupSubscriptions, handleError, queueStartTime],
+    [user, isInQueue, setupSubscriptions, handleError],
   );
 
   /**
@@ -315,6 +414,7 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       setIsInQueue(false);
       setQueuePosition(-1);
       setQueueStartTime(null);
+      queueStartTimeRef.current = null;
       setTimeInQueue(0);
       setMatchFound(false);
       setLobbyCode(null);
@@ -381,26 +481,95 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
   );
 
   /**
-   * Retry the last failed operation
-   * Reuses existing retry mechanisms
+   * Enhanced retry function with exponential backoff and user feedback
    */
   const retry = useCallback(async (): Promise<void> => {
-    if (!user) {
+    if (!user || isRetrying) {
       return;
     }
 
-    if (isInQueue) {
-      // Reestablish subscriptions
-      setupSubscriptions(user.id);
-    } else {
-      // Try to rejoin queue if we were in queue before
-      if (queueStartTime) {
-        await joinQueue();
-      }
-    }
-  }, [user, isInQueue, setupSubscriptions, joinQueue, queueStartTime]);
+    setIsRetrying(true);
+    setRetryCount((prev) => prev + 1);
 
-  // Update estimated wait time periodically
+    try {
+      // Clear any existing retry timeout
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
+      setError(null); // Clear current error
+      setConnectionStatus("connecting");
+
+      if (isInQueue) {
+        // Reestablish subscriptions with enhanced error handling
+        await setupSubscriptions(user.id);
+        setError("Reconnected to matchmaking service");
+      } else if (queueStartTime) {
+        // Try to rejoin queue if we were in queue before
+        await joinQueue();
+        setError("Successfully rejoined the queue");
+      }
+
+      // Clear success message after 3 seconds
+      const currentError = error;
+      setTimeout(() => {
+        if (
+          currentError?.includes("Reconnected") ||
+          currentError?.includes("Successfully")
+        ) {
+          setError(null);
+        }
+      }, 3000);
+
+      setRetryCount(0); // Reset retry count on success
+      setNextRetryTime(null);
+    } catch {
+      const retryDelay = Math.min(1000 * 2 ** retryCount, 30000); // Max 30 seconds
+      const nextRetry = new Date(Date.now() + retryDelay);
+
+      setNextRetryTime(nextRetry);
+      setError(
+        `Connection failed. Retrying in ${Math.ceil(retryDelay / 1000)} seconds...`,
+      );
+
+      // Schedule automatic retry
+      retryTimeoutRef.current = setTimeout(async () => {
+        if (retryCount < 5) {
+          // Max 5 retries
+          await retry();
+        } else {
+          setError(
+            "Connection issues persist. Please check your internet connection and try again.",
+          );
+          setRetryCount(0);
+          setNextRetryTime(null);
+        }
+      }, retryDelay);
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [
+    user,
+    isRetrying,
+    retryCount,
+    isInQueue,
+    queueStartTime,
+    setupSubscriptions,
+    joinQueue,
+    error,
+  ]);
+
+  /**
+   * Manual retry function for user-initiated retries
+   */
+  const manualRetry = useCallback(async (): Promise<void> => {
+    setRetryCount(0); // Reset retry count for manual retry
+    setNextRetryTime(null);
+    await retry();
+  }, [retry]);
+
+  // Update estimated wait time and check position fallback periodically
   useEffect(() => {
     if (!user || !isInQueue) {
       return;
@@ -418,14 +587,43 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
       }
     };
 
+    const checkPositionFallback = async () => {
+      // Only check fallback if we have network issues and it's been a while since last successful update
+      if (queuePosition === 0 && shouldUseFallbackPosition()) {
+        try {
+          const fallbackPos = await getFallbackPosition();
+          if (fallbackPos > 0 && fallbackPos !== queuePosition) {
+            console.log(`Using fallback position: ${fallbackPos}`);
+            setQueuePosition(fallbackPos);
+            setError(null); // Clear network error when fallback works
+          }
+        } catch (error) {
+          console.warn("Fallback position check failed:", error);
+        }
+      }
+    };
+
     // Update wait time every 30 seconds
-    const interval = setInterval(updateWaitTime, 30000);
+    const waitTimeInterval = setInterval(updateWaitTime, 30000);
 
-    // Initial update
+    // Check position fallback every 15 seconds (more frequent than wait time updates)
+    const positionCheckInterval = setInterval(checkPositionFallback, 15000);
+
+    // Initial updates
     updateWaitTime();
+    checkPositionFallback();
 
-    return () => clearInterval(interval);
-  }, [user, isInQueue]);
+    return () => {
+      clearInterval(waitTimeInterval);
+      clearInterval(positionCheckInterval);
+    };
+  }, [
+    user,
+    isInQueue,
+    queuePosition,
+    shouldUseFallbackPosition,
+    getFallbackPosition,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -446,6 +644,11 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
     matchFound,
     lobbyCode,
 
+    // Retry State
+    retryCount,
+    nextRetryTime,
+    isRetrying,
+
     // Actions
     joinQueue,
     leaveQueue,
@@ -456,5 +659,6 @@ export function useMatchmakingQueue(): UseMatchmakingQueueReturn {
     timeInQueue,
     clearError,
     retry,
+    manualRetry,
   };
 }

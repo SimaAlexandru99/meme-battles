@@ -291,7 +291,7 @@ export class MatchmakingService {
   }
 
   /**
-   * Get the current queue position for a player
+   * Get the current queue position for a player with enhanced error handling
    */
   async getQueuePosition(playerUid: string): Promise<number> {
     return Sentry.startSpan(
@@ -301,48 +301,130 @@ export class MatchmakingService {
       },
       async () => {
         try {
-          // Get player's queue entry to find their queue time
-          const playerQueueRef = ref(rtdb, `${this.QUEUE_PATH}/${playerUid}`);
-          const playerSnapshot = await get(playerQueueRef);
+          // First, try to get player's queue entry with retry
+          const playerEntry = await this.retryOperation(async () => {
+            const playerQueueRef = ref(rtdb, `${this.QUEUE_PATH}/${playerUid}`);
+            const playerSnapshot = await get(playerQueueRef);
+            return playerSnapshot.exists()
+              ? (playerSnapshot.val() as QueueEntry)
+              : null;
+          }, "get_player_queue_entry");
 
-          if (!playerSnapshot.exists()) {
+          if (!playerEntry) {
             return -1; // Player not in queue
           }
 
-          const playerEntry = playerSnapshot.val() as QueueEntry;
           const playerQueueTime = new Date(playerEntry.queuedAt).getTime();
 
-          // Query all players who joined before this player
-          const queueRef = query(
-            ref(rtdb, this.QUEUE_PATH),
-            orderByChild("queuedAt"),
-          );
-
-          const queueSnapshot = await get(queueRef);
+          // Get queue snapshot with enhanced error handling
+          const queueSnapshot = await this.retryOperation(async () => {
+            const queueRef = query(
+              ref(rtdb, this.QUEUE_PATH),
+              orderByChild("queuedAt"),
+            );
+            return await get(queueRef);
+          }, "get_queue_snapshot");
 
           if (!queueSnapshot.exists()) {
             return 1; // Only player in queue
           }
 
           let position = 1;
-          queueSnapshot.forEach((childSnapshot) => {
-            const entry = childSnapshot.val() as QueueEntry;
-            const entryTime = new Date(entry.queuedAt).getTime();
+          let validEntries = 0;
 
-            if (entryTime < playerQueueTime) {
-              position++;
+          queueSnapshot.forEach((childSnapshot) => {
+            try {
+              const entry = childSnapshot.val() as QueueEntry;
+
+              // Validate entry has required fields
+              if (entry?.queuedAt && entry?.playerUid) {
+                const entryTime = new Date(entry.queuedAt).getTime();
+
+                // Handle invalid timestamps gracefully
+                if (!Number.isNaN(entryTime)) {
+                  validEntries++;
+                  if (entryTime < playerQueueTime) {
+                    position++;
+                  }
+                }
+              }
+            } catch (entryError) {
+              // Log individual entry parsing errors but continue
+              Sentry.captureException(entryError, {
+                tags: { operation: "parse_queue_entry" },
+                extra: { playerUid, entryKey: childSnapshot.key },
+              });
             }
           });
 
-          return position;
+          // If no valid entries found, assume position 1
+          if (validEntries === 0) {
+            return 1;
+          }
+
+          return Math.max(1, position);
         } catch (error) {
-          Sentry.captureException(error);
-          throw this.createBattleRoyaleError(
-            "NETWORK_ERROR",
-            `Failed to get queue position: ${error}`,
-            "Unable to get your queue position. Please try again.",
-            true,
+          // Enhanced error handling with specific error types
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          const isError = error instanceof Error;
+
+          const isNetworkError =
+            isError &&
+            (errorMessage.includes("network") ||
+              errorMessage.includes("timeout") ||
+              errorMessage.includes("unavailable"));
+
+          const isPermissionError =
+            isError && errorMessage.includes("permission");
+
+          if (isNetworkError) {
+            // For network errors, return a cached/fallback position if possible
+            console.warn(
+              `Network error getting queue position for ${playerUid}:`,
+              errorMessage,
+            );
+            Sentry.captureException(error, {
+              tags: { operation: "queue_position_network_error" },
+              extra: { playerUid, errorMessage, errorType: typeof error },
+            });
+            return 0; // Special value indicating position unknown due to network issues
+          }
+
+          if (isPermissionError) {
+            console.error(
+              `Permission error getting queue position for ${playerUid}:`,
+              errorMessage,
+            );
+            Sentry.captureException(error, {
+              tags: { operation: "queue_position_permission_error" },
+              extra: { playerUid, errorMessage, errorType: typeof error },
+            });
+            return -1; // Player not in queue due to permissions
+          }
+
+          // For other errors, log and return unknown position
+          console.error(
+            `Unexpected error getting queue position for ${playerUid}:`,
+            errorMessage || "Unknown error (empty object)",
           );
+
+          // Create a proper error for Sentry if we don't have one
+          const sentryError = isError
+            ? error
+            : new Error(`Non-Error thrown: ${errorMessage}`);
+          Sentry.captureException(sentryError, {
+            tags: { operation: "queue_position_unexpected_error" },
+            extra: {
+              playerUid,
+              originalError: error,
+              errorType: typeof error,
+              errorMessage: errorMessage || "Empty error object",
+            },
+          });
+
+          // Don't throw error - return special value for graceful degradation
+          return 0; // Position unknown
         }
       },
     );
@@ -574,35 +656,97 @@ export class MatchmakingService {
   }
 
   /**
-   * Subscribe to queue position updates for a specific player
+   * Subscribe to queue position updates for a specific player with enhanced error handling
    */
   subscribeToQueuePosition(
     playerUid: string,
     callback: (position: number) => void,
   ): UnsubscribeFunction {
-    // Subscribe to the entire queue to calculate position
-    return this.subscribeToQueue((queueData) => {
-      const playerEntry = queueData.find(
-        (entry) => entry.playerUid === playerUid,
-      );
+    let lastKnownPosition = -1;
+    let retryTimeout: NodeJS.Timeout | null = null;
 
-      if (!playerEntry) {
-        callback(-1); // Player not in queue
-        return;
-      }
+    const calculatePosition = (queueData: QueueEntry[]) => {
+      try {
+        const playerEntry = queueData.find(
+          (entry) => entry.playerUid === playerUid,
+        );
 
-      const playerQueueTime = new Date(playerEntry.queuedAt).getTime();
-      let position = 1;
-
-      queueData.forEach((entry) => {
-        const entryTime = new Date(entry.queuedAt).getTime();
-        if (entryTime < playerQueueTime) {
-          position++;
+        if (!playerEntry) {
+          lastKnownPosition = -1;
+          callback(-1); // Player not in queue
+          return;
         }
-      });
 
-      callback(position);
+        const playerQueueTime = new Date(playerEntry.queuedAt).getTime();
+
+        // Validate timestamp
+        if (Number.isNaN(playerQueueTime)) {
+          console.warn(`Invalid queue timestamp for player ${playerUid}`);
+          callback(0); // Position unknown
+          return;
+        }
+
+        let position = 1;
+        let validEntries = 0;
+
+        queueData.forEach((entry) => {
+          try {
+            if (entry?.queuedAt && entry?.playerUid) {
+              const entryTime = new Date(entry.queuedAt).getTime();
+
+              // Skip invalid entries
+              if (!Number.isNaN(entryTime)) {
+                validEntries++;
+                if (entryTime < playerQueueTime) {
+                  position++;
+                }
+              }
+            }
+          } catch (entryError) {
+            // Log but continue processing other entries
+            console.warn(
+              `Error processing queue entry for player ${playerUid}:`,
+              entryError,
+            );
+          }
+        });
+
+        // If no valid entries, assume position 1
+        if (validEntries === 0) {
+          position = 1;
+        }
+
+        const finalPosition = Math.max(1, position);
+        lastKnownPosition = finalPosition;
+        callback(finalPosition);
+      } catch (error) {
+        console.error(
+          `Error calculating queue position for ${playerUid}:`,
+          error,
+        );
+        Sentry.captureException(error, {
+          tags: { operation: "calculate_queue_position" },
+          extra: { playerUid, queueSize: queueData.length },
+        });
+
+        // Use last known position or unknown position
+        callback(lastKnownPosition > 0 ? lastKnownPosition : 0);
+      }
+    };
+
+    // Subscribe to the entire queue to calculate position
+    const unsubscribe = this.subscribeToQueue((queueData) => {
+      calculatePosition(queueData);
     });
+
+    // Enhanced unsubscribe function that also clears retry timeout
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+      }
+      unsubscribe();
+    };
   }
 
   /**
@@ -1645,7 +1789,7 @@ export class MatchmakingService {
    */
   async batchRemovePlayersFromQueue(
     playerUids: string[],
-    sessionId?: string
+    sessionId?: string,
   ): Promise<ServiceResult> {
     return Sentry.startSpan(
       {
@@ -1670,7 +1814,7 @@ export class MatchmakingService {
               return {
                 uid,
                 exists: snapshot.exists(),
-                data: snapshot.exists() ? snapshot.val() : null
+                data: snapshot.exists() ? snapshot.val() : null,
               };
             });
             return await Promise.all(verificationPromises);
@@ -1678,13 +1822,16 @@ export class MatchmakingService {
 
           // Step 2: Filter out players who were already removed by another process
           const playersToRemove = verificationResults
-            .filter(result => result.exists)
-            .map(result => result.uid);
-          
-          const alreadyRemovedCount = playerUids.length - playersToRemove.length;
-          
+            .filter((result) => result.exists)
+            .map((result) => result.uid);
+
+          const alreadyRemovedCount =
+            playerUids.length - playersToRemove.length;
+
           if (alreadyRemovedCount > 0) {
-            console.log(`${alreadyRemovedCount} players already removed by another process`);
+            console.log(
+              `${alreadyRemovedCount} players already removed by another process`,
+            );
           }
 
           if (playersToRemove.length === 0) {
@@ -1701,7 +1848,8 @@ export class MatchmakingService {
             updates[`${this.QUEUE_PATH}/${playerUid}`] = null;
           });
           updates[`${this.METRICS_PATH}/lastUpdated`] = serverTimestamp();
-          updates[`${this.METRICS_PATH}/lastMatchmakingSession`] = sessionId || 'unknown';
+          updates[`${this.METRICS_PATH}/lastMatchmakingSession`] =
+            sessionId || "unknown";
 
           // Step 4: Execute atomic batch removal with verification
           let actualRemovedCount = 0;
@@ -1713,16 +1861,19 @@ export class MatchmakingService {
           }, "batch_remove_players_atomic");
 
           // Step 5: Update queue metrics asynchronously (non-blocking)
-          this.updateQueueMetrics().catch(error => {
-            console.warn('Failed to update queue metrics after batch removal:', error);
+          this.updateQueueMetrics().catch((error) => {
+            console.warn(
+              "Failed to update queue metrics after batch removal:",
+              error,
+            );
           });
 
           return {
             success: true,
-            data: { 
+            data: {
               removedCount: actualRemovedCount,
               alreadyRemoved: alreadyRemovedCount,
-              totalRequested: playerUids.length
+              totalRequested: playerUids.length,
             },
             timestamp: new Date().toISOString(),
           };
@@ -1731,8 +1882,8 @@ export class MatchmakingService {
             extra: {
               playerUids,
               sessionId,
-              requestedCount: playerUids.length
-            }
+              requestedCount: playerUids.length,
+            },
           });
           throw this.createBattleRoyaleError(
             "UNKNOWN_ERROR",
@@ -2361,7 +2512,7 @@ export class MatchmakingService {
       },
       async () => {
         const matchmakingSession = `matchmaking_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-        
+
         try {
           // Step 1: Atomically snapshot and lock queue state
           const queueSnapshot = await this.retryOperation(async () => {
@@ -2386,28 +2537,33 @@ export class MatchmakingService {
 
           // Step 2: Extract and validate queue entries with race condition checks
           const queuedPlayers: QueueEntry[] = [];
-          const playerStates = new Map<string, { 
-            entry: QueueEntry; 
-            timestamp: number; 
-            sessionId: string 
-          }>();
+          const playerStates = new Map<
+            string,
+            {
+              entry: QueueEntry;
+              timestamp: number;
+              sessionId: string;
+            }
+          >();
 
           queueSnapshot.forEach((childSnapshot) => {
             const entry = childSnapshot.val() as QueueEntry;
             const now = Date.now();
             const queueTime = new Date(entry.queuedAt).getTime();
-            
+
             // Validate queue entry is not stale (max 30 minutes in queue)
             if (now - queueTime < 30 * 60 * 1000) {
               queuedPlayers.push(entry);
               playerStates.set(entry.playerUid, {
                 entry,
                 timestamp: now,
-                sessionId: matchmakingSession
+                sessionId: matchmakingSession,
               });
             } else {
               // Mark stale entries for cleanup
-              console.warn(`Removing stale queue entry: ${entry.playerUid}, queued at: ${entry.queuedAt}`);
+              console.warn(
+                `Removing stale queue entry: ${entry.playerUid}, queued at: ${entry.queuedAt}`,
+              );
             }
           });
 
@@ -2415,7 +2571,7 @@ export class MatchmakingService {
           const results = await this.processMatchmakingWithLocking(
             queuedPlayers,
             playerStates,
-            matchmakingSession
+            matchmakingSession,
           );
 
           Sentry.addBreadcrumb({
@@ -2437,10 +2593,10 @@ export class MatchmakingService {
           };
         } catch (error) {
           Sentry.captureException(error, {
-            tags: { 
+            tags: {
               operation: "process_matchmaking",
-              sessionId: matchmakingSession
-            }
+              sessionId: matchmakingSession,
+            },
           });
           throw this.createBattleRoyaleError(
             "MATCHMAKING_TIMEOUT",
@@ -2580,8 +2736,11 @@ export class MatchmakingService {
    */
   private async processMatchmakingWithLocking(
     queuedPlayers: QueueEntry[],
-    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
-    sessionId: string
+    playerStates: Map<
+      string,
+      { entry: QueueEntry; timestamp: number; sessionId: string }
+    >,
+    sessionId: string,
   ): Promise<{
     filledLobbies: Array<{ lobbyCode: string; playersAdded: number }>;
     newMatches: Array<{ lobbyCode: string; matchId: string; players: number }>;
@@ -2589,29 +2748,34 @@ export class MatchmakingService {
   }> {
     const results = {
       filledLobbies: [] as Array<{ lobbyCode: string; playersAdded: number }>,
-      newMatches: [] as Array<{ lobbyCode: string; matchId: string; players: number }>,
-      totalPlayersMatched: 0
+      newMatches: [] as Array<{
+        lobbyCode: string;
+        matchId: string;
+        players: number;
+      }>,
+      totalPlayersMatched: 0,
     };
 
     // Step 1: Fill existing lobbies with atomic player assignment
     try {
-      const { filledLobbies, remainingPlayers } = await this.fillExistingLobbiesWithLocking(
-        queuedPlayers,
-        playerStates,
-        sessionId
-      );
-      
-      results.filledLobbies = filledLobbies.map(lobby => ({
+      const { filledLobbies, remainingPlayers } =
+        await this.fillExistingLobbiesWithLocking(
+          queuedPlayers,
+          playerStates,
+          sessionId,
+        );
+
+      results.filledLobbies = filledLobbies.map((lobby) => ({
         lobbyCode: lobby.lobbyCode,
-        playersAdded: lobby.playersAdded.length
+        playersAdded: lobby.playersAdded.length,
       }));
-      
+
       // Step 2: Create new matches for remaining players with race condition protection
       if (remainingPlayers.length >= this.MIN_PLAYERS_PER_MATCH) {
         const matchmakingResults = await this.findMatchesWithLocking(
           remainingPlayers,
           playerStates,
-          sessionId
+          sessionId,
         );
 
         for (const match of matchmakingResults) {
@@ -2620,7 +2784,7 @@ export class MatchmakingService {
             const lobbyResult = await this.createBattleRoyaleLobbyWithLocking(
               match,
               playerStates,
-              sessionId
+              sessionId,
             );
 
             if (lobbyResult.success && lobbyResult.data) {
@@ -2641,13 +2805,15 @@ export class MatchmakingService {
         }
       }
 
-      results.totalPlayersMatched = 
-        results.filledLobbies.reduce((sum, lobby) => sum + lobby.playersAdded, 0) +
-        results.newMatches.reduce((sum, match) => sum + match.players, 0);
+      results.totalPlayersMatched =
+        results.filledLobbies.reduce(
+          (sum, lobby) => sum + lobby.playersAdded,
+          0,
+        ) + results.newMatches.reduce((sum, match) => sum + match.players, 0);
 
       return results;
     } catch (error) {
-      console.error('Matchmaking processing failed:', error);
+      console.error("Matchmaking processing failed:", error);
       throw error;
     }
   }
@@ -2657,25 +2823,31 @@ export class MatchmakingService {
    */
   private async fillExistingLobbiesWithLocking(
     players: QueueEntry[],
-    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
-    sessionId: string
+    playerStates: Map<
+      string,
+      { entry: QueueEntry; timestamp: number; sessionId: string }
+    >,
+    sessionId: string,
   ): Promise<{
     filledLobbies: Array<{ lobbyCode: string; playersAdded: QueueEntry[] }>;
     remainingPlayers: QueueEntry[];
   }> {
     // Reuse existing fillExistingLobbies logic but with atomic operations
     const standardResult = await this.fillExistingLobbies(players);
-    
+
     // Verify no race conditions occurred during lobby filling
     const verifiedResults = {
-      filledLobbies: [] as Array<{ lobbyCode: string; playersAdded: QueueEntry[] }>,
-      remainingPlayers: [...standardResult.remainingPlayers]
+      filledLobbies: [] as Array<{
+        lobbyCode: string;
+        playersAdded: QueueEntry[];
+      }>,
+      remainingPlayers: [...standardResult.remainingPlayers],
     };
 
     for (const filledLobby of standardResult.filledLobbies) {
       // Verify all players were actually added and removed from queue
       const verifiedPlayers: QueueEntry[] = [];
-      
+
       for (const player of filledLobby.playersAdded) {
         const playerState = playerStates.get(player.playerUid);
         if (playerState && playerState.sessionId === sessionId) {
@@ -2685,11 +2857,11 @@ export class MatchmakingService {
           verifiedResults.remainingPlayers.push(player);
         }
       }
-      
+
       if (verifiedPlayers.length > 0) {
         verifiedResults.filledLobbies.push({
           lobbyCode: filledLobby.lobbyCode,
-          playersAdded: verifiedPlayers
+          playersAdded: verifiedPlayers,
         });
       }
     }
@@ -2702,11 +2874,14 @@ export class MatchmakingService {
    */
   private async findMatchesWithLocking(
     players: QueueEntry[],
-    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
-    sessionId: string
+    playerStates: Map<
+      string,
+      { entry: QueueEntry; timestamp: number; sessionId: string }
+    >,
+    sessionId: string,
   ): Promise<MatchmakingResult[]> {
     // Filter players that are still valid for this session
-    const validPlayers = players.filter(player => {
+    const validPlayers = players.filter((player) => {
       const state = playerStates.get(player.playerUid);
       return state && state.sessionId === sessionId;
     });
@@ -2724,29 +2899,32 @@ export class MatchmakingService {
    */
   private async createBattleRoyaleLobbyWithLocking(
     match: MatchmakingResult,
-    playerStates: Map<string, { entry: QueueEntry; timestamp: number; sessionId: string }>,
-    sessionId: string
+    playerStates: Map<
+      string,
+      { entry: QueueEntry; timestamp: number; sessionId: string }
+    >,
+    sessionId: string,
   ): Promise<ServiceResult<string>> {
     // Verify all players are still valid for this session
     const validPlayerUids = match.players
-      .filter(player => {
+      .filter((player) => {
         const state = playerStates.get(player.playerUid);
         return state && state.sessionId === sessionId;
       })
-      .map(player => player.playerUid);
+      .map((player) => player.playerUid);
 
     if (validPlayerUids.length < this.MIN_PLAYERS_PER_MATCH) {
       throw this.createBattleRoyaleError(
         "MATCH_CREATION_FAILED",
         "Not enough valid players for match creation",
         "Failed to create match due to player availability conflicts.",
-        true
+        true,
       );
     }
 
     // Create the lobby first
     const lobbyResult = await this.createBattleRoyaleLobby(match);
-    
+
     if (lobbyResult.success && lobbyResult.data) {
       // Atomically remove players from queue after successful lobby creation
       try {
@@ -2754,10 +2932,17 @@ export class MatchmakingService {
         return lobbyResult;
       } catch (error) {
         // If queue removal fails, log but don't fail the match
-        console.error('Failed to remove players from queue after lobby creation:', error);
+        console.error(
+          "Failed to remove players from queue after lobby creation:",
+          error,
+        );
         Sentry.captureException(error, {
           tags: { operation: "queue_cleanup_after_lobby_creation" },
-          extra: { lobbyCode: lobbyResult.data, playerUids: validPlayerUids, sessionId }
+          extra: {
+            lobbyCode: lobbyResult.data,
+            playerUids: validPlayerUids,
+            sessionId,
+          },
         });
         return lobbyResult;
       }
@@ -2769,7 +2954,9 @@ export class MatchmakingService {
   /**
    * Helper method to find matches for specific players (extracted from findMatches)
    */
-  private async findMatchesForPlayers(players: QueueEntry[]): Promise<MatchmakingResult[]> {
+  private async findMatchesForPlayers(
+    players: QueueEntry[],
+  ): Promise<MatchmakingResult[]> {
     if (players.length < this.MIN_PLAYERS_PER_MATCH) {
       return [];
     }
@@ -2791,7 +2978,8 @@ export class MatchmakingService {
       // Only create matches with acceptable quality (>= 0.3)
       if (matchQuality >= 0.3) {
         const matchId = this.generateMatchId();
-        const averageSkillRating = this.calculateAverageSkillRating(playerGroup);
+        const averageSkillRating =
+          this.calculateAverageSkillRating(playerGroup);
         const skillRatingRange = this.calculateSkillRatingRange(playerGroup);
 
         matchmakingResults.push({
