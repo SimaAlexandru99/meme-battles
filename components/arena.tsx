@@ -2,12 +2,11 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { push, ref } from "firebase/database";
-import { createFirebaseListener, removeFirebaseListener } from "@/lib/services/firebase-connection-manager";
-import { GameErrorBoundary } from "@/components/shared/game-error-boundary";
 import { Clock, Gamepad2, MessageCircle, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useReducer, useRef } from "react";
 import { toast } from "sonner";
+import { GameErrorBoundary } from "@/components/shared/game-error-boundary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,9 @@ import { rtdb } from "@/firebase/client";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLobbyManagement } from "@/hooks/use-lobby-management";
 import { useMemeCardSelection } from "@/hooks/useMemeCardSelection";
+import { createFirebaseListener } from "@/lib/services/firebase-connection-manager";
 import { cn } from "@/lib/utils";
+import { arenaReducer, initialArenaState } from "./arena-state-reducer";
 import { ChatPanel } from "./chat-panel";
 import { GameOver } from "./game-over";
 import { GameTransition } from "./game-transition";
@@ -38,7 +39,10 @@ interface ArenaProps {
   currentUser: User;
 }
 
-export function Arena({ lobbyCode, currentUser }: ArenaProps) {
+export const Arena = memo(function Arena({
+  lobbyCode,
+  currentUser,
+}: ArenaProps) {
   const router = useRouter();
 
   // Use real-time game state from lobby system
@@ -70,74 +74,110 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     });
   }, [rawPlayers, players.length, gameState?.phase]);
 
-  // Enhanced card loading state management with proper race condition handling
-  const [cardLoadingState, setCardLoadingState] = useState<{
-    status: 'idle' | 'loading' | 'loaded' | 'error' | 'retrying';
-    retryCount: number;
-    lastRetryTime: number | null;
-  }>({ status: 'idle', retryCount: 0, lastRetryTime: null });
+  // Use reducer for Arena-specific state management
+  const [arenaState, arenaDispatch] = useReducer(
+    arenaReducer,
+    initialArenaState,
+  );
+  const { cardLoadingState, messages, newMessage } = arenaState;
 
-  const [cardLoadRetryToken, setCardLoadRetryToken] = useState<string | null>(null);
+  const cardLoadRetryTokenRef = useRef<string | null>(null);
+  const cardLoadingStateRef = useRef(cardLoadingState);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    cardLoadingStateRef.current = cardLoadingState;
+  }, [cardLoadingState]);
 
   // Card loading effect with proper race condition prevention
   useEffect(() => {
     if (gameState?.phase === "submission") {
       const currentToken = `${Date.now()}-${Math.random()}`;
-      setCardLoadRetryToken(currentToken);
-      
+      cardLoadRetryTokenRef.current = currentToken;
+
       if (playerCards.length === 0) {
-        setCardLoadingState(prev => ({ 
-          ...prev, 
-          status: prev.retryCount > 0 ? 'retrying' : 'loading' 
-        }));
-        
-        console.warn("⚠️ Submission phase started but no player cards available");
-        
+        arenaDispatch({
+          type: "UPDATE_CARD_LOADING_STATE",
+          payload: {
+            status: cardLoadingState.retryCount > 0 ? "retrying" : "loading",
+          },
+        });
+
+        console.warn(
+          "⚠️ Submission phase started but no player cards available",
+        );
+
         // Immediate retry if we haven't tried yet
-        if (cardLoadingState.retryCount === 0) {
+        if (cardLoadingStateRef.current.retryCount === 0) {
           console.log("🔄 Initial card load attempt");
           // Give the hook a moment to load cards naturally
           const immediateCheck = setTimeout(() => {
-            if (cardLoadRetryToken === currentToken && playerCards.length === 0) {
-              setCardLoadingState(prev => ({ 
-                ...prev, 
-                status: 'loading',
-                retryCount: 1,
-                lastRetryTime: Date.now()
-              }));
+            // Use refs to avoid stale closure issues
+            if (
+              cardLoadRetryTokenRef.current === currentToken &&
+              playerCards.length === 0
+            ) {
+              arenaDispatch({
+                type: "UPDATE_CARD_LOADING_STATE",
+                payload: {
+                  status: "loading",
+                  retryCount: 1,
+                  lastRetryTime: Date.now(),
+                },
+              });
             }
           }, 500);
-          
+
           return () => clearTimeout(immediateCheck);
         }
-        
+
         // Progressive retry with exponential backoff
-        const retryDelay = Math.min(3000 * Math.pow(1.5, cardLoadingState.retryCount), 10000);
+        const retryDelay = Math.min(
+          3000 * 1.5 ** cardLoadingStateRef.current.retryCount,
+          10000,
+        );
         const retryTimeout = setTimeout(() => {
-          if (cardLoadRetryToken === currentToken && playerCards.length === 0) {
-            if (cardLoadingState.retryCount < 3) {
-              console.log(`🔄 Retrying card load (attempt ${cardLoadingState.retryCount + 1})`);
-              setCardLoadingState(prev => ({ 
-                ...prev,
-                status: 'retrying',
-                retryCount: prev.retryCount + 1,
-                lastRetryTime: Date.now()
-              }));
-              
-              if (cardLoadingState.retryCount === 0) {
+          // Use refs to avoid stale closure issues
+          if (
+            cardLoadRetryTokenRef.current === currentToken &&
+            playerCards.length === 0
+          ) {
+            if (cardLoadingStateRef.current.retryCount < 3) {
+              console.log(
+                `🔄 Retrying card load (attempt ${cardLoadingStateRef.current.retryCount + 1})`,
+              );
+
+              if (cardLoadingStateRef.current.retryCount === 0) {
                 toast.info("Loading your cards...");
               } else {
-                toast.warning(`Retrying card load (${cardLoadingState.retryCount + 1}/3)...`);
+                toast.warning(
+                  `Retrying card load (${cardLoadingStateRef.current.retryCount + 1}/3)...`,
+                );
               }
+
+              arenaDispatch({
+                type: "UPDATE_CARD_LOADING_STATE",
+                payload: {
+                  status: "retrying",
+                  retryCount: cardLoadingStateRef.current.retryCount + 1,
+                  lastRetryTime: Date.now(),
+                },
+              });
             } else {
               console.error("❌ Cards failed to load after maximum retries");
-              setCardLoadingState(prev => ({ ...prev, status: 'error' }));
-              toast.error("Failed to load your cards. Please refresh the page.", {
-                duration: 10000,
-                action: {
-                  label: 'Refresh',
-                  onClick: () => window.location.reload()
-                }
+              toast.error(
+                "Failed to load your cards. Please refresh the page.",
+                {
+                  duration: 10000,
+                  action: {
+                    label: "Refresh",
+                    onClick: () => window.location.reload(),
+                  },
+                },
+              );
+              arenaDispatch({
+                type: "UPDATE_CARD_LOADING_STATE",
+                payload: { status: "error" },
               });
             }
           }
@@ -148,22 +188,29 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         };
       } else {
         // Cards loaded successfully
-        if (cardLoadingState.status !== 'loaded') {
+        if (cardLoadingStateRef.current.status !== "loaded") {
           console.log("✅ Player cards loaded successfully");
-          setCardLoadingState({ status: 'loaded', retryCount: 0, lastRetryTime: null });
-          if (cardLoadingState.retryCount > 0) {
+          arenaDispatch({
+            type: "SET_CARD_LOADING_STATE",
+            payload: {
+              status: "loaded",
+              retryCount: 0,
+              lastRetryTime: null,
+            },
+          });
+          if (cardLoadingStateRef.current.retryCount > 0) {
             toast.success("Cards loaded successfully!");
           }
         }
       }
     } else {
       // Reset card loading state when not in submission phase
-      if (cardLoadingState.status !== 'idle') {
-        setCardLoadingState({ status: 'idle', retryCount: 0, lastRetryTime: null });
-        setCardLoadRetryToken(null);
+      if (cardLoadingStateRef.current.status !== "idle") {
+        arenaDispatch({ type: "RESET_CARD_LOADING" });
+        cardLoadRetryTokenRef.current = null;
       }
     }
-  }, [gameState?.phase, playerCards.length, cardLoadingState.retryCount, cardLoadRetryToken]);
+  }, [gameState?.phase, playerCards.length, cardLoadingState.retryCount]);
 
   // Track game state changes for debugging in non-production
   useEffect(() => {
@@ -184,14 +231,20 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
   // Use lobby management for lobby-specific operations (only need leaveLobby)
   const { leaveLobby } = useLobbyManagement(lobbyCode);
 
+  // Use ref to prevent unnecessary re-renders from leaveLobby changes
+  const leaveLobbyRef = useRef(leaveLobby);
+
+  // Keep ref in sync with leaveLobby function
+  useEffect(() => {
+    leaveLobbyRef.current = leaveLobby;
+  }, [leaveLobby]);
+
   // Card selection functionality
   const { selectedCard, selectCard, clearSelection } = useMemeCardSelection({
     cards: playerCards,
   });
 
-  // Chat functionality - now using Firebase real-time data
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
+  // Chat functionality - now using Firebase real-time data (managed by reducer)
 
   // Real-time chat listener with proper cleanup
   useEffect(() => {
@@ -199,7 +252,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
     const listenerId = `arena_chat_${lobbyCode}_${currentUser.id}`;
     const chatPath = `lobbies/${lobbyCode}/chat`;
-    
+
     const { unsubscribe } = createFirebaseListener(
       listenerId,
       chatPath,
@@ -210,19 +263,19 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
             (a, b) =>
               new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
           );
-          setMessages(messagesList);
+          arenaDispatch({ type: "SET_MESSAGES", payload: messagesList });
         } else {
-          setMessages([]);
+          arenaDispatch({ type: "SET_MESSAGES", payload: [] });
         }
       },
       (error) => {
-        console.error('Chat listener error:', error);
+        console.error("Chat listener error:", error);
         Sentry.captureException(error, {
-          tags: { operation: 'arena_chat_listener' },
-          extra: { lobbyCode, currentUser: currentUser.id }
+          tags: { operation: "arena_chat_listener" },
+          extra: { lobbyCode, currentUser: currentUser.id },
         });
-        toast.error('Chat connection lost. Messages may not update.');
-      }
+        toast.error("Chat connection lost. Messages may not update.");
+      },
     );
 
     return unsubscribe;
@@ -261,7 +314,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
       const chatRef = ref(rtdb, `lobbies/${lobbyCode}/chat`);
       await push(chatRef, message);
-      setNewMessage("");
+      arenaDispatch({ type: "SET_NEW_MESSAGE", payload: "" });
     } catch (error) {
       toast.error("Failed to send message. Please try again.");
       Sentry.captureException(error, {
@@ -326,7 +379,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         event.returnValue = ""; // Show browser confirmation dialog
 
         // Attempt cleanup but don't block
-        leaveLobby().catch((error) => {
+        leaveLobbyRef.current().catch((error) => {
           console.error("Failed to cleanup on beforeunload:", error);
         });
       }
@@ -345,7 +398,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
         "🔄 Arena: Component unmounting - NOT leaving lobby (normal navigation)",
       );
     };
-  }, [lobbyCode, currentUser?.id, leaveLobby]);
+  }, [lobbyCode, currentUser?.id]);
 
   // Loading state
   if (isLoading) {
@@ -512,23 +565,25 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
   if (gameState.phase === "submission") {
     // Enhanced card loading state with proper error handling
-    if (playerCards.length === 0 && cardLoadingState.status !== 'error') {
+    if (playerCards.length === 0 && cardLoadingState.status !== "error") {
       const getLoadingMessage = () => {
         switch (cardLoadingState.status) {
-          case 'retrying':
+          case "retrying":
             return `Retrying... (${cardLoadingState.retryCount}/3)`;
-          case 'loading':
-            return cardLoadingState.retryCount > 0 ? 'Retrying card load...' : 'Loading your cards...';
+          case "loading":
+            return cardLoadingState.retryCount > 0
+              ? "Retrying card load..."
+              : "Loading your cards...";
           default:
-            return 'Preparing your meme arsenal...';
+            return "Preparing your meme arsenal...";
         }
       };
 
       const getProgressWidth = () => {
-        if (cardLoadingState.status === 'retrying') {
-          return `${33 + (cardLoadingState.retryCount * 20)}%`;
+        if (cardLoadingState.status === "retrying") {
+          return `${33 + cardLoadingState.retryCount * 20}%`;
         }
-        return cardLoadingState.status === 'loading' ? '60%' : '20%';
+        return cardLoadingState.status === "loading" ? "60%" : "20%";
       };
 
       return (
@@ -536,25 +591,27 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
           <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl shadow-purple-500/10 max-w-md mx-4">
             <CardHeader>
               <CardTitle className="text-white font-bangers text-2xl tracking-wide text-center">
-                {cardLoadingState.status === 'retrying' ? 'Retrying...' : 'Loading Your Cards...'}
+                {cardLoadingState.status === "retrying"
+                  ? "Retrying..."
+                  : "Loading Your Cards..."}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center">
                 <div className="text-4xl font-bangers text-purple-400 mb-4">
-                  {cardLoadingState.status === 'retrying' ? '🔄' : '🃏'}
+                  {cardLoadingState.status === "retrying" ? "🔄" : "🃏"}
                 </div>
                 <p className="text-purple-200/70 font-bangers text-lg tracking-wide mb-4">
                   {getLoadingMessage()}
                 </p>
                 <div className="space-y-2">
                   <div className="w-full bg-slate-700/50 rounded-full h-3">
-                    <div 
+                    <div
                       className={cn(
                         "h-3 rounded-full transition-all duration-500",
-                        cardLoadingState.status === 'retrying' 
+                        cardLoadingState.status === "retrying"
                           ? "bg-gradient-to-r from-yellow-500 to-orange-500 animate-pulse"
-                          : "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"
+                          : "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse",
                       )}
                       style={{ width: getProgressWidth() }}
                     />
@@ -573,7 +630,7 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
     }
 
     // Show error state if card loading failed
-    if (playerCards.length === 0 && cardLoadingState.status === 'error') {
+    if (playerCards.length === 0 && cardLoadingState.status === "error") {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
           <Card className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-red-700/50 shadow-2xl shadow-red-500/10 max-w-md mx-4">
@@ -593,8 +650,8 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
                 <div className="space-y-3">
                   <Button
                     onClick={() => {
-                      setCardLoadingState({ status: 'idle', retryCount: 0, lastRetryTime: null });
-                      toast.info('Attempting to reload cards...');
+                      arenaDispatch({ type: "RESET_CARD_LOADING" });
+                      toast.info("Attempting to reload cards...");
                     }}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bangers text-lg"
                   >
@@ -617,264 +674,271 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
 
     // Show the main game interface for card submission
     return (
-      <GameErrorBoundary 
-        lobbyCode={lobbyCode} 
+      <GameErrorBoundary
+        lobbyCode={lobbyCode}
         currentUser={currentUser}
         onError={(error, errorInfo) => {
-          console.error('Arena game interface error:', error);
+          console.error("Arena game interface error:", error);
           Sentry.captureException(error, {
-            tags: { component: 'Arena', phase: 'submission', lobbyCode },
-            extra: { errorInfo, currentUser, gameState }
+            tags: { component: "Arena", phase: "submission", lobbyCode },
+            extra: { errorInfo, currentUser, gameState },
           });
         }}
       >
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        {/* Fixed Top Bar */}
-        <div className="fixed top-0 left-0 right-0 z-10 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-            <div className="flex items-center justify-between">
-              {/* Mobile Menu Buttons (Left) */}
-              <div className="flex items-center gap-2 lg:hidden">
-                {/* Chat Sheet Trigger */}
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white hover:bg-slate-700/50"
+          {/* Fixed Top Bar */}
+          <div className="fixed top-0 left-0 right-0 z-10 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50">
+            <div className="mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+              <div className="flex items-center justify-between">
+                {/* Mobile Menu Buttons (Left) */}
+                <div className="flex items-center gap-2 lg:hidden">
+                  {/* Chat Sheet Trigger */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white hover:bg-slate-700/50"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent
+                      side="left"
+                      className="w-[350px] bg-slate-800 border-slate-700"
                     >
-                      <MessageCircle className="w-5 h-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent
-                    side="left"
-                    className="w-[350px] bg-slate-800 border-slate-700"
-                  >
-                    <SheetHeader>
-                      <SheetTitle className="text-white font-bangers tracking-wide">
-                        Chat
-                      </SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-8 h-full">
-                      <ChatPanel
-                        messages={messages}
-                        newMessage={newMessage}
-                        onNewMessageChange={setNewMessage}
-                        onSendMessage={handleSendMessage}
-                        currentUser={currentUser}
-                      />
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                      <SheetHeader>
+                        <SheetTitle className="text-white font-bangers tracking-wide">
+                          Chat
+                        </SheetTitle>
+                      </SheetHeader>
+                      <div className="mt-8 h-full">
+                        <ChatPanel
+                          messages={messages}
+                          newMessage={newMessage}
+                          onNewMessageChange={(value) =>
+                            arenaDispatch({
+                              type: "SET_NEW_MESSAGE",
+                              payload: value,
+                            })
+                          }
+                          onSendMessage={handleSendMessage}
+                          currentUser={currentUser}
+                        />
+                      </div>
+                    </SheetContent>
+                  </Sheet>
 
-                {/* Players Sheet Trigger */}
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white hover:bg-slate-700/50"
+                  {/* Players Sheet Trigger */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white hover:bg-slate-700/50"
+                      >
+                        <Users className="w-5 h-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent
+                      side="right"
+                      className="w-[350px] bg-slate-800 border-slate-700"
                     >
-                      <Users className="w-5 h-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent
-                    side="right"
-                    className="w-[350px] bg-slate-800 border-slate-700"
-                  >
-                    <SheetHeader>
-                      <SheetTitle className="text-white font-bangers tracking-wide">
-                        Players
-                      </SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-8 h-full">
-                      <PlayersList players={players} />
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
+                      <SheetHeader>
+                        <SheetTitle className="text-white font-bangers tracking-wide">
+                          Players
+                        </SheetTitle>
+                      </SheetHeader>
+                      <div className="mt-8 h-full">
+                        <PlayersList players={players} />
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
 
-              {/* Game Info (Center on mobile, Left on desktop) */}
-              <div className="flex items-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-1 sm:gap-3 bg-purple-600/20 border border-purple-400/30 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
-                  <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300" />
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
-                    <span className="text-purple-200 font-bangers tracking-wide text-xs sm:text-sm uppercase">
-                      Round
-                    </span>
-                    <span className="text-white font-bangers tracking-wide text-lg sm:text-xl font-bold">
-                      {gameState.roundNumber || 1}
-                      <span className="text-purple-300 font-normal">
-                        /{gameState.totalRounds || 8}
+                {/* Game Info (Center on mobile, Left on desktop) */}
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-1 sm:gap-3 bg-purple-600/20 border border-purple-400/30 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
+                    <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300" />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
+                      <span className="text-purple-200 font-bangers tracking-wide text-xs sm:text-sm uppercase">
+                        Round
                       </span>
-                    </span>
+                      <span className="text-white font-bangers tracking-wide text-lg sm:text-xl font-bold">
+                        {gameState.roundNumber || 1}
+                        <span className="text-purple-300 font-normal">
+                          /{gameState.totalRounds || 8}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    {(() => {
+                      const timeLeftValue =
+                        typeof gameState.timeLeft === "number"
+                          ? gameState.timeLeft
+                          : 0;
+                      const isCritical = timeLeftValue <= 15;
+                      const isVeryLow = timeLeftValue <= 5;
+
+                      return (
+                        <>
+                          <Clock
+                            className={cn(
+                              "w-4 h-4 sm:w-6 sm:h-6",
+                              isCritical ? "text-red-400" : "text-purple-400",
+                              isVeryLow && "animate-bounce",
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "font-bangers tracking-wide",
+                              isCritical
+                                ? "text-lg sm:text-2xl text-red-400 font-bold"
+                                : "text-sm sm:text-lg text-white",
+                              isVeryLow && "animate-pulse text-red-300",
+                              isCritical && "drop-shadow-lg",
+                            )}
+                            style={
+                              isVeryLow
+                                ? {
+                                    textShadow:
+                                      "0 0 10px rgba(248, 113, 113, 0.8), 0 0 20px rgba(248, 113, 113, 0.4)",
+                                  }
+                                : undefined
+                            }
+                          >
+                            {timeLeftValue}s
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  {(() => {
-                    const timeLeftValue =
-                      typeof gameState.timeLeft === "number"
-                        ? gameState.timeLeft
-                        : 0;
-                    const isCritical = timeLeftValue <= 15;
-                    const isVeryLow = timeLeftValue <= 5;
 
-                    return (
-                      <>
-                        <Clock
-                          className={cn(
-                            "w-4 h-4 sm:w-6 sm:h-6",
-                            isCritical ? "text-red-400" : "text-purple-400",
-                            isVeryLow && "animate-bounce",
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "font-bangers tracking-wide",
-                            isCritical
-                              ? "text-lg sm:text-2xl text-red-400 font-bold"
-                              : "text-sm sm:text-lg text-white",
-                            isVeryLow && "animate-pulse text-red-300",
-                            isCritical && "drop-shadow-lg",
-                          )}
-                          style={
-                            isVeryLow
-                              ? {
-                                  textShadow:
-                                    "0 0 10px rgba(248, 113, 113, 0.8), 0 0 20px rgba(248, 113, 113, 0.4)",
-                                }
-                              : undefined
-                          }
-                        >
-                          {timeLeftValue}s
-                        </span>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Lobby Code (Right) */}
-              <div className="flex items-center gap-1 sm:gap-2 bg-purple-600/20 border border-purple-400/30 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
-                <span className="text-purple-200 font-bangers tracking-wide text-xs sm:text-sm uppercase">
-                  Code:
-                </span>
-                <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-bangers text-sm sm:text-base px-2 sm:px-3 py-1 tracking-wider border border-purple-400/50">
-                  {lobbyCode}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Responsive Main Game Area */}
-        <div className="pt-16 sm:pt-20 h-screen flex gap-2 sm:gap-4 p-2 sm:p-4 min-h-0">
-          {/* Desktop: Chat Panel (Left) - Hidden on mobile */}
-          <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4 pt-8">
-            <ChatPanel
-              messages={messages}
-              newMessage={newMessage}
-              onNewMessageChange={setNewMessage}
-              onSendMessage={handleSendMessage}
-              currentUser={currentUser}
-            />
-          </div>
-
-          {/* Center Column - Situation + Cards (Full width on mobile) */}
-          <div className="flex-1 flex flex-col justify-between min-h-0">
-            {/* Situation (Top Center) - Enhanced readability */}
-            <div className="flex-1 flex items-center justify-center text-center px-2 sm:px-4">
-              <div className="max-w-4xl w-full">
-                <div className="bg-slate-800/40 border border-purple-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-6 mb-3 sm:mb-4">
-                  <h2 className="text-purple-300 font-bangers text-sm sm:text-xl mb-2 sm:mb-3 uppercase tracking-wider">
-                    Current Situation
-                  </h2>
-                  <p className="text-white font-bangers text-lg sm:text-3xl md:text-4xl leading-tight break-words drop-shadow-lg">
-                    {gameState.currentSituation}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Cards + Submit Button (Bottom Center) - Mobile optimized */}
-            <div className="flex flex-col items-center gap-2 sm:gap-4 pb-2 sm:pb-4 px-1 sm:px-2 lg:px-4">
-              <div className="w-full max-w-full overflow-hidden">
-                <MemeCardHand
-                  cards={playerCards}
-                  selectedCard={selectedCard}
-                  onSelectCard={selectCard}
-                  hasSubmitted={hasSubmitted}
-                />
-              </div>
-
-              {/* Submit Button - Enhanced prominence & mobile-friendly */}
-              {!hasSubmitted && (
-                <div className="flex flex-col items-center gap-2 w-full max-w-sm">
-                  {selectedCard && (
-                    <div className="text-center px-2">
-                      <p className="text-purple-200 font-bangers text-xs sm:text-base">
-                        Ready to submit:{" "}
-                        <span className="text-white font-bold">
-                          {selectedCard.filename?.replace(
-                            /\.(jpg|jpeg|png|gif|webp)$/i,
-                            "",
-                          ) || "Card"}
-                        </span>
-                      </p>
-                    </div>
-                  )}
-                  <Button
-                    onClick={handleSubmitCard}
-                    disabled={!selectedCard}
-                    className={cn(
-                      "font-bangers w-full min-h-[44px] transition-all duration-300 transform shadow-2xl",
-                      "text-base sm:text-xl px-4 sm:px-12 py-3 sm:py-4",
-                      selectedCard
-                        ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-105 text-white"
-                        : "bg-slate-600 cursor-not-allowed opacity-60 text-slate-300",
-                      selectedCard &&
-                        "animate-pulse hover:animate-none border-2 border-purple-400/50",
-                    )}
-                    style={
-                      selectedCard
-                        ? {
-                            boxShadow:
-                              "0 10px 30px rgba(168, 85, 247, 0.4), 0 0 0 2px rgba(168, 85, 247, 0.2)",
-                          }
-                        : undefined
-                    }
-                  >
-                    <span className="block sm:hidden">
-                      {selectedCard ? "🎭 Submit!" : "⚡ Select First"}
-                    </span>
-                    <span className="hidden sm:block">
-                      {selectedCard
-                        ? "🎭 Submit Your Meme!"
-                        : "⚡ Select a Card First"}
-                    </span>
-                  </Button>
-                </div>
-              )}
-
-              {/* Submitted Indicator - Enhanced styling & mobile-friendly */}
-              {hasSubmitted && (
-                <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-lg sm:rounded-xl font-bangers text-base sm:text-xl shadow-2xl border-2 border-green-400/50">
-                  <span className="text-lg sm:text-2xl">✅</span>
-                  <span className="block sm:hidden">Submitted!</span>
-                  <span className="hidden sm:block">
-                    Card Submitted Successfully!
+                {/* Lobby Code (Right) */}
+                <div className="flex items-center gap-1 sm:gap-2 bg-purple-600/20 border border-purple-400/30 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
+                  <span className="text-purple-200 font-bangers tracking-wide text-xs sm:text-sm uppercase">
+                    Code:
                   </span>
+                  <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-bangers text-sm sm:text-base px-2 sm:px-3 py-1 tracking-wider border border-purple-400/50">
+                    {lobbyCode}
+                  </Badge>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* Desktop: Players List (Right) - Hidden on mobile */}
-          <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4 pt-8">
-            <PlayersList players={players} />
+          {/* Responsive Main Game Area */}
+          <div className="pt-16 sm:pt-20 h-screen flex gap-2 sm:gap-4 p-2 sm:p-4 min-h-0">
+            {/* Desktop: Chat Panel (Left) - Hidden on mobile */}
+            <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4 pt-8">
+              <ChatPanel
+                messages={messages}
+                newMessage={newMessage}
+                onNewMessageChange={(value) =>
+                  arenaDispatch({ type: "SET_NEW_MESSAGE", payload: value })
+                }
+                onSendMessage={handleSendMessage}
+                currentUser={currentUser}
+              />
+            </div>
+
+            {/* Center Column - Situation + Cards (Full width on mobile) */}
+            <div className="flex-1 flex flex-col justify-between min-h-0">
+              {/* Situation (Top Center) - Enhanced readability */}
+              <div className="flex-1 flex items-center justify-center text-center px-2 sm:px-4">
+                <div className="max-w-4xl w-full">
+                  <div className="bg-slate-800/40 border border-purple-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-6 mb-3 sm:mb-4">
+                    <h2 className="text-purple-300 font-bangers text-sm sm:text-xl mb-2 sm:mb-3 uppercase tracking-wider">
+                      Current Situation
+                    </h2>
+                    <p className="text-white font-bangers text-lg sm:text-3xl md:text-4xl leading-tight break-words drop-shadow-lg">
+                      {gameState.currentSituation}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cards + Submit Button (Bottom Center) - Mobile optimized */}
+              <div className="flex flex-col items-center gap-2 sm:gap-4 pb-2 sm:pb-4 px-1 sm:px-2 lg:px-4">
+                <div className="w-full max-w-full overflow-hidden">
+                  <MemeCardHand
+                    cards={playerCards}
+                    selectedCard={selectedCard}
+                    onSelectCard={selectCard}
+                    hasSubmitted={hasSubmitted}
+                  />
+                </div>
+
+                {/* Submit Button - Enhanced prominence & mobile-friendly */}
+                {!hasSubmitted && (
+                  <div className="flex flex-col items-center gap-2 w-full max-w-sm">
+                    {selectedCard && (
+                      <div className="text-center px-2">
+                        <p className="text-purple-200 font-bangers text-xs sm:text-base">
+                          Ready to submit:{" "}
+                          <span className="text-white font-bold">
+                            {selectedCard.filename?.replace(
+                              /\.(jpg|jpeg|png|gif|webp)$/i,
+                              "",
+                            ) || "Card"}
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleSubmitCard}
+                      disabled={!selectedCard}
+                      className={cn(
+                        "font-bangers w-full min-h-[44px] transition-all duration-300 transform shadow-2xl",
+                        "text-base sm:text-xl px-4 sm:px-12 py-3 sm:py-4",
+                        selectedCard
+                          ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-105 text-white"
+                          : "bg-slate-600 cursor-not-allowed opacity-60 text-slate-300",
+                        selectedCard &&
+                          "animate-pulse hover:animate-none border-2 border-purple-400/50",
+                      )}
+                      style={
+                        selectedCard
+                          ? {
+                              boxShadow:
+                                "0 10px 30px rgba(168, 85, 247, 0.4), 0 0 0 2px rgba(168, 85, 247, 0.2)",
+                            }
+                          : undefined
+                      }
+                    >
+                      <span className="block sm:hidden">
+                        {selectedCard ? "🎭 Submit!" : "⚡ Select First"}
+                      </span>
+                      <span className="hidden sm:block">
+                        {selectedCard
+                          ? "🎭 Submit Your Meme!"
+                          : "⚡ Select a Card First"}
+                      </span>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Submitted Indicator - Enhanced styling & mobile-friendly */}
+                {hasSubmitted && (
+                  <div className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-lg sm:rounded-xl font-bangers text-base sm:text-xl shadow-2xl border-2 border-green-400/50">
+                    <span className="text-lg sm:text-2xl">✅</span>
+                    <span className="block sm:hidden">Submitted!</span>
+                    <span className="hidden sm:block">
+                      Card Submitted Successfully!
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop: Players List (Right) - Hidden on mobile */}
+            <div className="hidden lg:flex w-[350px] flex-col bg-slate-800/30 border border-slate-700/40 rounded-lg p-4 pt-8">
+              <PlayersList players={players} />
+            </div>
           </div>
         </div>
-      </div>
       </GameErrorBoundary>
     );
   }
@@ -1014,4 +1078,4 @@ export function Arena({ lobbyCode, currentUser }: ArenaProps) {
       </Card>
     </div>
   );
-}
+});

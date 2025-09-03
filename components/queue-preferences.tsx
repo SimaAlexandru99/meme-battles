@@ -343,11 +343,13 @@ export function QueuePreferencesComponent({
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{
-                          duration: 1,
+                          duration: 1.2,
                           repeat: Infinity,
                           ease: "linear",
+                          repeatType: "loop",
                         }}
-                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
+                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2 will-change-transform"
+                        style={{ transform: "translateZ(0)" }}
                       />
                       Saving...
                     </>

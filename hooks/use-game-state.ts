@@ -8,7 +8,7 @@ import {
   set,
   update,
 } from "firebase/database";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { rtdb } from "@/firebase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { AIBotService } from "@/lib/services/ai-bot.service";
@@ -16,6 +16,16 @@ import { lobbyService } from "@/lib/services/lobby.service";
 import { MatchmakingService } from "@/lib/services/matchmaking.service";
 import { MemeCardPool } from "@/lib/utils/meme-card-pool";
 import { calculateRoundScoring, type PlayerStreak } from "@/lib/utils/scoring";
+import {
+  type GameStateAction,
+  gameStateReducer,
+  initialGameStateReducerState,
+  selectCanVote,
+  selectHasAbstained,
+  selectHasSubmitted,
+  selectHasVoted,
+  selectIsHost,
+} from "./game-state-reducer";
 
 interface GameState {
   phase:
@@ -79,25 +89,29 @@ interface UseGameStateReturn {
  */
 export function useGameState(lobbyCode: string): UseGameStateReturn {
   const { user } = useCurrentUser();
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [playerCards, setPlayerCards] = useState<MemeCard[]>([]);
-  const [cardsLoadedOnce, setCardsLoadedOnce] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connected" | "disconnected" | "reconnecting"
-  >("disconnected");
 
-  // --- Add state for hostUid and isHost ---
-  const [hostUid, setHostUid] = useState<string | null>(null);
-  // Duration for submission phase (derived from lobby settings.timeLimit)
-  const [submissionDuration, setSubmissionDuration] = useState<number | null>(
-    null,
+  // Replace all useState with single useReducer
+  const [state, dispatch] = useReducer(
+    gameStateReducer,
+    initialGameStateReducerState,
   );
-  // Total rounds from lobby settings
-  const [totalRounds, setTotalRounds] = useState<number>(8);
-  const isHost = Boolean(user && hostUid && user.id === hostUid);
+
+  // Destructure state for easier access
+  const {
+    gameState,
+    players,
+    playerCards,
+    cardsLoadedOnce,
+    isLoading,
+    error,
+    connectionStatus,
+    hostUid,
+    submissionDuration,
+    totalRounds,
+  } = state;
+
+  // Derive isHost from state
+  const isHost = selectIsHost(state, user?.id);
 
   // Battle Royale service instance
   const matchmakingService = useRef(MatchmakingService.getInstance());
@@ -113,8 +127,8 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
    * Clear error state
    */
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    dispatch({ type: "CLEAR_ERROR" });
+  }, [dispatch]);
 
   /**
    * Handle errors with Sentry tracking
@@ -123,14 +137,14 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     (error: unknown, operation: string) => {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred";
-      setError(errorMessage);
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
 
       Sentry.captureException(error, {
         tags: { operation, lobbyCode },
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode],
+    [lobbyCode, dispatch],
   );
 
   /**
@@ -978,8 +992,8 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
   useEffect(() => {
     if (!lobbyCode || !user) return;
 
-    setIsLoading(true);
-    setError(null);
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "CLEAR_ERROR" });
 
     // Listen to game state changes
     const gameStatePath = `lobbies/${lobbyCode}/gameState`;
@@ -998,17 +1012,17 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             timestamp: new Date().toISOString(),
           });
 
-          // Force a new object reference to ensure React re-renders
-          setGameState({ ...data });
-          setConnectionStatus("connected");
+          // Use reducer for optimized state updates with built-in comparison
+          dispatch({ type: "SET_GAME_STATE", payload: { ...data } });
+          dispatch({ type: "SET_CONNECTION_STATUS", payload: "connected" });
         } else {
-          setGameState(null);
+          dispatch({ type: "SET_GAME_STATE", payload: null });
         }
-        setIsLoading(false);
+        dispatch({ type: "SET_LOADING", payload: false });
       },
       (error) => {
         handleError(error, "game_state_listener");
-        setConnectionStatus("disconnected");
+        dispatch({ type: "SET_CONNECTION_STATUS", payload: "disconnected" });
       },
     );
 
@@ -1060,8 +1074,8 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
             },
           );
 
-          // Ensure we always have a valid array
-          setPlayers(gamePlayers || []);
+          // Use reducer for optimized players updates with built-in comparison
+          dispatch({ type: "SET_PLAYERS", payload: gamePlayers || [] });
         } else {
           console.log("No players data found, keeping existing players");
           // Don't clear players if snapshot doesn't exist - they might be loading
@@ -1091,21 +1105,20 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
           if (cards && cards.length !== 7) {
             console.warn(`Player has ${cards.length} cards instead of 7`);
           }
-          setPlayerCards(cards || []);
-          setCardsLoadedOnce(true);
+          dispatch({ type: "SET_PLAYER_CARDS", payload: cards || [] });
+          dispatch({ type: "SET_CARDS_LOADED_ONCE", payload: true });
         } else {
           console.log("No player cards found at path:", playerCardsPath);
           // Only clear cards if we haven't loaded them before or if we're in waiting phase
-          setPlayerCards((prevCards) => {
-            if (cardsLoadedOnce && prevCards.length > 0) {
-              console.warn(
-                "⚠️ Cards snapshot is null but we had cards before - keeping previous cards to prevent loss",
-              );
-              return prevCards; // Keep existing cards to prevent loss during transitions
-            }
+          if (cardsLoadedOnce && playerCards.length > 0) {
+            console.warn(
+              "⚠️ Cards snapshot is null but we had cards before - keeping previous cards to prevent loss",
+            );
+            // Keep existing cards - don't dispatch any change
+          } else {
             console.log("Setting empty cards array");
-            return []; // Only set empty if we haven't loaded cards before
-          });
+            dispatch({ type: "SET_PLAYER_CARDS", payload: [] });
+          }
         }
       },
       (error) => {
@@ -1128,7 +1141,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         playerCardsUnsubscribeRef.current = null;
       }
     };
-  }, [user, handleError, lobbyCode, cardsLoadedOnce]);
+  }, [user, handleError, lobbyCode, cardsLoadedOnce, dispatch]);
 
   // --- Initialize presence with onDisconnect handler ---
   useEffect(() => {
@@ -1156,14 +1169,20 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     const unsubscribe = onValue(lobbyRef, (snapshot) => {
       if (snapshot.exists()) {
         const lobby = snapshot.val();
-        setHostUid(lobby.hostUid || null);
+        dispatch({ type: "SET_HOST_UID", payload: lobby.hostUid || null });
         const limit = Number(lobby?.settings?.timeLimit);
-        setSubmissionDuration(Number.isFinite(limit) && limit > 0 ? limit : 60);
+        dispatch({
+          type: "SET_SUBMISSION_DURATION",
+          payload: Number.isFinite(limit) && limit > 0 ? limit : 60,
+        });
         const rounds = Number(lobby?.settings?.rounds);
-        setTotalRounds(Number.isFinite(rounds) && rounds > 0 ? rounds : 8);
+        dispatch({
+          type: "SET_TOTAL_ROUNDS",
+          payload: Number.isFinite(rounds) && rounds > 0 ? rounds : 8,
+        });
       } else {
-        setHostUid(null);
-        setSubmissionDuration(null);
+        dispatch({ type: "SET_HOST_UID", payload: null });
+        dispatch({ type: "SET_SUBMISSION_DURATION", payload: null });
       }
     });
     return () => off(lobbyRef, "value", unsubscribe);
@@ -1219,23 +1238,15 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     return () => clearInterval(timer);
   }, [isHost, gameState, handleTimerExpire, lobbyCode]);
 
-  // Derived state
+  // Derived state using optimized selectors
   const isCurrentPlayer = !!user;
-  const hasSubmitted = gameState?.submissions?.[user?.id || ""] !== undefined;
-  const hasVoted = gameState?.votes?.[user?.id || ""] !== undefined;
-  const hasAbstained = gameState?.abstentions?.[user?.id || ""] === true;
+  const hasSubmitted = selectHasSubmitted(state, user?.id);
+  const hasVoted = selectHasVoted(state, user?.id);
+  const hasAbstained = selectHasAbstained(state, user?.id);
 
   const canVote = useCallback(
-    (playerId: string) => {
-      return (
-        isCurrentPlayer &&
-        gameState?.phase === "voting" &&
-        !hasVoted &&
-        playerId !== user?.id &&
-        gameState?.submissions?.[playerId] !== undefined
-      );
-    },
-    [isCurrentPlayer, gameState, hasVoted, user?.id],
+    (playerId: string) => selectCanVote(state, user?.id, playerId),
+    [state, user?.id],
   );
 
   return {

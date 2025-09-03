@@ -190,15 +190,18 @@ export function QueueStatus({
       )}
       aria-label="Battle Royale queue status"
     >
-      {/* Animated background gradient for queue state */}
+      {/* Animated background gradient - optimized */}
       <div
         className={cn(
-          "absolute inset-0 opacity-0 transition-opacity duration-1000",
+          "absolute inset-0 opacity-0 transition-opacity duration-700 will-change-auto",
           isInQueue && "opacity-100",
         )}
         aria-hidden="true"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 animate-pulse" />
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-purple-500/8 via-pink-500/8 to-orange-500/8 animate-pulse"
+          style={{ transform: "translateZ(0)" }}
+        />
       </div>
 
       <CardHeader className="relative">
@@ -372,11 +375,14 @@ export function QueueStatus({
                     className={cn(
                       "bg-gradient-to-r from-purple-600 to-pink-600",
                       "hover:from-purple-700 hover:to-pink-700",
-                      "text-white font-bangers text-lg tracking-wide",
-                      "px-8 py-3 rounded-full shadow-lg",
+                      "active:from-purple-800 active:to-pink-800",
+                      "text-white font-bangers text-base sm:text-lg tracking-wide",
+                      "px-6 sm:px-8 py-3 sm:py-4 rounded-full shadow-lg",
                       "hover:shadow-purple-500/25 transition-all duration-300",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
-                      "min-w-[200px]",
+                      "min-w-[180px] sm:min-w-[200px]",
+                      "touch-manipulation select-none",
+                      "min-h-[48px] sm:min-h-[52px]",
                     )}
                     aria-label="Join Battle Royale queue"
                   >
@@ -414,11 +420,14 @@ export function QueueStatus({
                     className={cn(
                       "border-red-500/30 text-red-300",
                       "hover:bg-red-500/10 hover:border-red-400/50",
-                      "font-bangers text-lg tracking-wide",
-                      "px-8 py-3 rounded-full",
+                      "active:bg-red-500/20 active:border-red-400/70",
+                      "font-bangers text-base sm:text-lg tracking-wide",
+                      "px-6 sm:px-8 py-3 sm:py-4 rounded-full",
                       "transition-all duration-300",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
-                      "min-w-[200px]",
+                      "min-w-[180px] sm:min-w-[200px]",
+                      "touch-manipulation select-none",
+                      "min-h-[48px] sm:min-h-[52px]",
                     )}
                     aria-label="Leave Battle Royale queue"
                   >

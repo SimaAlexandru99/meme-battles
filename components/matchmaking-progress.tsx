@@ -136,29 +136,31 @@ export function MatchmakingProgress({
       : `${minutes}m`;
   }, []);
 
-  // Animated dots for loading states
+  // Animated dots for loading states - optimized
   const AnimatedDots = React.memo(function AnimatedDots() {
     return (
       <motion.span
         className="inline-flex"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.2 }}
       >
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-1 h-1 bg-current rounded-full mx-0.5"
+            className="w-1 h-1 bg-current rounded-full mx-0.5 will-change-transform"
             animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.5, 1, 0.5],
+              scale: [1, 1.4, 1],
+              opacity: [0.6, 1, 0.6],
             }}
             transition={{
-              duration: 1.5,
+              duration: 1.8,
               repeat: Infinity,
-              delay: i * 0.2,
+              delay: i * 0.25,
               ease: "easeInOut",
+              repeatType: "loop",
             }}
+            style={{ transform: "translateZ(0)" }}
           />
         ))}
       </motion.span>
@@ -193,15 +195,17 @@ export function MatchmakingProgress({
           aria-hidden="true"
         >
           <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent will-change-transform"
             animate={{
               x: ["-100%", "100%"],
             }}
             transition={{
-              duration: 2,
+              duration: 3,
               repeat: Infinity,
               ease: "linear",
+              repeatType: "loop",
             }}
+            style={{ transform: "translateZ(0)" }}
           />
         </div>
 
@@ -274,21 +278,25 @@ export function MatchmakingProgress({
                 className="h-2 bg-slate-700/50"
               />
 
-              {/* Animated progress indicator */}
+              {/* Animated progress indicator - optimized */}
               <motion.div
                 className={cn(
                   "absolute top-0 left-0 h-full rounded-full",
                   "bg-gradient-to-r from-purple-500 to-pink-500",
-                  "opacity-80",
+                  "opacity-80 will-change-transform",
                 )}
-                style={{ width: `${progressPercentage}%` }}
+                style={{
+                  width: `${progressPercentage}%`,
+                  transform: "translateZ(0)",
+                }}
                 animate={{
-                  opacity: [0.6, 1, 0.6],
+                  opacity: [0.7, 1, 0.7],
                 }}
                 transition={{
-                  duration: 2,
+                  duration: 2.5,
                   repeat: Infinity,
                   ease: "easeInOut",
+                  repeatType: "loop",
                 }}
               />
             </div>

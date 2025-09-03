@@ -130,16 +130,20 @@ export function useLobbyConnection(
           setLastSeen(now);
 
           if (snapshot.exists()) {
-            if (connectionStatus !== "connected") {
-              setConnectionStatus("connected");
-              setRetryCount(0);
+            setConnectionStatus((current) => {
+              if (current !== "connected") {
+                setRetryCount(0);
 
-              Sentry.addBreadcrumb({
-                message: "Lobby connection established",
-                data: { lobbyCode, retryCount },
-                level: "info",
-              });
-            }
+                Sentry.addBreadcrumb({
+                  message: "Lobby connection established",
+                  data: { lobbyCode },
+                  level: "info",
+                });
+
+                return "connected";
+              }
+              return current;
+            });
           } else {
             // Lobby doesn't exist
             setConnectionStatus("disconnected");
@@ -160,15 +164,19 @@ export function useLobbyConnection(
           });
 
           // Trigger automatic reconnection for network errors
-          if (retryCount < MAX_RETRY_ATTEMPTS && isOnline) {
-            const delay = calculateRetryDelay(retryCount);
-            setRetryCount((prev) => prev + 1);
-            setConnectionStatus("reconnecting");
+          setRetryCount((currentRetry) => {
+            if (currentRetry < MAX_RETRY_ATTEMPTS && isOnline) {
+              const delay = calculateRetryDelay(currentRetry);
+              setConnectionStatus("reconnecting");
 
-            reconnectTimeoutRef.current = setTimeout(() => {
-              connect();
-            }, delay);
-          }
+              reconnectTimeoutRef.current = setTimeout(() => {
+                connect();
+              }, delay);
+
+              return currentRetry + 1;
+            }
+            return currentRetry;
+          });
         },
       );
 
@@ -183,15 +191,7 @@ export function useLobbyConnection(
         },
       });
     }
-  }, [
-    lobbyCode,
-    isOnline,
-    connectionStatus,
-    retryCount,
-    cleanup,
-    calculateRetryDelay,
-    startHeartbeat,
-  ]);
+  }, [lobbyCode, isOnline, cleanup, calculateRetryDelay, startHeartbeat]);
 
   /**
    * Manual reconnect function for user-initiated recovery
@@ -240,10 +240,13 @@ export function useLobbyConnection(
       });
 
       // Automatically reconnect when coming back online
-      if (connectionStatus === "disconnected" && lobbyCode) {
-        setRetryCount(0);
-        connect();
-      }
+      setConnectionStatus((current) => {
+        if (current === "disconnected" && lobbyCode) {
+          setRetryCount(0);
+          connect();
+        }
+        return current;
+      });
     };
 
     const handleOffline = () => {
@@ -265,7 +268,7 @@ export function useLobbyConnection(
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [cleanup, connect, connectionStatus, lobbyCode]);
+  }, [lobbyCode, connect, cleanup]);
 
   /**
    * Initial connection setup
@@ -278,8 +281,10 @@ export function useLobbyConnection(
       setConnectionStatus("disconnected");
     }
 
-    return cleanup;
-  }, [lobbyCode, isOnline, cleanup, connect]);
+    return () => {
+      cleanup();
+    };
+  }, [lobbyCode, isOnline, connect, cleanup]);
 
   /**
    * Automatic reconnection for connection drops

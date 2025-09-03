@@ -148,14 +148,116 @@ export const MemeCard = memo(function MemeCard({
   const currentTheme = themeConfig[theme];
   const currentRarity = rarityConfig[rarity];
 
+  const isInteractive = !!onSelect;
+
+  if (isInteractive) {
+    return (
+      <button
+        type="button"
+        className={cn(
+          "relative cursor-pointer transition-all duration-300 ease-out overflow-hidden",
+          "hover:scale-105 focus-visible:scale-105 group",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "touch-manipulation",
+          config.container,
+          currentTheme.cardBg,
+          currentTheme.border,
+          currentTheme.shadow,
+          currentRarity.glow,
+          currentRarity.border,
+          isSelected &&
+            cn(
+              currentTheme.selectedBorder,
+              "scale-105 ring-2 ring-current ring-opacity-50",
+            ),
+          disabled &&
+            "cursor-not-allowed opacity-50 hover:scale-100 focus-visible:scale-100",
+          className,
+        )}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
+        aria-label={`Meme card: ${card.alt}${isSelected ? " (selected)" : ""} (${rarity})`}
+        aria-pressed={isSelected}
+      >
+        {/* Card Content Container */}
+        <div className="relative h-full p-1 sm:p-2 flex flex-col">
+          {/* Card Header with Rarity Indicator */}
+          <div className="flex justify-between items-start mb-1">
+            <div className="text-[8px] sm:text-xs font-bold text-foreground/70 truncate flex-1">
+              {theme === "poker" ? "MEME" : card.alt.slice(0, 12)}
+            </div>
+            {rarity !== "common" && (
+              <div
+                className={cn(
+                  "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ml-1 flex-shrink-0",
+                  rarity === "rare" && "bg-blue-400",
+                  rarity === "epic" && "bg-purple-400",
+                  rarity === "legendary" && "bg-orange-400",
+                )}
+              />
+            )}
+          </div>
+
+          {/* Image Container */}
+          <div className="flex-1 flex items-center justify-center relative">
+            {isLoading && (
+              <Skeleton className={cn("rounded-md", config.image)} />
+            )}
+
+            {hasError && (
+              <div className="flex flex-col items-center justify-center text-center p-1 sm:p-2">
+                <div className="text-muted-foreground text-[8px] sm:text-xs mb-1 sm:mb-2">
+                  Failed to load
+                </div>
+              </div>
+            )}
+
+            {!hasError && (
+              <Image
+                src={card.url}
+                alt={card.alt}
+                width={config.imageSize.width}
+                height={config.imageSize.height}
+                className={cn(
+                  "object-contain rounded-md transition-all duration-300",
+                  config.image,
+                  isLoading && "opacity-0",
+                  "group-hover:scale-105",
+                )}
+                style={{ width: "auto", height: "auto" }}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                loading="lazy"
+                unoptimized={true}
+              />
+            )}
+          </div>
+
+          {/* Card Footer */}
+          {theme !== "poker" && (
+            <div className="text-[6px] sm:text-[10px] text-foreground/50 text-center truncate mt-1">
+              {card.filename.split(".")[0].slice(0, 15)}
+            </div>
+          )}
+        </div>
+
+        {/* Loading overlay */}
+        {isLoading && !hasError && (
+          <div className="absolute inset-0 bg-background/50 rounded-lg flex items-center justify-center">
+            <div className="animate-spin w-3 h-3 sm:w-4 sm:h-4 border-2 border-primary border-t-transparent rounded-full" />
+          </div>
+        )}
+      </button>
+    );
+  }
+
+  // Non-interactive version
   return (
-    <button
-      type="button"
+    <div
       className={cn(
-        "relative cursor-pointer transition-all duration-300 ease-out overflow-hidden",
-        "hover:scale-105 focus-visible:scale-105 group",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "touch-manipulation",
+        "relative transition-all duration-300 ease-out overflow-hidden",
+        "group",
         config.container,
         currentTheme.cardBg,
         currentTheme.border,
@@ -167,15 +269,9 @@ export const MemeCard = memo(function MemeCard({
             currentTheme.selectedBorder,
             "scale-105 ring-2 ring-current ring-opacity-50",
           ),
-        disabled &&
-          "cursor-not-allowed opacity-50 hover:scale-100 focus-visible:scale-100",
+        disabled && "opacity-50",
         className,
       )}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      disabled={disabled}
-      aria-label={`Meme card: ${card.alt}${isSelected ? " (selected)" : ""} (${rarity})`}
-      aria-pressed={isSelected}
     >
       {/* Card Content Container */}
       <div className="relative h-full p-1 sm:p-2 flex flex-col">
@@ -243,6 +339,6 @@ export const MemeCard = memo(function MemeCard({
           <div className="animate-spin w-3 h-3 sm:w-4 sm:h-4 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       )}
-    </button>
+    </div>
   );
 });
