@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/F:\\meme-battles\\components/**)",
+      "Read(/F:\\meme-battles\\components/**)",
+      "Read(/F:\\meme-battles\\components/**)",
+      "Read(/F:\\meme-battles/**)",
+      "Read(/F:\\meme-battles/**)",
+      "Read(/F:\\meme-battles/**)",
+      "Read(/F:\\meme-battles\\lib\\services/**)",
+      "Read(/F:\\meme-battles\\lib\\services/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

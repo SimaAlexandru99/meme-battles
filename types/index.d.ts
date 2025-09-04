@@ -641,3 +641,301 @@ interface RankingTier {
   icon: string;
   percentile: number;
 }
+
+// Player Progression UI Types
+
+// Achievement System Types
+type AchievementRarity = "common" | "rare" | "epic";
+type AchievementCategory = "win_streaks" | "skill_milestones" | "games_played";
+
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: AchievementRarity;
+  category: AchievementCategory;
+  criteria: AchievementCriteria;
+  unlockedAt?: string;
+  progress?: AchievementProgress;
+}
+
+interface AchievementCriteria {
+  type: "win_streak" | "games_played" | "skill_rating" | "total_wins" | "perfect_rounds";
+  target: number;
+  trackable: boolean;
+}
+
+interface AchievementProgress {
+  current: number;
+  target: number;
+  percentage: number;
+}
+
+interface AchievementUnlock {
+  achievementId: string;
+  unlockedAt: string;
+  gameId?: string;
+}
+
+interface AchievementNotification {
+  id: string;
+  achievement: Achievement;
+  timestamp: string;
+  dismissed: boolean;
+  autoHide: boolean;
+  duration: number;
+}
+
+// XP System Types
+interface XPCalculation {
+  baseXP: number;
+  positionBonus: number;
+  roundsBonus: number;
+  totalXP: number;
+  levelBefore: number;
+  levelAfter: number;
+  leveledUp: boolean;
+}
+
+interface XPBreakdown {
+  baseXP: number;
+  positionBonus: number;
+  roundsBonus: number;
+  totalXP: number;
+}
+
+interface LevelDefinition {
+  level: number;
+  xpRequired: number;
+  totalXPRequired: number;
+  rewards?: LevelReward[];
+}
+
+interface LevelReward {
+  type: "achievement" | "cosmetic" | "title";
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface XPHistoryEntry {
+  gameId: string;
+  timestamp: string;
+  xpGained: number;
+  source: "battle_royale" | "daily_bonus" | "achievement";
+  details: XPBreakdown;
+}
+
+// Progression Display Types
+interface ProgressionSummary {
+  skillRating: SkillRatingData;
+  xp: XPData;
+  achievements: AchievementData;
+  performance: PerformanceData;
+}
+
+interface SkillRatingData {
+  current: number;
+  change: number;
+  tier: RankingTier;
+  nextTier?: RankingTier;
+  progressToNext: number;
+}
+
+interface XPData {
+  currentXP: number;
+  currentLevel: number;
+  xpForNextLevel: number;
+  totalXPForNextLevel: number;
+  totalXPEarned: number;
+  recentGains: XPHistoryEntry[];
+}
+
+interface AchievementData {
+  unlocked: Achievement[];
+  locked: Achievement[];
+  recentUnlocks: AchievementUnlock[];
+  progress: Record<string, AchievementProgress>;
+  totalUnlocked: number;
+  totalAvailable: number;
+}
+
+interface PerformanceData {
+  trend: "improving" | "declining" | "stable";
+  recentGames: number;
+  winRate: number;
+  averagePosition: number;
+  skillRatingChange: number;
+}
+
+// Component Props Types
+interface AchievementGalleryProps {
+  achievements: Achievement[];
+  unlockedAchievements: string[];
+  achievementProgress: Record<string, AchievementProgress>;
+  className?: string;
+  onAchievementSelect?: (achievement: Achievement) => void;
+}
+
+interface AchievementCardProps {
+  achievement: Achievement;
+  isUnlocked: boolean;
+  progress?: AchievementProgress;
+  size?: "small" | "medium" | "large";
+  showProgress?: boolean;
+  onClick?: () => void;
+}
+
+interface AchievementNotificationProps {
+  achievement: Achievement;
+  onDismiss: () => void;
+  autoHide?: boolean;
+  duration?: number;
+  rarity?: AchievementRarity;
+}
+
+interface XPProgressBarProps {
+  currentXP: number;
+  currentLevel: number;
+  xpForNextLevel: number;
+  totalXPForNextLevel: number;
+  showLabel?: boolean;
+  size?: "small" | "medium" | "large";
+  animated?: boolean;
+  className?: string;
+}
+
+interface XPBreakdownProps {
+  baseXP: number;
+  positionBonus: number;
+  roundsBonus: number;
+  totalXP: number;
+  animated?: boolean;
+  className?: string;
+}
+
+interface LevelUpCelebrationProps {
+  newLevel: number;
+  onComplete: () => void;
+  rewards?: LevelReward[];
+  className?: string;
+}
+
+interface SkillRatingChangeProps {
+  before: number;
+  after: number;
+  change: number;
+  tierChange?: {
+    from: RankingTier;
+    to: RankingTier;
+  };
+  animated?: boolean;
+  className?: string;
+}
+
+interface PlayerSkillBadgeProps {
+  player: {
+    uid: string;
+    displayName: string;
+    skillRating: number;
+    level: number;
+    tier: string;
+  };
+  showDetails?: boolean;
+  size?: "small" | "medium";
+  className?: string;
+}
+
+interface MatchmakingInfoProps {
+  estimatedSkillRange: {
+    min: number;
+    max: number;
+  };
+  queueTime: number;
+  matchQuality: number;
+  competitiveBalance: number;
+  className?: string;
+}
+
+interface GlobalLeaderboardProps {
+  timeframe: "daily" | "weekly" | "monthly" | "all-time";
+  currentPlayerRank?: number;
+  onPlayerSelect?: (playerId: string) => void;
+  className?: string;
+}
+
+interface LeaderboardEntryProps {
+  rank: number;
+  player: {
+    uid: string;
+    displayName: string;
+    skillRating: number;
+    tier: string;
+    winRate: number;
+    gamesPlayed: number;
+  };
+  isCurrentPlayer?: boolean;
+  onClick?: () => void;
+  className?: string;
+}
+
+// Progression Constants and Enums
+const ACHIEVEMENT_RARITIES: Record<AchievementRarity, { color: string; weight: number }> = {
+  common: { color: "#9CA3AF", weight: 1 },
+  rare: { color: "#3B82F6", weight: 2 },
+  epic: { color: "#8B5CF6", weight: 3 },
+} as const;
+
+const ACHIEVEMENT_CATEGORIES: Record<AchievementCategory, { name: string; icon: string }> = {
+  win_streaks: { name: "Win Streaks", icon: "Trophy" },
+  skill_milestones: { name: "Skill Milestones", icon: "Target" },
+  games_played: { name: "Games Played", icon: "GameController2" },
+} as const;
+
+const XP_CONSTANTS = {
+  BASE_XP_PER_GAME: 50,
+  POSITION_MULTIPLIERS: {
+    1: 2.0,  // 1st place: 100% bonus
+    2: 1.5,  // 2nd place: 50% bonus
+    3: 1.2,  // 3rd place: 20% bonus
+    4: 1.0,  // 4th place: no bonus
+    5: 0.8,  // 5th place: -20%
+    6: 0.6,  // 6th place: -40%
+    7: 0.4,  // 7th place: -60%
+    8: 0.2,  // 8th place: -80%
+  },
+  ROUNDS_BONUS_PER_WIN: 10,
+  XP_PER_LEVEL: 1000,
+} as const;
+
+// Notification Queue Types
+interface NotificationQueueItem {
+  id: string;
+  type: "achievement" | "level_up" | "skill_rating";
+  data: Achievement | LevelReward | SkillRatingData;
+  priority: number;
+  timestamp: string;
+}
+
+interface NotificationQueueState {
+  queue: NotificationQueueItem[];
+  current: NotificationQueueItem | null;
+  isProcessing: boolean;
+}
+
+// Extended Player Progression Data
+interface PlayerProgressionData {
+  // Existing fields maintained
+  skillRating: number;
+  totalXpEarned: number;
+  achievements: string[];
+  
+  // New fields for UI enhancement
+  xpHistory: XPHistoryEntry[];
+  achievementProgress: Record<string, number>;
+  lastLevelUp?: string;
+  notificationQueue: AchievementNotification[];
+  currentLevel: number;
+  currentXP: number;
+}

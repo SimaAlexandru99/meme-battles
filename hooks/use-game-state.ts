@@ -17,7 +17,6 @@ import { MatchmakingService } from "@/lib/services/matchmaking.service";
 import { MemeCardPool } from "@/lib/utils/meme-card-pool";
 import { calculateRoundScoring, type PlayerStreak } from "@/lib/utils/scoring";
 import {
-  type GameStateAction,
   gameStateReducer,
   initialGameStateReducerState,
   selectCanVote,
@@ -105,7 +104,6 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
     isLoading,
     error,
     connectionStatus,
-    hostUid,
     submissionDuration,
     totalRounds,
   } = state;
@@ -128,7 +126,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
    */
   const clearError = useCallback(() => {
     dispatch({ type: "CLEAR_ERROR" });
-  }, [dispatch]);
+  }, []);
 
   /**
    * Handle errors with Sentry tracking
@@ -144,7 +142,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         extra: { lobbyCode, operation },
       });
     },
-    [lobbyCode, dispatch],
+    [lobbyCode],
   );
 
   /**
@@ -1141,7 +1139,7 @@ export function useGameState(lobbyCode: string): UseGameStateReturn {
         playerCardsUnsubscribeRef.current = null;
       }
     };
-  }, [user, handleError, lobbyCode, cardsLoadedOnce, dispatch]);
+  }, [user, handleError, lobbyCode, cardsLoadedOnce, playerCards.length]);
 
   // --- Initialize presence with onDisconnect handler ---
   useEffect(() => {
