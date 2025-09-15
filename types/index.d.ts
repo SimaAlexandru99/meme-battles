@@ -661,7 +661,12 @@ interface Achievement {
 }
 
 interface AchievementCriteria {
-  type: "win_streak" | "games_played" | "skill_rating" | "total_wins" | "perfect_rounds";
+  type:
+    | "win_streak"
+    | "games_played"
+    | "skill_rating"
+    | "total_wins"
+    | "perfect_rounds";
   target: number;
   trackable: boolean;
 }
@@ -881,13 +886,19 @@ interface LeaderboardEntryProps {
 }
 
 // Progression Constants and Enums
-const ACHIEVEMENT_RARITIES: Record<AchievementRarity, { color: string; weight: number }> = {
+const ACHIEVEMENT_RARITIES: Record<
+  AchievementRarity,
+  { color: string; weight: number }
+> = {
   common: { color: "#9CA3AF", weight: 1 },
   rare: { color: "#3B82F6", weight: 2 },
   epic: { color: "#8B5CF6", weight: 3 },
 } as const;
 
-const ACHIEVEMENT_CATEGORIES: Record<AchievementCategory, { name: string; icon: string }> = {
+const ACHIEVEMENT_CATEGORIES: Record<
+  AchievementCategory,
+  { name: string; icon: string }
+> = {
   win_streaks: { name: "Win Streaks", icon: "Trophy" },
   skill_milestones: { name: "Skill Milestones", icon: "Target" },
   games_played: { name: "Games Played", icon: "GameController2" },
@@ -896,17 +907,17 @@ const ACHIEVEMENT_CATEGORIES: Record<AchievementCategory, { name: string; icon: 
 const XP_CONSTANTS = {
   BASE_XP_PER_GAME: 50,
   POSITION_MULTIPLIERS: {
-    1: 2.0,  // 1st place: 100% bonus
-    2: 1.5,  // 2nd place: 50% bonus
-    3: 1.2,  // 3rd place: 20% bonus
-    4: 1.0,  // 4th place: no bonus
-    5: 0.8,  // 5th place: -20%
-    6: 0.6,  // 6th place: -40%
-    7: 0.4,  // 7th place: -60%
-    8: 0.2,  // 8th place: -80%
+    1: 2.0, // 1st place: 100% bonus
+    2: 1.5, // 2nd place: 50% bonus
+    3: 1.2, // 3rd place: 20% bonus
+    4: 1.0, // 4th place: no bonus
+    5: 0.8, // 5th place: -20%
+    6: 0.6, // 6th place: -40%
+    7: 0.4, // 7th place: -60%
+    8: 0.2, // 8th place: -80%
   },
   ROUNDS_BONUS_PER_WIN: 10,
-  XP_PER_LEVEL: 1000,
+  XP_PER_LEVEL: 1000 as number,
 } as const;
 
 // Notification Queue Types
@@ -930,7 +941,7 @@ interface PlayerProgressionData {
   skillRating: number;
   totalXpEarned: number;
   achievements: string[];
-  
+
   // New fields for UI enhancement
   xpHistory: XPHistoryEntry[];
   achievementProgress: Record<string, number>;
